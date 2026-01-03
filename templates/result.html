@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>搜尋結果 - {{ target_name }}</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f7fa;
+            padding: 20px;
+            line-height: 1.6;
+            color: #333;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            position: relative;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 12px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .header h1 {
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+
+        .stats {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        .stat-item {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 10px 15px;
+            border-radius: 8px;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            opacity: 0.9;
+        }
+
+        .stat-value {
+            font-size: 20px;
+            font-weight: bold;
+        }
+
+        .thread-card {
+            background: white;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .thread-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 25px;
+            background: white;
+            cursor: pointer;
+            user-select: none;
+            border-bottom: 1px solid transparent;
+            transition: background-color 0.2s;
+        }
+
+        .thread-header:hover {
+            background-color: #f8f9fa;
+        }
+
+        .thread-title-group {
+            flex: 1;
+            display: flex;
+            justify-content: flex-start;
+            align-items: center;
+        }
+
+        .thread-center-action {
+            flex: 0 0 50px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .thread-meta {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 6px;
+        }
+
+        .thread-time {
+            font-size: 13px;
+            color: #555;
+            font-weight: 500;
+        }
+
+        .toggle-icon {
+            font-size: 14px;
+            color: #666;
+            transition: transform 0.3s ease;
+            transform: rotate(-90deg);
+        }
+
+        .thread-card.expanded .toggle-icon {
+            transform: rotate(0deg);
+        }
+
+        .thread-card.expanded .thread-header {
+            border-bottom: 1px solid #eee;
+        }
+
+        .thread-id {
+            font-size: 11px;
+            color: #888;
+            background: #f0f0f0;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-family: monospace;
+        }
+
+        .thread-body {
+            max-height: 0;
+            opacity: 0;
+            transition: max-height 0.3s ease-out, opacity 0.3s ease;
+            overflow: hidden;
+        }
+
+        .thread-card.expanded .thread-body {
+            max-height: 600px;
+            opacity: 1;
+            overflow-y: auto;
+        }
+
+        .thread-body::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .thread-body::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+
+        .thread-body::-webkit-scrollbar-thumb {
+            background: #ccc;
+            border-radius: 4px;
+        }
+
+        .thread-body::-webkit-scrollbar-thumb:hover {
+            background: #bbb;
+        }
+
+        .messages {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            padding: 25px;
+        }
+
+        .message {
+            padding: 15px;
+            border-radius: 8px;
+        }
+
+        .message.user {
+            background: #e3f2fd;
+            border-left: 4px solid #2196F3;
+        }
+
+        .message.assistant {
+            background: #f3e5f5;
+            border-left: 4px solid #9c27b0;
+        }
+
+        .message-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 8px;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .message-content {
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
+        mark {
+            background: #ffeb3b;
+            padding: 2px 4px;
+            border-radius: 2px;
+        }
+
+        .no-result {
+            background: white;
+            border-radius: 12px;
+            padding: 40px;
+            text-align: center;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        .no-result .icon {
+            font-size: 48px;
+            margin-bottom: 15px;
+        }
+
+        .time-hint {
+            margin-top: 20px;
+            display: inline-block;
+            background: #f1f3f5;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+            color: #555;
+            border: 1px solid #e9ecef;
+        }
+
+        .back-btn-container {
+            text-align: center;
+            margin-top: 30px;
+            margin-bottom: 40px;
+        }
+
+        .back-button {
+            display: inline-block;
+            background: #667eea;
+            color: white;
+            padding: 12px 24px;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 600;
+            transition: opacity 0.2s;
+        }
+
+        .back-button:hover {
+            opacity: 0.9;
+        }
+
+        .scroll-top-btn {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            width: 50px;
+            height: 50px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            transition: all 0.3s ease;
+            z-index: 1000;
+        }
+
+        .scroll-top-btn:hover {
+            transform: translateY(-5px);
+            background: #5a6fd6;
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+        }
+
+        @media (max-width: 600px) {
+            .thread-header {
+                flex-wrap: wrap;
+            }
+
+            .thread-title-group {
+                flex: 0 0 100%;
+                margin-bottom: 10px;
+            }
+
+            .thread-center-action {
+                flex: 0 0 100%;
+                margin-bottom: 10px;
+            }
+
+            .thread-meta {
+                flex: 0 0 100%;
+                align-items: flex-start;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔍 搜尋結果</h1>
+            <div class="stats">
+                <div class="stat-item">
+                    <div class="stat-label">關鍵字</div>
+                    <div class="stat-value">{{ target_name }}</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">找到對話</div>
+                    <div class="stat-value">{{ count }}</div>
+                </div>
+                {% if target_time and count > 0 %}
+                <div class="stat-item">
+                    <div class="stat-label">搜尋時間</div>
+                    <div class="stat-value">{{ target_time }}</div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        {% if results|length == 0 %}
+        <div class="no-result">
+            <div class="icon">😕</div>
+            <h3>找不到相關對話</h3>
+            <p>沒有找到包含 "{{ target_name }}" 的對話紀錄</p>
+        </div>
+        {% else %}
+        {% for thread in results %}
+        <div class="thread-card expanded">
+            <div class="thread-header" onclick="toggleThread(this)">
+                <div class="thread-title-group">
+                    <h3>對話 #{{ loop.index }}</h3>
+                </div>
+                <div class="thread-center-action">
+                    <span class="toggle-icon">▼</span>
+                </div>
+                <div class="thread-meta">
+                    <span class="thread-time">📅 {{ thread.time }}</span>
+                    <span class="thread-id">ID: {{ thread.thread_id }}</span>
+                </div>
+            </div>
+            <div class="thread-body">
+                <div class="messages">
+                    {% for msg in thread.messages %}
+                    <div class="message {{ msg.role_class }}">
+                        <div class="message-header">
+                            <span class="role-name">{{ msg.time }}</span>
+                            <span class="role-icon">{{ msg.role_icon }}</span>
+                            <span class="role-name">{{ msg.role_name }}</span>
+                        </div>
+                        <div class="message-content">{{ msg.content | sanitize_html }}</div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+        {% endif %}
+
+        <div class="back-btn-container">
+            <a href="/" class="back-button">← 返回搜尋</a>
+        </div>
+    </div>
+
+    <button id="scrollTopBtn" class="scroll-top-btn" title="回到頂部">↑</button>
+
+    <script>
+        function toggleThread(headerElement) {
+            const card = headerElement.parentElement;
+            card.classList.toggle('expanded');
+        }
+
+        const scrollToTopBtn = document.getElementById("scrollTopBtn");
+        window.onscroll = function () {
+            if (document.body.scrollTop > 300 || document.documentElement.scrollTop > 300) {
+                scrollToTopBtn.style.display = "flex";
+            } else {
+                scrollToTopBtn.style.display = "none";
+            }
+        };
+        scrollToTopBtn.addEventListener("click", function () {
+            window.scrollTo({ top: 0, behavior: "smooth" });
+        });
+    </script>
+    <!-- Data Injection for IDE Compatibility -->
+    <script type="application/json" id="data-search-results">
+        {{ results | tojson | safe }}
+    </script>
+    <script type="application/json" id="data-debug-log">
+        {{ debug_log | default([]) | tojson | safe }}
+    </script>
+
+    <script>
+        // Debugging Data Injection
+        const searchResults = JSON.parse(document.getElementById('data-search-results').textContent);
+        const debugLog = JSON.parse(document.getElementById('data-debug-log').textContent);
+
+        console.group("🚀 Thread Search Debug Console");
+
+        console.log("📊 Search Summary (Scanned Threads):", debugLog);
+
+        if (searchResults.length > 0) {
+            console.group("🔍 Match Results (Processed & Raw)");
+            searchResults.forEach((item, index) => {
+                console.groupCollapsed(`Thread #${index + 1}: ${item.thread_id}`);
+                console.log("Processed:", item.messages);
+                if (item.raw_messages) {
+                    console.log("Raw OpenAI Response:", item.raw_messages);
+                }
+                console.groupEnd();
+            });
+            console.groupEnd();
+        } else {
+            console.log("❌ No Matches Found in filtered results.");
+        }
+
+        console.groupEnd();
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Thread 搜尋系統</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 40px;
+            max-width: 500px;
+            width: 100%;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            color: #555;
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+
+        input[type="text"],
+        input[type="date"] {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+
+        input[type="text"]:focus,
+        input[type="date"]:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .date-range-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .date-info {
+            background: #f8f9ff;
+            padding: 10px;
+            border-radius: 6px;
+            margin-top: 8px;
+            font-size: 13px;
+            color: #666;
+        }
+
+        .error-message {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 12px;
+            border-radius: 6px;
+            margin-top: 15px;
+            display: none;
+            font-size: 14px;
+        }
+
+        .error-message.show {
+            display: block;
+        }
+
+        button {
+            width: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 14px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+        }
+
+        button:disabled {
+            background: #ccc;
+            transform: none;
+            cursor: not-allowed;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        .loading.active {
+            display: block;
+        }
+
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>🔍 Thread 搜尋系統</h1>
+        <p class="subtitle">搜尋包含特定關鍵字的對話紀錄</p>
+
+        <form method="POST" action="/search" id="searchForm">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+            <div class="form-group">
+                <label for="group_id">請選擇群組 (必填)</label>
+                <select id="group_id" name="group_id"
+                    style="width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 16px; margin-bottom: 10px;"
+                    required>
+                    {% for group in groups %}
+                    <option value="{{ group.group_id }}">{{ group.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="target_name">請輸入搜尋關鍵字 (選填)</label>
+                <input type="text" id="target_name" name="target_name" placeholder="例如: 你的姓名或對話主題 (有在對話中出現過的)..."
+                    maxlength="50" autofocus>
+            </div>
+            <div class="form-group">
+                <label>請選擇日期範圍 (選填)</label>
+                <div class="date-range-container">
+                    <div>
+                        <input type="date" id="start_date" name="start_date" placeholder="開始日期">
+                    </div>
+                    <div>
+                        <input type="date" id="end_date" name="end_date" placeholder="結束日期">
+                    </div>
+                </div>
+                <div class="date-info" id="dateInfo">
+                    💡 至少需要填寫「關鍵字」或「日期」其中一項
+                </div>
+            </div>
+            <div class="error-message" id="errorMessage">
+                ⚠️ 請至少填寫「關鍵字」或「日期」其中一項!
+            </div>
+            <button type="submit">開始搜尋</button>
+        </form>
+
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p style="margin-top: 10px; color: #666;">搜尋中...</p>
+        </div>
+
+        <!-- Admin Link (Moved Inside) -->
+        <div style="text-align: center; margin-top: 30px; border-top: 1px solid #f0f0f0; padding-top: 20px;">
+            <a href="/admin"
+                style="color: #999; text-decoration: none; font-size: 13px; display: inline-flex; align-items: center; gap: 5px; transition: color 0.2s;">
+                ⚙️ 管理員登入
+            </a>
+        </div>
+    </div>
+
+    <script>
+        const form = document.getElementById('searchForm');
+        const loading = document.getElementById('loading');
+        const btn = document.querySelector('button[type="submit"]');
+        const targetName = document.getElementById('target_name');
+        const startDate = document.getElementById('start_date');
+        const endDate = document.getElementById('end_date');
+        const dateInfo = document.getElementById('dateInfo');
+        const errorMessage = document.getElementById('errorMessage');
+
+        // 日期範圍驗證與提示
+        function updateDateInfo() {
+            const start = startDate.value;
+            const end = endDate.value;
+
+            if (start && end) {
+                if (start > end) {
+                    dateInfo.innerHTML = '⚠️ 結束日期不可早於開始日期';
+                    dateInfo.style.background = '#fff3cd';
+                    dateInfo.style.color = '#856404';
+                } else if (start === end) {
+                    dateInfo.innerHTML = '📅 搜尋單一日期: ' + start;
+                    dateInfo.style.background = '#d1ecf1';
+                    dateInfo.style.color = '#0c5460';
+                } else {
+                    dateInfo.innerHTML = '📅 搜尋範圍: ' + start + ' 至 ' + end;
+                    dateInfo.style.background = '#d4edda';
+                    dateInfo.style.color = '#155724';
+                }
+            } else if (start && !end) {
+                dateInfo.innerHTML = '📅 搜尋 ' + start + ' 之後的紀錄';
+                dateInfo.style.background = '#f8f9ff';
+                dateInfo.style.color = '#666';
+            } else if (!start && end) {
+                dateInfo.innerHTML = '📅 搜尋 ' + end + ' 之前的紀錄';
+                dateInfo.style.background = '#f8f9ff';
+                dateInfo.style.color = '#666';
+            } else {
+                dateInfo.innerHTML = '💡 至少需要填寫「關鍵字」或「日期」其中一項';
+                dateInfo.style.background = '#f8f9ff';
+                dateInfo.style.color = '#666';
+            }
+        }
+
+        // 當選擇開始日期時,自動將結束日期設為相同
+        startDate.addEventListener('change', function () {
+            if (startDate.value && !endDate.value) {
+                endDate.value = startDate.value;
+            }
+            updateDateInfo();
+            errorMessage.classList.remove('show');
+        });
+
+        // 當選擇結束日期時,如果開始日期為空,則自動設定開始日期
+        endDate.addEventListener('change', function () {
+            if (endDate.value && !startDate.value) {
+                startDate.value = endDate.value;
+            }
+            updateDateInfo();
+            errorMessage.classList.remove('show');
+        });
+
+        // 當輸入關鍵字時,隱藏錯誤訊息
+        targetName.addEventListener('input', function () {
+            if (targetName.value.trim()) {
+                errorMessage.classList.remove('show');
+            }
+        });
+
+        // 表單驗證
+        form.addEventListener('submit', function (e) {
+            const keyword = targetName.value.trim();
+            const start = startDate.value;
+            const end = endDate.value;
+
+            // 檢查是否至少填寫了關鍵字或日期其中一項
+            if (!keyword && !start && !end) {
+                e.preventDefault();
+                errorMessage.classList.add('show');
+                errorMessage.innerHTML = '⚠️ 請至少填寫「關鍵字」或「日期」其中一項!';
+                return false;
+            }
+
+            // 檢查日期邏輯
+            if (start && end && start > end) {
+                e.preventDefault();
+                errorMessage.classList.add('show');
+                errorMessage.innerHTML = '⚠️ 結束日期不可早於開始日期!';
+                return false;
+            }
+
+            // 隱藏錯誤訊息並顯示載入狀態
+            errorMessage.classList.remove('show');
+            loading.classList.add('active');
+            btn.disabled = true;
+            btn.textContent = '搜尋中...';
+        });
+
+        // 處理瀏覽器返回
+        window.addEventListener('pageshow', function (event) {
+            if (event.persisted || (window.performance && window.performance.navigation.type === 2)) {
+                loading.classList.remove('active');
+                btn.disabled = false;
+                btn.textContent = '開始搜尋';
+                errorMessage.classList.remove('show');
+            }
+        });
+    </script>
+
+</body>
+
+</html>

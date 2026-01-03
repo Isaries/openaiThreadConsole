@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Thread 資料管理</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f7fa;
+            color: #333;
+            min-height: 100vh;
+        }
+
+        .navbar {
+            background: white;
+            padding: 15px 30px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .logo {
+            font-weight: bold;
+            font-size: 18px;
+            color: #4a5568;
+            text-decoration: none;
+        }
+
+        .nav-actions a {
+            text-decoration: none;
+            color: #666;
+            font-size: 14px;
+            margin-left: 20px;
+            transition: color 0.2s;
+        }
+
+        .nav-actions a:hover {
+            color: #667eea;
+        }
+
+        .nav-actions .logout {
+            color: #e53e3e;
+        }
+
+        /* Layout */
+        .main-container {
+            display: flex;
+            max-width: 1200px;
+            margin: 30px auto;
+            padding: 0 20px;
+            gap: 30px;
+            align-items: flex-start;
+        }
+
+        .sidebar {
+            flex: 0 0 250px;
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+            position: sticky;
+            top: 90px;
+        }
+
+        .content-area {
+            flex: 1;
+            min-width: 0;
+        }
+
+        /* Sub-components */
+        .section-card {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 25px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+        }
+
+        h2 {
+            margin-bottom: 20px;
+            font-size: 20px;
+            border-bottom: 2px solid #f0f0f0;
+            padding-bottom: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .group-item {
+            display: block;
+            padding: 12px 15px;
+            border-radius: 8px;
+            color: #4a5568;
+            text-decoration: none;
+            margin-bottom: 8px;
+            transition: background 0.2s;
+            border: 1px solid transparent;
+        }
+
+        .group-item:hover {
+            background: #f7fafc;
+        }
+
+        .group-item.active {
+            background: #ebf4ff;
+            color: #5a67d8;
+            border-color: #c3dafe;
+            font-weight: 600;
+        }
+
+        .group-list-header {
+            font-size: 14px;
+            font-weight: 600;
+            color: #718096;
+            margin-bottom: 15px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+
+        .btn-sm {
+            padding: 4px 8px;
+            font-size: 12px;
+        }
+
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #5a6fd6;
+        }
+
+        .btn-danger {
+            background: #fc8181;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #f56565;
+        }
+
+        .btn-secondary {
+            background: #edf2f7;
+            color: #4a5568;
+        }
+
+        .btn-secondary:hover {
+            background: #e2e8f0;
+        }
+
+        .input-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        input[type="text"],
+        input[type="file"] {
+            flex: 1;
+            padding: 10px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        /* Stats */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+        }
+
+        .stat-box {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 28px;
+            font-weight: bold;
+        }
+
+        .stat-label {
+            font-size: 13px;
+            opacity: 0.9;
+        }
+
+        /* Table */
+        .table-container {
+            overflow-x: auto;
+            max-height: 600px;
+            border: 1px solid #eee;
+            border-radius: 8px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+        }
+
+        th,
+        td {
+            text-align: left;
+            padding: 12px 15px;
+            border-bottom: 1px solid #eee;
+        }
+
+        th {
+            background: #f8fafc;
+            font-weight: 600;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        tr:hover {
+            background: #f8f9fa;
+        }
+
+        .alert {
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+        }
+
+        .alert-success {
+            background: #c6f6d5;
+            color: #276749;
+        }
+
+        .alert-error {
+            background: #fed7d7;
+            color: #9b2c2c;
+        }
+
+        /* Modal for Create/Edit Group */
+        #settingsSection {
+            background: #f8fafc;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: none;
+            border: 1px solid #e2e8f0;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="navbar">
+        <a href="/admin" class="logo">⚙️ Thread 管理後台</a>
+        <div class="nav-actions">
+            <a href="/">🔍 前往搜尋頁</a>
+            <a href="/logout" class="logout">登出</a>
+        </div>
+    </div>
+
+    <div class="main-container">
+        <!-- Sidebar: Group List -->
+        <div class="sidebar">
+            <div class="group-list-header">群組列表 (Groups)</div>
+            {% for g in groups %}
+            <a href="/admin?group_id={{ g.group_id }}"
+                class="group-item {% if active_group.group_id == g.group_id %}active{% endif %}">
+                {{ g.name }}
+                {% if current_role == 'admin' and g.created_by %}
+                {% set creator = users | selectattr('id', 'equalto', g.created_by) | first %}
+                <div style="font-size:11px; opacity:0.7;">
+                    👤 {{ creator.username if creator else 'Unknown' }}
+                </div>
+                {% endif %}
+            </a>
+            {% endfor %}
+            <hr style="margin: 15px 0; border: 0; border-top: 1px solid #eee;">
+
+            <div style="margin-top:10px;">
+                <button onclick="document.getElementById('createGroupForm').style.display = 'block'"
+                    class="btn btn-secondary" style="width:100%">+ 新增群組</button>
+            </div>
+
+            <form id="createGroupForm" action="/admin/group/create" method="POST"
+                style="display:none; margin-top:15px; background:#f7fafc; padding:10px; border-radius:8px;">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div style="margin-bottom:8px;">
+                    <label style="font-size:12px; font-weight:600;">群組名稱</label>
+                    <input type="text" name="name" required style="width:100%; padding:6px; margin-top:4px;">
+                </div>
+                <div style="margin-bottom:8px;">
+                    <label style="font-size:12px; font-weight:600;">API Key (必填)</label>
+                    <input type="text" name="api_key" placeholder="sk-..." required
+                        style="width:100%; padding:6px; margin-top:4px;">
+                </div>
+                <div style="display:flex; gap:5px;">
+                    <button type="submit" class="btn btn-primary btn-sm" style="flex:1">建立</button>
+                    <button type="button" onclick="this.form.style.display='none'"
+                        class="btn btn-secondary btn-sm">取消</button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Main Content -->
+        <div class="content-area">
+
+            {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+            {% for category, message in messages %}
+            <div class="alert alert-{{ category }}">{{ message }}</div>
+            {% endfor %}
+            {% endif %}
+            {% endwith %}
+
+            {% if not active_group %}
+            <div class="section-card" style="text-align: center; padding: 50px;">
+                <div style="font-size: 48px; margin-bottom: 20px;">📂</div>
+                <h3>目前沒有選擇群組或無群組</h3>
+                <p style="color: #666; margin-bottom: 20px;">請從左側選單選擇一個群組，或是建立一個新群組。</p>
+            </div>
+            {% else %}
+
+            <div class="section-card">
+                <h2>
+                    <span>📁 當前群組: {{ active_group.name }}</span>
+                    <button onclick="toggleSettings()" class="btn btn-secondary btn-sm">⚙️ 設定</button>
+                </h2>
+
+                <!-- Hidden Settings Panel -->
+                <div id="settingsSection">
+                    <form action="/admin/group/update" method="POST">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <input type="hidden" name="group_id" value="{{ active_group.group_id }}">
+
+                        <div style="margin-bottom:15px">
+                            <label style="display:block; font-weight:600; margin-bottom:5px;">修改名稱</label>
+                            <input type="text" name="name" value="{{ active_group.name }}" required>
+                        </div>
+                        <div style="margin-bottom:15px">
+                            <label style="display:block; font-weight:600; margin-bottom:5px;">OpenAI API Key
+                                (綁定此群組)</label>
+                            <div style="font-size:12px; color:#718096; margin-bottom:5px;">目前狀態: {{ masked_key }}</div>
+                            <input type="text" name="api_key" placeholder="輸入 sk-... 以更新或覆蓋系統預設值 (留空則不修改)"
+                                maxlength="200">
+                        </div>
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <div>
+                                <button type="submit" class="btn btn-primary">儲存設定</button>
+                                <button type="submit" name="clear_key" value="true" class="btn btn-secondary"
+                                    onclick="return confirm('確定清除？將改用系統預設 Key')">清除 Key</button>
+                            </div>
+
+                            <button type="submit" formaction="/admin/group/delete" formmethod="POST"
+                                class="btn btn-danger btn-sm"
+                                onclick="return confirm('確定刪除此群組嗎？所有對話 ID 將會消失！')">刪除此群組</button>
+                        </div>
+                    </form>
+                </div>
+
+                <div class="stats-grid">
+                    <div class="stat-box">
+                        <div class="stat-number">{{ threads|length }}</div>
+                        <div class="stat-label">此群組 Threads</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Upload -->
+            <div class="section-card">
+                <h3>📤 批次匯入 / 刪除 (Excel)</h3>
+                <form action="/admin/upload" method="POST" enctype="multipart/form-data">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="group_id" value="{{ active_group.group_id }}">
+                    <div class="input-group" style="margin-top:15px;">
+                        <input type="file" name="file" accept=".xlsx" required>
+                    </div>
+                    <div class="hint">請上傳 .xlsx 檔案，必須包含 <code>thread_id</code> 欄位</div>
+                    <div class="upload-actions">
+                        <button type="submit" name="action" value="add" class="btn btn-primary">📥 匯入新增</button>
+                        <button type="submit" name="action" value="delete" class="btn btn-danger"
+                            onclick="return confirm('確定要從目前的 List 中移除這些 ID 嗎？')">🗑️ 批次刪除</button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Single Add -->
+            <div class="section-card">
+                <h3>➕ 單筆新增</h3>
+                <form action="/admin/add_one" method="POST">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="group_id" value="{{ active_group.group_id }}">
+                    <div class="input-group" style="margin-top:15px;">
+                        <input type="text" name="thread_id" placeholder="輸入 Thread ID..." required maxlength="100">
+                        <button type="submit" class="btn btn-primary">新增</button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- List and Delete Multi -->
+            <div class="section-card">
+                <form action="/admin/delete_multi" method="POST" id="deleteMultiForm">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="group_id" value="{{ active_group.group_id }}">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                        <h3>📋 資料列表</h3>
+                        <button type="submit" class="btn btn-danger btn-sm"
+                            onclick="return confirm('確定刪除選取的項目？')">刪除選取項目</button>
+                    </div>
+
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th class="col-check"><input type="checkbox" onclick="toggleAll(this)"></th>
+                                    <th>Thread ID</th>
+                                    <th>備註 (Note)</th>
+                                    <th class="col-actions">操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for thread in threads %}
+                                <tr>
+                                    <td class="col-check"><input type="checkbox" name="selected_ids"
+                                            value="{{ thread.thread_id }}"></td>
+                                    <td>{{ thread.thread_id }}</td>
+                                    <td>-</td>
+                                    <td class="col-actions">
+                                        <a href="/admin/delete_one?id={{ thread.thread_id }}&group_id={{ active_group.group_id }}"
+                                            class="action-icon" title="刪除" onclick="return confirm('確定刪除？')">🗑️</a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </form>
+            </div>
+            {% endif %}
+
+            <!-- Logs -->
+            <div class="section-card">
+                <h3>📜 近期搜尋紀錄 (System Logs)</h3>
+                <div class="table-container" style="max-height: 300px; margin-top:15px;">
+                    <table style="font-size:12px;">
+                        <thead>
+                            <tr>
+                                <th>時間</th>
+                                <th>群組</th>
+                                <th>關鍵字</th>
+                                <th>結果</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for log in logs %}
+                            <tr>
+                                <td>{{ log.time }}</td>
+                                <td>{{ log.group or '-' }}</td>
+                                <td>{{ log.target }}</td>
+                                <td>{{ log.matches }} / {{ log.total }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- User Management Section (Admin Only) -->
+    {% if current_role == 'admin' %}
+    <div class="main-container" style="margin-top: 0; padding-top: 0;">
+        <div class="content-area" style="width: 100%;">
+            <div class="section-card" style="border-top: 4px solid #F6AD55;">
+                <h2>
+                    <span>👨‍🏫 教師帳戶管理 (Admin Only)</span>
+                </h2>
+
+                <div style="display: flex; gap: 30px;">
+                    <!-- Create User Form -->
+                    <div style="flex: 1; background: #fffaf0; padding: 20px; border-radius: 8px;">
+                        <h4 style="margin-top:0;">新增教師</h4>
+                        <form action="/admin/user/create" method="POST">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <div style="margin-bottom:10px;">
+                                <label style="font-weight:600; font-size:13px;">顯示名稱 (Username)</label>
+                                <input type="text" name="username" required
+                                    style="width:100%; padding:8px; margin-top:5px; border:1px solid #ddd; border-radius:4px;">
+                            </div>
+                            <div style="margin-bottom:15px;">
+                                <label style="font-weight:600; font-size:13px;">登入密碼</label>
+                                <input type="text" name="password" required
+                                    style="width:100%; padding:8px; margin-top:5px; border:1px solid #ddd; border-radius:4px;">
+                            </div>
+                            <button type="submit" class="btn btn-primary" style="width:100%;">建立帳戶</button>
+                        </form>
+                    </div>
+
+                    <!-- User List -->
+                    <div style="flex: 2;">
+                        <h4 style="margin-top:0;">現有教師列表</h4>
+                        <div class="table-container" style="max-height: 300px;">
+                            <table style="font-size:14px;">
+                                <thead>
+                                    <tr>
+                                        <th>名稱</th>
+                                        <th>建立時間</th>
+                                        <th>操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for u in users %}
+                                    <tr>
+                                        <td>{{ u.username }}</td>
+                                        <td>{{ u.created_at | format_timestamp }}</td>
+                                        <!-- Note: You might want a filter to format this timestamp properly -->
+                                        <td>
+                                            <form action="/admin/user/delete" method="POST" style="display:inline;">
+                                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                                <input type="hidden" name="user_id" value="{{ u.id }}">
+                                                <button type="submit" class="btn btn-danger btn-sm"
+                                                    onclick="return confirm('確定刪除此帳戶？')">刪除</button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                    {% else %}
+                                    <tr>
+                                        <td colspan="3" style="text-align:center; color:#999;">目前沒有教師帳戶</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <script>
+        function toggleAll(source) {
+            checkboxes = document.getElementsByName('selected_ids');
+            for (var i = 0, n = checkboxes.length; i < n; i++) {
+                checkboxes[i].checked = source.checked;
+            }
+        }
+        function toggleSettings() {
+            var el = document.getElementById('settingsSection');
+            el.style.display = (el.style.display === 'block') ? 'none' : 'block';
+        }
+    </script>
+</body>
+
+</html>
