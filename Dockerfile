@@ -12,12 +12,12 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
 # Expose port (Waitress defaults to 8081 in run_server.py)
-EXPOSE 8085
+EXPOSE 8000
 
 # Environment variables (Can be overridden at runtime)
 # FLASK_DEBUG is explicitly False for safety
 ENV FLASK_DEBUG=False
-ENV PORT=8085
+ENV PORT=8000
 
 # Run the production server
 CMD ["python", "run_server.py"]
