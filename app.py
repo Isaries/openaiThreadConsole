@@ -709,6 +709,12 @@ def create_group():
         return redirect(url_for('admin'))
         
     groups = load_groups()
+    
+    # Check for duplicate name
+    if any(g['name'] == name for g in groups):
+        flash('群組名稱已存在，請使用不同名稱', 'error')
+        return redirect(url_for('admin'))
+
     new_id = f"group_{int(datetime.now().timestamp())}"
     
     encrypted_key = ""
