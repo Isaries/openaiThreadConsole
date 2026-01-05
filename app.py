@@ -745,6 +745,7 @@ def update_group():
     name = request.form.get('name', '').strip()
     api_key = request.form.get('api_key', '').strip()
     clear_key = request.form.get('clear_key')
+    new_owner_id = request.form.get('owner_id') # For Ownership Transfer
     
     groups = load_groups()
     group = next((g for g in groups if g['group_id'] == group_id), None)
@@ -756,11 +757,32 @@ def update_group():
     # Permission Check
     current_role = session.get('role')
     user_id = session.get('user_id')
+    
+    # Admin can edit any group; Teacher can only edit own groups
     if current_role != 'admin' and group.get('created_by') != user_id:
         flash('權限不足：您只能編輯自己建立的群組', 'error')
         return redirect(url_for('admin'))
 
-    if name: group['name'] = name
+    if name: 
+        # Check duplicate name if changing name
+        if name != group['name'] and any(g['name'] == name for g in groups):
+             flash('群組名稱已存在，請使用不同名稱', 'error')
+             return redirect(url_for('admin', group_id=group_id))
+        group['name'] = name
+
+    # Ownership Transfer (Admin Only)
+    if current_role == 'admin' and new_owner_id:
+        if new_owner_id == 'admin':
+            group['created_by'] = 'admin' # Assign back to admin
+            log_audit(session.get('username'), 'Transfer Group', f"{group['name']} -> Admin")
+        else:
+            # Verify user exists
+            users = load_users()
+            new_owner = next((u for u in users if u['id'] == new_owner_id), None)
+            if new_owner:
+                group['created_by'] = new_owner_id
+                flash(f'群組已轉移給 {new_owner["username"]}', 'success')
+                log_audit(session.get('username'), 'Transfer Group', f"{group['name']} -> {new_owner['username']}")
     
     if clear_key:
         group['api_key'] = ""
@@ -793,6 +815,8 @@ def create_user():
         flash('請輸入使用者名稱與密碼', 'error')
         return redirect(url_for('admin'))
         
+    email = request.form.get('email', '').strip() # Optional for Create, but needed for login
+    
     # Password Strength Check
     is_valid, err_msg = validate_password_strength(password)
     if not is_valid:
@@ -804,9 +828,15 @@ def create_user():
         flash('使用者名稱已存在', 'error')
         return redirect(url_for('admin'))
         
+    # Check email duplicate if provided
+    if email and any(u.get('email') == email for u in users):
+        flash('此 Email 已被其他使用者使用', 'error')
+        return redirect(url_for('admin'))
+        
     new_user = {
         "id": str(uuid.uuid4()),
         "username": username,
+        "email": email, # Store Email
         "password_hash": generate_password_hash(password),
         "password_hint": generate_password_hint(password),
         "role": "teacher",

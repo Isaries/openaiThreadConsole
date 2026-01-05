@@ -286,7 +286,7 @@
                 {% if current_role == 'admin' and g.created_by %}
                 {% set creator = users | selectattr('id', 'equalto', g.created_by) | first %}
                 <div style="font-size:11px; opacity:0.7;">
-                    👤 {{ creator.username if creator else 'Unknown' }}
+                    👤 {{ creator.username if creator else 'Admin' }}
                 </div>
                 {% endif %}
             </a>
@@ -362,9 +362,25 @@
                                     <label
                                         style="display:block; font-size:13px; font-weight:700; color:#4a5568; margin-bottom:8px;">群組名稱</label>
                                     <input type="text" name="name" value="{{ active_group.name }}" required
-                                        style="width:100%; padding:10px 12px; border:1px solid #cbd5e0; border-radius:6px; font-size:15px; transition:all 0.2s; outline:none;"
+                                        style="width:100%; padding:10px 12px; border:1px solid #cbd5e0; border-radius:6px; font-size:15px; transition:all 0.2s; outline:none; margin-bottom:15px;"
                                         onfocus="this.style.borderColor='#4299e1'; this.style.boxShadow='0 0 0 3px rgba(66, 153, 225, 0.2)';"
                                         onblur="this.style.borderColor='#cbd5e0'; this.style.boxShadow='none';">
+
+                                    {% if current_role == 'admin' %}
+                                    <label
+                                        style="display:block; font-size:13px; font-weight:700; color:#4a5568; margin-bottom:8px;">群組擁有者
+                                        (派發給...)</label>
+                                    <select name="owner_id"
+                                        style="width:100%; padding:10px; border:1px solid #cbd5e0; border-radius:6px; background:#fff;">
+                                        <option value="admin" {% if not active_group.created_by or
+                                            active_group.created_by=='admin' %}selected{% endif %}>Myself (Admin)
+                                        </option>
+                                        {% for u in users %}
+                                        <option value="{{ u.id }}" {% if active_group.created_by==u.id %}selected{%
+                                            endif %}>{{ u.username }} ({{ u.email or 'No Email' }})</option>
+                                        {% endfor %}
+                                    </select>
+                                    {% endif %}
                                 </div>
 
                                 <!-- Column 2: API Key -->
@@ -566,6 +582,7 @@
                                 <thead>
                                     <tr>
                                         <th>名稱</th>
+                                        <th>Email</th>
                                         <th>密碼提示</th>
                                         <th>建立時間</th>
                                         <th>操作</th>
@@ -575,6 +592,7 @@
                                     {% for u in users %}
                                     <tr>
                                         <td>{{ u.username }}</td>
+                                        <td>{{ u.email or '-' }}</td>
                                         <td><span
                                                 style="font-family:monospace; background:#eee; padding:2px 4px; border-radius:3px;">{{
                                                 u.password_hint or '****' }}</span></td>

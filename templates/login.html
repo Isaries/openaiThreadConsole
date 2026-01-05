@@ -111,8 +111,11 @@
         <form method="POST">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
             <div class="form-group">
+                <label>Email (教師登入需填寫)</label>
+                <input type="email" name="email" placeholder="教師請輸入 Email (管理員留空)" style="margin-bottom:10px;">
+
                 <label>密碼</label>
-                <input type="password" name="password" placeholder="請輸入管理員密碼" required autofocus maxlength="100">
+                <input type="password" name="password" placeholder="請輸入密碼" required maxlength="100">
             </div>
             <button type="submit">登入</button>
         </form>
