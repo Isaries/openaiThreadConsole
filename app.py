@@ -121,6 +121,7 @@ def login():
                 session['role'] = 'teacher'
                 session['user_id'] = user['id']
                 session['username'] = user['username']
+                session['email'] = user.get('email', '')
                 
                 security.record_login_attempt(ip, True)
                 database.log_audit(user['username'], 'Login', 'Admin Panel', 'Success', f"IP: {ip}")
