@@ -604,8 +604,9 @@
                                         <td>{{ u.created_at | format_timestamp }}</td>
                                         <!-- Note: You might want a filter to format this timestamp properly -->
                                         <td>
+                                            {% set u_email = u.email or '' %}
                                             <button type="button" class="btn btn-secondary btn-sm"
-                                                onclick="openEditUserModal('{{ u.id }}', '{{ u.username }}', '{{ u.email or '' }}')">編輯</button>
+                                                onclick="openEditUserModal('{{ u.id }}', '{{ u.username }}', '{{ u_email }}')">編輯</button>
                                             <button type="button" class="btn btn-secondary btn-sm"
                                                 onclick="openResetModal('{{ u.id }}', '{{ u.username }}')">重設密碼</button>
                                             <form action="/admin/user/delete" method="POST" style="display:inline;">
