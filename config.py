@@ -4,7 +4,8 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # File Paths
-THREADS_FILE = 'threads.json'
+# File Paths
+GROUPS_FILE = 'groups.json'
 USERS_FILE = 'users.json'
 SETTINGS_FILE = 'settings.json'
 LOG_FILE = 'search_logs.json'

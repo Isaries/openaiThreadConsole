@@ -62,10 +62,10 @@ def get_user_by_username(username):
 
 # --- Groups ---
 def load_groups():
-    if not os.path.exists(config.THREADS_FILE):
+    if not os.path.exists(config.GROUPS_FILE):
         return [{"group_id": "default", "name": "預設群組", "api_key": "", "threads": []}]
     try:
-        with open(config.THREADS_FILE, 'r', encoding='utf-8') as f:
+        with open(config.GROUPS_FILE, 'r', encoding='utf-8') as f:
             data = json.load(f)
             
         # Migration Logic
@@ -90,7 +90,7 @@ def load_groups():
 def save_groups(groups):
     with data_lock:
         try:
-            with open(config.THREADS_FILE, 'w', encoding='utf-8') as f:
+            with open(config.GROUPS_FILE, 'w', encoding='utf-8') as f:
                 json.dump(groups, f, indent=2, ensure_ascii=False)
             return True
         except: return False
