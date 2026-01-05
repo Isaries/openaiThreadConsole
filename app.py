@@ -400,9 +400,15 @@ def add_one_thread():
     group_id = request.form.get('group_id')
     thread_id = request.form.get('thread_id', '').strip()
     
+    # Robustness: Try to extract thread_ ID if not verbatim
     if not thread_id.startswith('thread_'):
-        flash('Thread ID 格式錯誤', 'error')
-        return redirect(url_for('admin', group_id=group_id))
+        import re
+        match = re.search(r'(thread_[A-Za-z0-9]+)', thread_id)
+        if match:
+            thread_id = match.group(1)
+        else:
+            flash('Thread ID 格式錯誤 (應以 thread_ 開頭)', 'error')
+            return redirect(url_for('admin', group_id=group_id))
         
     groups = database.load_groups()
     group = next((g for g in groups if g['group_id'] == group_id), None)

@@ -693,9 +693,8 @@
                                                     style="display: flex; justify-content: space-between; margin-bottom: 5px;">
                                                     <span style="font-weight: bold; color: #2d3748;">🧵 Thread: {{
                                                         res.thread_id }}</span>
-                                                    <span style="
-                                                                {% if res.keep %}color: #38a169;{% else %}color: #e53e3e;{% endif %}
-                                                                font-weight: bold;">
+                                                    <span
+                                                        style="{% if res.keep %}color: #38a169;{% else %}color: #e53e3e;{% endif %} font-weight: bold;">
                                                         [{{ res.status }}]
                                                     </span>
                                                 </div>

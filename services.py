@@ -160,9 +160,9 @@ def process_thread(thread_data, target_name, start_date, end_date, api_key=None)
     status = "Filtered"
     
     if target_name:
-        if has_target: 
+        if has_target or (target_name.lower() in t_id.lower()): 
             keep_thread = True
-            status = "Matched Keyword"
+            status = "Matched Keyword/ID"
         else:
             status = "No Keyword Match"
     else:
