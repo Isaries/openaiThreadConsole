@@ -457,7 +457,7 @@
             <!-- Upload -->
             <div class="section-card">
                 <h3>📤 批次匯入 / 刪除 (Excel)</h3>
-                <form action="/admin/upload" method="POST" enctype="multipart/form-data">
+                <form action="/admin/threads/upload" method="POST" enctype="multipart/form-data">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <input type="hidden" name="group_id" value="{{ active_group.group_id }}">
                     <div class="input-group" style="margin-top:15px;">
@@ -475,7 +475,7 @@
             <!-- Single Add -->
             <div class="section-card">
                 <h3>➕ 單筆新增</h3>
-                <form action="/admin/add_one" method="POST">
+                <form action="/admin/threads/add_one" method="POST">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <input type="hidden" name="group_id" value="{{ active_group.group_id }}">
                     <div class="input-group" style="margin-top:15px;">
@@ -487,7 +487,7 @@
 
             <!-- List and Delete Multi -->
             <div class="section-card">
-                <form action="/admin/delete_multi" method="POST" id="deleteMultiForm">
+                <form action="/admin/threads/delete_multi" method="POST" id="deleteMultiForm">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <input type="hidden" name="group_id" value="{{ active_group.group_id }}">
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
@@ -514,8 +514,14 @@
                                     <td>{{ thread.thread_id }}</td>
                                     <td>-</td>
                                     <td class="col-actions">
-                                        <a href="/admin/delete_one?id={{ thread.thread_id }}&group_id={{ active_group.group_id }}"
-                                            class="action-icon" title="刪除" onclick="return confirm('確定刪除？')">🗑️</a>
+                                        <form action="/admin/threads/delete" method="POST" style="display:inline;">
+                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                            <input type="hidden" name="group_id" value="{{ active_group.group_id }}">
+                                            <input type="hidden" name="thread_id" value="{{ thread.thread_id }}">
+                                            <button type="submit" class="action-icon"
+                                                style="background:none; border:none; cursor:pointer;"
+                                                onclick="return confirm('確定刪除？')">🗑️</button>
+                                        </form>
                                     </td>
                                 </tr>
                                 {% endfor %}
