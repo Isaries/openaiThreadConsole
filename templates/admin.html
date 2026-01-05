@@ -381,6 +381,16 @@
                                         {% endfor %}
                                     </select>
                                     {% endif %}
+
+                                    <div style="margin-top: 20px; display: flex; align-items: center; gap: 10px;">
+                                        <input type="checkbox" name="is_visible" id="is_visible" {% if
+                                            active_group.get('is_visible', True) %}checked{% endif %}
+                                            style="width: 20px; height: 20px; cursor: pointer;">
+                                        <label for="is_visible"
+                                            style="font-size: 15px; font-weight: 700; color: #4a5568; cursor: pointer; margin-bottom: 0;">
+                                            顯示於搜尋頁面 (公開可見)
+                                        </label>
+                                    </div>
                                 </div>
 
                                 <!-- Column 2: API Key -->

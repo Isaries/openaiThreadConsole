@@ -570,7 +570,9 @@ def process_thread(thread_data, target_name, start_date, end_date, api_key=None)
 
 @app.route('/', methods=['GET'])
 def index():
-    groups = load_groups()
+    all_groups = load_groups()
+    # Filter for visible groups only on the search page
+    groups = [g for g in all_groups if g.get('is_visible', True)]
     return render_template('index.html', groups=groups)
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -728,6 +730,7 @@ def create_group():
         "name": name,
         "api_key": encrypted_key,
         "created_by": session.get('user_id'), # Assign Owner
+        "is_visible": True,
         "threads": []
     }
     
@@ -746,6 +749,7 @@ def update_group():
     api_key = request.form.get('api_key', '').strip()
     clear_key = request.form.get('clear_key')
     new_owner_id = request.form.get('owner_id') # For Ownership Transfer
+    is_visible = request.form.get('is_visible') == 'on' # From checkbox
     
     groups = load_groups()
     group = next((g for g in groups if g['group_id'] == group_id), None)
@@ -769,6 +773,9 @@ def update_group():
              flash('群組名稱已存在，請使用不同名稱', 'error')
              return redirect(url_for('admin', group_id=group_id))
         group['name'] = name
+
+    # Update Visibility
+    group['is_visible'] = is_visible
 
     # Ownership Transfer (Admin Only)
     if current_role == 'admin' and new_owner_id:
