@@ -63,7 +63,7 @@ def get_user_by_username(username):
 # --- Groups ---
 def load_groups():
     if not os.path.exists(config.GROUPS_FILE):
-        return [{"group_id": "default", "name": "預設群組", "api_key": "", "threads": []}]
+        return [{"group_id": "default", "name": "Default Project", "api_key": "", "threads": []}]
     try:
         with open(config.GROUPS_FILE, 'r', encoding='utf-8') as f:
             data = json.load(f)
@@ -73,7 +73,7 @@ def load_groups():
             logging.getLogger().info("Migrating old threads format to new Groups format...")
             migrated_group = {
                 "group_id": "default", 
-                "name": "預設群組 (Migrated)", 
+                "name": "Default Project (Migrated)", 
                 "api_key": "", 
                 "threads": data
             }
@@ -81,7 +81,7 @@ def load_groups():
             return [migrated_group]
         
         if isinstance(data, list) and len(data) == 0:
-             return [{"group_id": "default", "name": "預設群組", "api_key": "", "threads": [], "owners": []}]
+             return [{"group_id": "default", "name": "Default Project", "api_key": "", "threads": [], "owners": []}]
 
         # Migration: 'created_by' (str) -> 'owners' (list)
         migrated = False
@@ -101,7 +101,7 @@ def load_groups():
         return data 
     except Exception as e:
         logging.getLogger().error(f"Failed to load groups from {config.GROUPS_FILE}: {e}")
-        return [{"group_id": "default", "name": "預設群組", "api_key": "", "threads": []}]
+        return [{"group_id": "default", "name": "Default Project", "api_key": "", "threads": []}]
 
 def save_groups(groups):
     with data_lock:

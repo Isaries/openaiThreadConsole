@@ -226,16 +226,14 @@ def create_group():
     api_key = request.form.get('api_key', '').strip()
     
     if not name:
-        flash('群組名稱不能為空', 'error')
+        flash('Project 名稱不能為空', 'error')
         return redirect(url_for('admin'))
         
     if not api_key:
         flash('API Key 不能為空', 'error')
         return redirect(url_for('admin'))
         
-    groups = database.load_groups()
-    if any(g['name'] == name for g in groups):
-        flash('群組名稱已存在，請使用不同名稱', 'error')
+        flash('Project 名稱已存在，請使用不同名稱', 'error')
         return redirect(url_for('admin'))
 
     new_id = f"group_{int(datetime.now().timestamp())}"
@@ -260,7 +258,7 @@ def create_group():
     database.save_groups(groups)
     
     database.log_audit(session.get('username'), 'Create Group', name)
-    flash(f'群組 "{name}" 建立成功', 'success')
+    flash(f'Project "{name}" 建立成功', 'success')
     return redirect(url_for('admin', group_id=new_id))
 
 @app.route('/admin/group/delete', methods=['POST'])
@@ -272,21 +270,21 @@ def delete_group():
     group = next((g for g in groups if g['group_id'] == group_id), None)
     
     if not group:
-        flash('群組不存在', 'error')
+        flash('Project 不存在', 'error')
         return redirect(url_for('admin'))
         
     current_role = session.get('role')
     user_id = session.get('user_id')
     
     if current_role != 'admin' and user_id not in group.get('owners', []):
-        flash('權限不足：您只能刪除自己建立的群組', 'error')
+        flash('權限不足：您只能刪除自己建立的 Project', 'error')
         return redirect(url_for('admin'))
     
     groups = [g for g in groups if g['group_id'] != group_id]
     database.save_groups(groups)
     
     database.log_audit(session.get('username'), 'Delete Group', group['name'])
-    flash(f'群組 "{group["name"]}" 已刪除', 'success')
+    flash(f'Project "{group["name"]}" 已刪除', 'success')
     return redirect(url_for('admin'))
 
 @app.route('/admin/group/update', methods=['POST'])
@@ -304,14 +302,14 @@ def update_group():
     group = next((g for g in groups if g['group_id'] == group_id), None)
     
     if not group:
-        flash('群組不存在', 'error')
+        flash('Project 不存在', 'error')
         return redirect(url_for('admin'))
     
     current_role = session.get('role')
     user_id = session.get('user_id')
     
     if current_role != 'admin' and user_id not in group.get('owners', []):
-        flash('權限不足：您只能編輯自己建立的群組', 'error')
+        flash('權限不足：您只能編輯自己建立的 Project', 'error')
         return redirect(url_for('admin'))
 
     # Optimistic Locking Check
@@ -322,7 +320,7 @@ def update_group():
 
     if name: 
         if name != group['name'] and any(g['name'] == name for g in groups):
-             flash('群組名稱已存在，請使用不同名稱', 'error')
+             flash('Project 名稱已存在，請使用不同名稱', 'error')
              return redirect(url_for('admin', group_id=group_id))
         group['name'] = name
 
@@ -489,7 +487,7 @@ def upload_file():
                 flash(f'成功刪除 {removed_count} 筆 Thread', 'success')
                 database.log_audit(session.get('username'), 'Batch Delete Excel', f"{removed_count} threads from {group['name']}")
             else:
-                 flash('沒有刪除任何 Thread (Excel 中的 ID 在群組中找不到)', 'warning')
+                 flash('沒有刪除任何 Thread (Excel 中的 ID 在 Project 中找不到)', 'warning')
 
         else:
             # Batch Add Logic

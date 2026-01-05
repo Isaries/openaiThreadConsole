@@ -284,7 +284,7 @@
     <div class="main-container">
         <!-- Sidebar: Group List -->
         <div class="sidebar">
-            <div class="group-list-header">群組列表 (Groups)</div>
+            <div class="group-list-header">Project 列表 (Projects)</div>
             {% for g in groups %}
             <a href="/admin?group_id={{ g.group_id }}"
                 class="group-item {% if active_group.group_id == g.group_id %}active{% endif %}">
@@ -301,14 +301,14 @@
 
             <div style="margin-top:10px;">
                 <button onclick="document.getElementById('createGroupForm').style.display = 'block'"
-                    class="btn btn-secondary" style="width:100%">+ 新增群組</button>
+                    class="btn btn-secondary" style="width:100%">+ 新增 Project</button>
             </div>
 
             <form id="createGroupForm" action="/admin/group/create" method="POST"
                 style="display:none; margin-top:15px; background:#f7fafc; padding:10px; border-radius:8px;">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <div style="margin-bottom:8px;">
-                    <label style="font-size:12px; font-weight:600;">群組名稱</label>
+                    <label style="font-size:12px; font-weight:600;">Project 名稱</label>
                     <input type="text" name="name" required style="width:100%; padding:6px; margin-top:4px;">
                 </div>
                 <div style="margin-bottom:8px;">
@@ -338,14 +338,14 @@
             {% if not active_group %}
             <div class="section-card" style="text-align: center; padding: 50px;">
                 <div style="font-size: 48px; margin-bottom: 20px;">📂</div>
-                <h3>目前沒有選擇群組或無群組</h3>
-                <p style="color: #666; margin-bottom: 20px;">請從左側選單選擇一個群組，或是建立一個新群組。</p>
+                <h3>目前沒有選擇 Project 或無 Project</h3>
+                <p style="color: #666; margin-bottom: 20px;">請從左側選單選擇一個 Project，或是建立一個新 Project。</p>
             </div>
             {% else %}
 
             <div class="section-card">
                 <h2>
-                    <span>📁 當前群組: {{ active_group.name }}</span>
+                    <span>📁 當前 Project: {{ active_group.name }}</span>
                     <button onclick="toggleSettings()" class="btn btn-secondary btn-sm">⚙️ 設定</button>
                 </h2>
 
@@ -355,7 +355,7 @@
                     <div
                         style="padding:15px 25px; background:#f8fafc; border-bottom:1px solid #e2e8f0; display:flex; align-items:center;">
                         <span style="font-size:18px; margin-right:10px;">⚙️</span>
-                        <h4 style="margin:0; color:#2d3748; font-size:16px;">群組設定</h4>
+                        <h4 style="margin:0; color:#2d3748; font-size:16px;">Project 設定</h4>
                     </div>
                     <div style="padding:25px;">
                         <form action="/admin/group/update" method="POST">
@@ -367,7 +367,8 @@
                                 <!-- Column 1: Rename -->
                                 <div>
                                     <label
-                                        style="display:block; font-size:13px; font-weight:700; color:#4a5568; margin-bottom:8px;">群組名稱</label>
+                                        style="display:block; font-size:13px; font-weight:700; color:#4a5568; margin-bottom:8px;">Project
+                                        名稱</label>
                                     <input type="text" name="name" value="{{ active_group.name }}" required
                                         style="width:100%; padding:10px 12px; border:1px solid #cbd5e0; border-radius:6px; font-size:15px; transition:all 0.2s; outline:none; margin-bottom:15px;"
                                         onfocus="this.style.borderColor='#4299e1'; this.style.boxShadow='0 0 0 3px rgba(66, 153, 225, 0.2)';"
@@ -375,7 +376,8 @@
 
                                     {% if current_role == 'admin' %}
                                     <label
-                                        style="display:block; font-size:13px; font-weight:700; color:#4a5568; margin-bottom:8px;">群組擁有者
+                                        style="display:block; font-size:13px; font-weight:700; color:#4a5568; margin-bottom:8px;">Project
+                                        擁有者
                                         (派發給...)</label>
                                     <div
                                         style="border:1px solid #cbd5e0; border-radius:6px; background:#fff; max-height:150px; overflow-y:auto; padding:10px;">
@@ -456,8 +458,8 @@
                                     style="color:#e53e3e; background:white; border:1px solid #fed7d7; font-size:13px; padding:8px 20px; border-radius:6px; transition:0.2s;"
                                     onmouseover="this.style.background='#fff5f5'"
                                     onmouseout="this.style.background='white'"
-                                    onclick="return confirm('⚠️ 危險操作：確定刪除此群組？這將無法復原！')">
-                                    🗑️ 刪除此群組
+                                    onclick="return confirm('⚠️ 危險操作：確定刪除此 Project？這將無法復原！')">
+                                    🗑️ 刪除此 Project
                                 </button>
 
                                 <button type="submit" class="btn btn-primary"
@@ -470,7 +472,7 @@
                 <div class="stats-grid">
                     <div class="stat-box">
                         <div class="stat-number">{{ threads|length }}</div>
-                        <div class="stat-label">此群組 Threads</div>
+                        <div class="stat-label">此 Project Threads</div>
                     </div>
                 </div>
             </div>
@@ -561,7 +563,7 @@
                         <thead>
                             <tr>
                                 <th>時間</th>
-                                <th>群組</th>
+                                <th>Project</th>
                                 <th>關鍵字</th>
                                 <th>結果</th>
                             </tr>
