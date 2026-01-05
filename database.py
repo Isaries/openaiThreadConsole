@@ -4,20 +4,34 @@ import threading
 import logging
 from logging.handlers import RotatingFileHandler
 from datetime import datetime
+from flask import request, has_request_context
 import config
 
 # --- Concurrency Control ---
 data_lock = threading.Lock()
 
 # --- Audit Logging ---
-audit_handler = RotatingFileHandler(config.AUDIT_LOG_FILE, maxBytes=1000000, backupCount=5)
-audit_handler.setFormatter(logging.Formatter('[%(asctime)s] %(message)s'))
+audit_handler = RotatingFileHandler(config.AUDIT_LOG_FILE, maxBytes=1000000, backupCount=5, encoding='utf-8')
+audit_handler.setFormatter(logging.Formatter('[%(asctime)s] %(message)s', datefmt='%Y-%m-%d %H:%M:%S'))
 audit_logger = logging.getLogger('audit')
 audit_logger.setLevel(logging.INFO)
 audit_logger.addHandler(audit_handler)
 
 def log_audit(user, action, target, status="Success", details=""):
-    msg = f"[User: {user}] [Action: {action}] [Target: {target}] [Status: {status}] {details}"
+    ip_info = ""
+    # Auto-detect IP if in request context
+    if has_request_context():
+        try:
+            # Check if proxied (X-Forwarded-For) or direct
+            ip = request.headers.get('X-Forwarded-For', request.remote_addr)
+            if ip:
+                # If multiple IPs in XFF, take the first one
+                ip = ip.split(',')[0].strip()
+                if "IP:" not in details: # Avoid double logging if passed in details
+                    ip_info = f" IP: {ip}"
+        except: pass
+
+    msg = f"[User: {user}] [Action: {action}] [Target: {target}] [Status: {status}] {details}{ip_info}"
     audit_logger.info(msg)
     # Also log to root logger for console visibility (simulating app.logger)
     logging.getLogger().info(f"AUDIT: {msg}")

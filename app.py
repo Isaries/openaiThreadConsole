@@ -60,6 +60,10 @@ def index():
     all_groups = database.load_groups()
     # Filter for visible groups
     groups = [g for g in all_groups if g.get('is_visible', True)]
+    
+    # Optional: Log visit (Unknown/User)
+    database.log_audit(session.get('username', 'Unknown'), 'Visit', 'Home')
+    
     return render_template('index.html', groups=groups)
 
 @app.before_request
@@ -136,6 +140,8 @@ def logout():
 @app.route('/admin')
 def admin():
     if not session.get('user_id'): return redirect(url_for('login'))
+    
+    database.log_audit(session.get('username'), 'Visit', 'Admin Panel')
     
     all_groups = database.load_groups()
     current_role = session.get('role', 'teacher')
@@ -513,7 +519,12 @@ def search():
     if api_key:
         api_key = security.get_decrypted_key(api_key)
     
-    # Audit Search
+    # Audit Search (This now goes to audit.log for IP monitoring)
+    # Note: Search params might be sensitive content, so maybe just log "Search" + Target Name length or generic?
+    # User requested "search content", so we log target_name
+    database.log_audit(session.get('username', 'Unknown'), 'Search', target_name or 'All', 'Success', f"Group: {group['name']}")
+    
+    # Legacy Search Log (kept for file-based strict history if needed)
     log_entry = {
          'timestamp': int(datetime.now().timestamp()),
          'group': group['name'],
@@ -695,6 +706,12 @@ def ban_ip_route():
     ip = request.form.get('ip')
     duration = request.form.get('duration', type=int) # seconds
     reason = request.form.get('reason', 'Admin Action')
+    
+    # Self-Ban Prevention
+    current_ip = get_remote_address()
+    if ip == current_ip:
+        flash('⚠️ 安全警告：您不能封鎖自己的 IP！以免將自己拒於門外。', 'error')
+        return redirect(url_for('admin'))
     
     if ip:
         security.ban_ip(ip, duration, reason)
