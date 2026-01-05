@@ -273,6 +273,22 @@
         const endDate = document.getElementById('end_date');
         const dateInfo = document.getElementById('dateInfo');
         const errorMessage = document.getElementById('errorMessage');
+        const groupIdSelect = document.getElementById('group_id');
+
+        // --- Persistence Logic (localStorage) ---
+        // 1. Restore selection on load
+        const savedGroup = localStorage.getItem('threadConsole_selectedGroup');
+        if (savedGroup) {
+            // Check if option exists (in case user was removed from group)
+            if (groupIdSelect.querySelector(`option[value="${savedGroup}"]`)) {
+                groupIdSelect.value = savedGroup;
+            }
+        }
+
+        // 2. Save selection on change
+        groupIdSelect.addEventListener('change', function () {
+            localStorage.setItem('threadConsole_selectedGroup', this.value);
+        });
 
         // 日期範圍驗證與提示
         function updateDateInfo() {
