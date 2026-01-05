@@ -579,6 +579,59 @@
                                 <td>{{ log.target }}</td>
                                 <td>{{ log.matches }} / {{ log.total }}</td>
                             </tr>
+                            <tr>
+                                <td colspan="4" style="padding: 0; border: none;">
+                                    <details style="margin: 5px 15px;">
+                                        <summary
+                                            style="cursor: pointer; color: #667eea; font-weight: bold; margin-bottom: 5px; outline: none; font-size: 12px;">
+                                            👉 查看詳細 API 回應 (Debug Info)
+                                        </summary>
+                                        <div
+                                            style="background: #f8f9fa; padding: 10px; border-radius: 6px; margin-bottom: 10px; border: 1px solid #e2e8f0;">
+                                            {% if log.api_results %}
+                                            <div style="font-size: 11px; margin-bottom: 5px; color: #666;">
+                                                Search Duration: <strong>{{ log.api_results|length }} threads
+                                                    checked</strong>
+                                            </div>
+                                            {% for res in log.api_results %}
+                                            <div
+                                                style="margin-bottom: 10px; border-bottom: 1px dashed #cbd5e0; padding-bottom: 10px;">
+                                                <div
+                                                    style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                                                    <span style="font-weight: bold; color: #2d3748;">🧵 Thread: {{
+                                                        res.thread_id }}</span>
+                                                    <span style="
+                                                                {% if res.keep %}color: #38a169;{% else %}color: #e53e3e;{% endif %}
+                                                                font-weight: bold;">
+                                                        [{{ res.status }}]
+                                                    </span>
+                                                </div>
+
+                                                {% if res.raw_messages %}
+                                                <div style="margin-top: 5px;">
+                                                    <details>
+                                                        <summary
+                                                            style="cursor: pointer; color: #4a5568; font-size: 11px;">
+                                                            📄 Raw JSON Response ({{ res.raw_messages|length }} msgs)
+                                                        </summary>
+                                                        <pre
+                                                            style="font-size: 11px; background: #2d3748; color: #a3bffa; padding: 10px; border-radius: 6px; max-height: 250px; overflow-y: auto; margin-top: 5px; white-space: pre-wrap; font-family: monospace;">{{ res.raw_messages | tojson(indent=2) }}</pre>
+                                                    </details>
+                                                </div>
+                                                {% else %}
+                                                <div style="color: #a0aec0; font-size: 11px; padding-left: 10px;">⚠️ No
+                                                    Raw Data Retrieved</div>
+                                                {% endif %}
+                                            </div>
+                                            {% endfor %}
+                                            {% else %}
+                                            <span style="color: #a0aec0; font-size: 12px;">(此紀錄無詳細 API 資料 / Legacy
+                                                Log)</span>
+                                            {% endif %}
+                                        </div>
+                                    </details>
+                                </td>
+                            </tr>
                             {% endfor %}
                         </tbody>
                     </table>

@@ -560,15 +560,7 @@ def search():
     # User requested "search content", so we log target_name
     database.log_audit(session.get('username', 'Unknown'), 'Search', target_name or 'All', 'Success', f"Group: {group['name']}")
     
-    # Legacy Search Log (kept for file-based strict history if needed)
-    log_entry = {
-         'timestamp': int(datetime.now().timestamp()),
-         'group': group['name'],
-         'target': target_name,
-         'date_range': f"{date_from}-{date_to}"
-    }
-    database.save_log(log_entry)
-
+    
     start_time = time.time()
 
     try:
@@ -585,6 +577,19 @@ def search():
     except Exception as e:
         logging.getLogger().error(f"Search Error: {e}")
         return render_template('result.html', results=[], target_name=target_name, count=0, debug_log=[], error="搜尋發生錯誤，請稍後再試")
+
+    # Save Log (Moved to after search to include results)
+    log_entry = {
+         'timestamp': int(datetime.now().timestamp()),
+         'time': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+         'group': group['name'],
+         'target': target_name,
+         'date_range': f"{date_from}-{date_to}",
+         'matches': len(results),
+         'total': len(threads_list),
+         'api_results': debug_log # List of results from process_thread
+    }
+    database.save_log(log_entry)
     
     end_time = time.time()
     duration = end_time - start_time

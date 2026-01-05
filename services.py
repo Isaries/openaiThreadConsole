@@ -206,5 +206,8 @@ def process_thread(thread_data, target_name, start_date, end_date, api_key=None)
             'messages': processed_messages,
             'raw_messages': messages_data # Debug: Pass raw API response
         }
+    
+    # Always include raw messages for System Log debugging
+    result['raw_messages'] = messages_data
         
     return result
