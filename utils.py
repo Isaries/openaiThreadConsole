@@ -1,12 +1,12 @@
 import bleach
 from datetime import datetime, timezone, timedelta
-from markupsafe import escape
+from markupsafe import escape, Markup
 
 # --- Template Filters ---
 def nl2br(value):
     if not value: return ""
     # Escape first, then replace newline with <br>
-    return str(escape(value)).replace('\n', '<br>')
+    return Markup(str(escape(value)).replace('\n', '<br>'))
 
 def sanitize_html(value):
     if not value: return ""
@@ -15,7 +15,8 @@ def sanitize_html(value):
         '*': ['class', 'style'],
         'a': ['href', 'target', 'rel']
     }
-    return bleach.clean(value, tags=allowed_tags, attributes=allowed_attrs, strip=True)
+    cleaned = bleach.clean(value, tags=allowed_tags, attributes=allowed_attrs, strip=True)
+    return Markup(cleaned)
 
 # --- Date/Time Helpers ---
 def unix_to_utc8(unix_timestamp):
