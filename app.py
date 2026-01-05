@@ -736,8 +736,8 @@ def update_user():
     return redirect(url_for('admin'))
 
 @app.route('/print-view', methods=['POST'])
-@login_required
 def print_view():
+    if not session.get('user_id'): return redirect(url_for('login'))
     thread_ids = request.form.getlist('thread_ids')
     if not thread_ids:
         return "No threads selected", 400
