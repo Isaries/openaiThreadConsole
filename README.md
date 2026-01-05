@@ -60,7 +60,7 @@ The project follows a modular architecture to ensure maintainability:
 
 1.  **Clone Repository**
     ```bash
-    git clone <https://github.com/Isaries/openaiThreadConsole>
+    git clone https://github.com/Isaries/openaiThreadConsole
     cd openaiThreadConsole
     ```
 
