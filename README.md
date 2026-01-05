@@ -1,52 +1,56 @@
 # OpenAI Thread Console
 
-This is a Flask-based management system for OpenAI Assistant Threads. It allows educational institutions or teams to manage multiple thread projects, providing role-based access control (Admin/Teacher), keyword searching, conversation viewing, and a comprehensive backend monitoring system.
+This is a comprehensive management system for OpenAI Assistant Threads, built with Flask. It is designed for educational institutions and teams to manage multiple thread "Projects" securely. The system provides role-based access control (Admin/Teacher), advanced search capabilities, server-side PDF generation, and a robust monitoring system.
 
 ---
 
 ## Key Features
 
-### 1. Project Management
-*   **Multi-Owner Support**: Projects can be assigned to multiple teachers. Admins have full control over assignment, while teachers can only view projects they are assigned to.
-*   **Optimistic Locking**: Prevents data overwrite conflicts when multiple administrators edit the same project simultaneously.
-*   **Orphan Handling**: Automatically cleans up ownership when a user account is deleted. If a project has no owners left, it reverts to Admin management.
-*   **API Key Management**: Supports project-specific OpenAI API Keys (stored with AES-256 encryption via Fernet) or falls back to the system default key.
+### 1. Project & Thread Management
+*   **Multi-Owner Projects**: Projects can be assigned to multiple teachers. Administrators maintain full control over assignments, while teachers can only access projects explicitly assigned to them.
+*   **Smart Thread Management**: 
+    *   **Optimistic Locking**: Prevents data conflicts when multiple administrators modify project settings simultaneously.
+    *   **Orphan Handling**: Automatically reassigns project ownership to Administrators if a teacher account is deleted.
+    *   **Smart ID Extraction**: Automatically extracts Thread IDs from full URLs pasted into the Admin interface.
+*   **Encrypted API Keys**: Project-specific OpenAI API keys are stored using AES-256 encryption (Fernet), ensuring security at rest.
 
-### 2. Search Portal
-*   **Cross-Project Search**: Users can select specific projects to search through conversation history.
-*   **Keyword Highlighting**: Keywords in search results are highlighted for easier reading.
-*   **Date Filtering**: Supports filtering conversations by start and end dates.
-*   **Visibility Control**: Only displays projects marked as "Visible" to general users.
+### 2. Search & Discovery
+*   **Advanced Search**: Users can search for threads across specific projects using keywords, date ranges, or direct Thread IDs.
+*   **Visibility Control**: Projects can be toggled as "Visible" or "Hidden". Hidden projects are inaccessible to the public and require authentication for all actions.
+*   **Keyword Highlighting**: Search terms are automatically highlighted within the conversation preview for quick reference.
 
-### 3. User & Session Management
-*   **Role-Based Access**:
-    *   **Admins**: Full access to all projects, user management, and system settings. Login via Password (or optional username 'admin').
-    *   **Teachers**: Restricted access to assigned projects only. Login via Email + Password.
-*   **Session Security**:
-    *   Strict 1-hour session timeout.
-    *   Automatic IP lockout after multiple failed login attempts.
-*   **User Management**: Administrators can create, delete, and edit teacher accounts. Password hints are stored for recovery assistance.
+### 3. PDF Export & Reporting
+*   **Server-Side Generation**: Utilizes WeasyPrint to generate high-fidelity PDFs directly on the server, ensuring consistent rendering across all devices (Desktop, Tablet, Mobile).
+*   **Split-PDF Logic**: Long conversations (over 50 messages) are automatically split into multiple PDF files and bundled into a ZIP archive for easier downloading and printing.
+*   **Visitor Access**: Publicly visible projects allow visitors to download conversation PDFs without requiring a login. Private projects remain strictly protected behind authentication.
+*   **Full Language Support**: Includes fonts for CJK (Chinese, Japanese, Korean) characters to ensure correct rendering.
 
-### 4. System Security & Monitoring
-*   **IP Access Control**:
-    *   **Monitoring**: Real-time logging of all actions (Login, Search, Visit, Data Modification) grouped by IP address.
-    *   **Ban System**: Administrators can ban IP addresses for specific durations (15m, 1h, 8h, 1d, 30d, Permanent).
-    *   **Real IP Detection**: Prioritizes `X-Forwarded-For` header to support Nginx Proxy Manager, crucial for Docker deployments.
-*   **Audit Logging**: Comprehensive logs for all critical actions, viewable directly from the admin dashboard.
-*   **Data Protection**: API Keys are encrypted at rest. Files are excluded from git.
+### 4. User & Session Security
+*   **Role-Based Access Control (RBAC)**:
+    *   **Administrators**: Complete system access, including user management, IP bans, and audit logs.
+    *   **Teachers**: Access limited to assigned projects.
+*   **Enhanced Security**:
+    *   **Session Management**: Strict 1-hour session timeout.
+    *   **IP Security**: Automatic lockout after multiple failed login attempts and an administrative IP ban system.
+    *   **Email Validation**: Enforces unique email addresses and character limits during user creation.
+*   **Responsive Design**: The entire interface is optimized for mobile and tablet devices, providing a seamless experience on any screen size.
+
+### 5. System Monitoring
+*   **Real-Time Audit Log**: Tracks all critical actions (Login, Search, Data Modification) with timestamps and user details.
+*   **IP Monitoring**: visualizes activity grouped by IP address, allowing administrators to identify and block suspicious traffic.
+*   **Real-IP Support**: Configured to respect `X-Forwarded-For` headers, ensuring accurate IP logging when deployed behind a reverse proxy (e.g., Nginx).
 
 ---
 
 ## Architecture
 
-The project follows a modular architecture to ensure maintainability:
+The application follows a modular structure for scalability and maintainability:
 
-*   **app.py**: Route Controller, handling HTTP requests, authentication, and view logic.
-*   **config.py**: System configuration, managing environment variables and constants.
-*   **database.py**: Persistence Layer, handling JSON file I/O (users.json, groups.json, ip_bans.json) and thread-safe locking.
-*   **security.py**: Security module, handling encryption (Fernet), password hashing, IP ban enforcement, and session validation.
-*   **services.py**: Business logic and external services, including OpenAI API interactions and message content processing.
-*   **utils.py**: Utility functions for date formatting, HTML sanitization, and helper tools.
+*   **app.py**: The central controller handling HTTP routes, request processing, and view rendering.
+*   **services.py**: Contains core business logic, including OpenAI API integration and message processing.
+*   **database.py**: Manages data persistence using JSON flat-files with thread-safe locking mechanisms.
+*   **security.py**: Handles encryption, password hashing, session validation, and IP blocking enforcement.
+*   **utils.py**: Provides helper functions for HTML sanitization, date formatting, and markdown processing.
 
 ---
 
@@ -54,7 +58,7 @@ The project follows a modular architecture to ensure maintainability:
 
 ### Prerequisites
 *   Docker and Docker Compose
-*   (Recommended) Nginx Proxy Manager for SSL and real IP forwarding
+*   (Recommended) Nginx Proxy Manager for SSL termination and Real-IP forwarding.
 
 ### Docker Deployment
 
@@ -65,15 +69,15 @@ The project follows a modular architecture to ensure maintainability:
     ```
 
 2.  **Configure Environment**
-    Create a `.env` file with your credentials:
+    Create a `.env` file in the root directory:
     ```ini
-    SECRET_KEY=your-random-secure-secret-key
-    OPENAI_API_KEY=sk-proj-your-default-openai-key
+    SECRET_KEY=your-secure-random-key
+    OPENAI_API_KEY=sk-proj-your-default-key
     ADMIN_PASSWORD=your-admin-password
     ```
 
-3.  **Prepare Data Files**
-    You must create these files locally to ensure Docker mounts them correctly with persistence.
+3.  **Initialize Data Files**
+    Create the necessary JSON files for data persistence:
     ```bash
     touch groups.json ip_bans.json audit.log users.json
     echo "[]" > groups.json
@@ -97,21 +101,21 @@ The project follows a modular architecture to ensure maintainability:
       thread-console
     ```
 
-### Networking Note (Important)
-By default, Docker containers in Bridge mode will mask the client IP address. To view real user IPs in the Admin Panel (essential for the Ban System to work correctly), it is highly recommended to run this container behind a reverse proxy like Nginx Proxy Manager and configure it to pass the `X-Forwarded-For` header.
+### Networking Note
+To ensure the Admin Panel correctly displays user IP addresses, deploying behind a reverse proxy (like Nginx) is highly recommended. Ensure the proxy passes the `X-Forwarded-For` header.
 
 ---
 
 ## Data Storage
 
-This system uses JSON files as a lightweight, persistent database:
+The system uses local JSON files for lightweight, portable data storage:
 
-*   **users.json**: User account information (ID, Username, Email, Password Hash).
-*   **groups.json**: Project configurations, including Thread IDs, Owner IDs, and encrypted API Keys.
-*   **ip_bans.json**: Registry of currently banned IP addresses and their expiration times.
-*   **audit.log**: System operation audit logs in text format.
+*   **users.json**: Stores user credentials and profile data.
+*   **groups.json**: Stores project configurations, thread associations, and encrypted API keys.
+*   **ip_bans.json**: Registry of banned IP addresses and expiration times.
+*   **audit.log**: Chronological log of system events.
 
-> **Note**: These files are critical for data persistence. Ensure they are properly mounted when using Docker.
+> **Important**: Ensure these files are mounted to persistent volumes in Docker to prevent data loss during container restarts.
 
 ---
 
