@@ -121,4 +121,4 @@ The system uses local JSON files for lightweight, portable data storage:
 
 ## Copyright
 
-Copyright (c) 2024 Thread Console System. All Rights Reserved.
+Copyright (c) 2026 Isaries All Rights Reserved.
