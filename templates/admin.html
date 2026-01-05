@@ -605,6 +605,8 @@
                                         <!-- Note: You might want a filter to format this timestamp properly -->
                                         <td>
                                             <button type="button" class="btn btn-secondary btn-sm"
+                                                onclick="openEditUserModal('{{ u.id }}', '{{ u.username }}', '{{ u.email or '' }}')">編輯</button>
+                                            <button type="button" class="btn btn-secondary btn-sm"
                                                 onclick="openResetModal('{{ u.id }}', '{{ u.username }}')">重設密碼</button>
                                             <form action="/admin/user/delete" method="POST" style="display:inline;">
                                                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -655,6 +657,37 @@
         </div>
     </div>
 
+    <div id="editUserModal"
+        style="display:none; position:fixed; right:0; top:0; width:100%; height:100%; z-index:2000; align-items:center; justify-content:center; pointer-events: none;">
+        <div style="position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); pointer-events: auto;"
+            onclick="closeEditUserModal()"></div>
+        <div
+            style="background:white; padding:20px; border-radius:8px; width:350px; box-shadow:0 4px 6px rgba(0,0,0,0.1); z-index:2001; pointer-events: auto; position: relative;">
+            <h3 style="margin-top:0;">編輯使用者資料</h3>
+            <form action="/admin/user/update_info" method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="user_id" id="editUserId">
+
+                <div style="margin-bottom:15px;">
+                    <label style="font-weight:600; font-size:13px;">顯示名稱 (Username)</label>
+                    <input type="text" name="username" id="editUsername" required
+                        style="width:100%; padding:8px; margin-top:5px; border:1px solid #ddd; border-radius:4px;">
+                </div>
+
+                <div style="margin-bottom:15px;">
+                    <label style="font-weight:600; font-size:13px;">Email</label>
+                    <input type="email" name="email" id="editEmail" placeholder="選填"
+                        style="width:100%; padding:8px; margin-top:5px; border:1px solid #ddd; border-radius:4px;">
+                </div>
+
+                <div style="display:flex; justify-content:flex-end; gap:10px;">
+                    <button type="button" class="btn btn-secondary" onclick="closeEditUserModal()">取消</button>
+                    <button type="submit" class="btn btn-primary">儲存變更</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <script>
         function toggleAll(source) {
             checkboxes = document.getElementsByName('selected_ids');
@@ -675,6 +708,17 @@
 
         function closeResetModal() {
             document.getElementById('resetPasswordModal').style.display = 'none';
+        }
+
+        function openEditUserModal(userId, username, email) {
+            document.getElementById('editUserId').value = userId;
+            document.getElementById('editUsername').value = username;
+            document.getElementById('editEmail').value = email;
+            document.getElementById('editUserModal').style.display = 'flex';
+        }
+
+        function closeEditUserModal() {
+            document.getElementById('editUserModal').style.display = 'none';
         }
     </script>
 </body>

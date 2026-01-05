@@ -850,6 +850,50 @@ def create_user():
     flash(f'教師帳戶 "{username}" 建立成功', 'success')
     return redirect(url_for('admin'))
 
+@app.route('/admin/user/update_info', methods=['POST'])
+def update_user_info():
+    if not session.get('user_id'): return redirect(url_for('login'))
+    if session.get('role') != 'admin':
+        flash('權限不足', 'error')
+        return redirect(url_for('admin'))
+
+    user_id = request.form.get('user_id')
+    new_username = request.form.get('username', '').strip()
+    new_email = request.form.get('email', '').strip()
+    
+    if not new_username:
+         flash('名稱不能為空', 'error')
+         return redirect(url_for('admin'))
+
+    users = load_users()
+    target_user = next((u for u in users if u['id'] == user_id), None)
+    
+    if not target_user:
+        flash('找不到該使用者', 'error')
+        return redirect(url_for('admin'))
+        
+    # Check duplicate username (exclude self)
+    if new_username != target_user['username']:
+        if any(u['username'] == new_username for u in users):
+            flash('名稱已存在', 'error')
+            return redirect(url_for('admin'))
+
+    # Check duplicate email (exclude self)
+    if new_email and new_email != target_user.get('email'):
+        if any(u.get('email') == new_email for u in users):
+            flash('Email 已存在', 'error')
+            return redirect(url_for('admin'))
+
+    old_username = target_user['username']
+    target_user['username'] = new_username
+    target_user['email'] = new_email
+    
+    save_users(users)
+    
+    log_audit(session.get('username'), 'Update User', f"{old_username} -> {new_username} (Info Update)")
+    flash(f'使用者資料更新成功', 'success')
+    return redirect(url_for('admin'))
+
 @app.route('/admin/user/delete', methods=['POST'])
 def delete_user():
     if not session.get('user_id'): return redirect(url_for('login'))
