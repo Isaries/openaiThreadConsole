@@ -735,6 +735,76 @@ def update_user():
     flash(f'用戶 {new_username} 資料更新成功', 'success')
     return redirect(url_for('admin'))
 
+@app.route('/print-view', methods=['POST'])
+@login_required
+def print_view():
+    thread_ids = request.form.getlist('thread_ids')
+    if not thread_ids:
+        return "No threads selected", 400
+        
+    # We need to re-fetch or use cached data. To keep it simple and accurate, we'll re-fetch from cache/API 
+    # BUT, actually, the search result already has processed data. 
+    # Re-fetching might be slow. 
+    # Optimization: On result.html, we have the full data in JS.
+    # But for a robust server-side print view, we should re-process.
+    # However, `process_thread` takes time.
+    # Let's see... `process_thread` fetches from API.
+    # For a print view, we hopefully have a target_name context? Maybe not necessary for print.
+    # Let's just re-fetch messages.
+    
+    # Wait, `request.form` could potentially receive a huge JSON? No, limitations.
+    # Let's use the session or valid parameters.
+    # Or, to be efficient, we can accept JSON body if we POST via JS.
+    # Because we want to re-use the search result data without hitting OpenAI 50 times again.
+    
+    # Approach: The `result.html` form will POST `thread_ids`.
+    # We will assume we need to re-fetch for now to be safe and use latest data.
+    # OR, we can try to pass the data? No, too big.
+    
+    # Re-fetching is safer but potentially slow.
+    # Let's check `services.process_thread`. It uses `fetch_thread_messages`.
+    # Does `fetch_thread_messages` cache? Not explicitly in the code I saw.
+    # That's a risk. If user selects 20 threads, we make 20 API calls.
+    # BUT, `fetch_thread_messages` is fast if threads are short.
+    
+    # Actually, we can assume the user just searched, so maybe we can't cache easily without a DB.
+    # Let's implement re-fetch for now.
+    
+    selected_threads = []
+    
+    # Get active group API key for context
+    if 'active_group_id' in session:
+        groups = database.load_groups()
+        active_group = next((g for g in groups if g['id'] == session['active_group_id']), None)
+        api_key_enc = active_group['api_key'] if active_group else None
+        # Decryption needed? services.fetch_thread_messages handles it via services.get_headers -> security.get_decrypted_key
+        # Wait, services.get_headers decrypts if passed a raw key?
+        # let's look at services.py again. 
+        # Yes, services.py:get_headers decrypts.
+    else:
+        api_key_enc = None
+
+    # We need a dummy target_name to reuse process_thread logic or just use fetch directly?
+    # process_thread formats everything nicely (dates, roles). Let's reuse it.
+    
+    with ThreadPoolExecutor(max_workers=10) as executor:
+        futures = []
+        for tid in thread_ids:
+            # We don't filter by date or keyword for printing, we want the whole thread usually?
+            # Or do we want exactly what was searched?
+            # User probably wants the full context.
+            futures.append(executor.submit(services.process_thread, {'thread_id': tid}, None, None, None, api_key_enc))
+
+        for future in futures:
+            res = future.result()
+            if res and res.get('data'):
+                selected_threads.append(res['data'])
+    
+    # Sort by time
+    selected_threads.sort(key=lambda x: x['timestamp'], reverse=True)
+
+    return render_template('print_view.html', threads=selected_threads)
+
 @app.route('/settings', methods=['POST'])
 def update_settings():
     # Only Admin can change global settings? 
