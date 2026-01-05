@@ -129,7 +129,7 @@ def process_thread(thread_data, target_name, start_date, end_date, api_key=None)
                          content_value += "[圖片]"
 
             if target_name:
-                if target_name.lower() in content_value.lower() and role == 'user':
+                if target_name.lower() in content_value.lower():
                     has_target = True
                 if target_name.lower() in content_value.lower() and target_name != "No choice was made":
                      pattern = re.compile(re.escape(target_name), re.IGNORECASE)
