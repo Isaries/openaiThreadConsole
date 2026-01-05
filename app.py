@@ -652,6 +652,10 @@ def create_user():
         flash('欄位不完整', 'error')
         return redirect(url_for('admin'))
         
+    if len(email) > 100:
+        flash('Email 長度不可超過 100 字元', 'error')
+        return redirect(url_for('admin'))
+        
     users = database.load_users()
     if any(u['username'] == username for u in users):
         flash('Username 已存在', 'error')
