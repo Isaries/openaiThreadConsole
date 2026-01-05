@@ -12,3 +12,5 @@ weasyprint
 pydyf<0.11.0
 bleach[css]
 requests
+
+cryptography
