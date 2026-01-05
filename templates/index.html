@@ -236,8 +236,8 @@
 
             <div class="form-group">
                 <label for="target_name">請輸入搜尋關鍵字 (選填)</label>
-                <input type="text" id="target_name" name="target_name" placeholder="例如: 你的姓名或對話主題 (有在對話中出現過的)..."
-                    maxlength="50" autofocus>
+                <input type="text" id="target_name" name="target_name" placeholder="例如: 你的姓名或對話主題 (或貼上 Thread 網址)..."
+                    maxlength="120" autofocus>
             </div>
             <div class="form-group">
                 <label>請選擇日期範圍 (選填)</label>
@@ -356,9 +356,25 @@
             errorMessage.classList.remove('show');
         });
 
-        // 當輸入關鍵字時,隱藏錯誤訊息
+        // 當輸入關鍵字時,處理智慧篩選與錯誤訊息
         targetName.addEventListener('input', function () {
-            if (targetName.value.trim()) {
+            // 1. Smart Thread ID Extraction
+            const val = this.value;
+            // Matches "thread_" followed by alphanumeric chars (typical OpenAI ID)
+            const threadMatch = val.match(/(thread_[A-Za-z0-9]+)/);
+
+            if (threadMatch) {
+                // If found, replace the entire input with just the ID
+                // Check if the current value IS ALREADY just the ID to avoid reset cursor loop (though redundant with replace)
+                if (val !== threadMatch[1]) {
+                    this.value = threadMatch[1];
+                    // Optionally flash or highlight to indicate auto-fix? 
+                    // For now, silent auto-correct as requested.
+                }
+            }
+
+            // 2. Hide error message if content exists
+            if (this.value.trim()) {
                 errorMessage.classList.remove('show');
             }
         });
