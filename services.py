@@ -130,7 +130,8 @@ def process_thread(thread_data, target_name, start_date, end_date, api_key=None)
                     has_target = True
                 if target_name.lower() in content_value.lower() and target_name != "No choice was made":
                      pattern = re.compile(re.escape(target_name), re.IGNORECASE)
-                     content_value = pattern.sub(f"<mark>{target_name}</mark>", content_value)
+                     # Use lambda to preserve original casing of the matched text
+                     content_value = pattern.sub(lambda m: f"<mark>{m.group(0)}</mark>", content_value)
 
             role_class = 'user' if role == 'user' else 'assistant'
             role_icon = '👤' if role == 'user' else '🤖'

@@ -535,16 +535,20 @@ def search():
 
     start_time = time.time()
 
-    with ThreadPoolExecutor(max_workers=5) as executor:
-        futures = []
-        for t in threads_list:
-            futures.append(executor.submit(services.process_thread, t, target_name, date_from, date_to, api_key))
+    try:
+        with ThreadPoolExecutor(max_workers=5) as executor:
+            futures = []
+            for t in threads_list:
+                futures.append(executor.submit(services.process_thread, t, target_name, date_from, date_to, api_key))
             
-        for future in futures:
-            res = future.result()
-            debug_log.append(res)
-            if res['keep']:
-                results.append(res['data'])
+            for future in futures:
+                res = future.result()
+                debug_log.append(res)
+                if res['keep']:
+                    results.append(res['data'])
+    except Exception as e:
+        logging.getLogger().error(f"Search Error: {e}")
+        return render_template('result.html', results=[], target_name=target_name, count=0, debug_log=[], error="搜尋發生錯誤，請稍後再試")
     
     end_time = time.time()
     duration = end_time - start_time
