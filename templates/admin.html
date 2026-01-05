@@ -289,10 +289,13 @@
             <a href="/admin?group_id={{ g.group_id }}"
                 class="group-item {% if active_group.group_id == g.group_id %}active{% endif %}">
                 {{ g.name }}
-                {% if current_role == 'admin' and g.created_by %}
-                {% set creator = users | selectattr('id', 'equalto', g.created_by) | first %}
-                <div style="font-size:11px; opacity:0.7;">
-                    👤 {{ creator.username if creator else 'Admin' }}
+                {% if current_role == 'admin' and g.owners %}
+                <div
+                    style="font-size:11px; color:#a0aec0; margin-top:2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                    👤
+                    {% for oid in g.owners %}
+                    {{ user_map.get(oid, 'Unknown') }}{% if not loop.last %}, {% endif %}
+                    {% endfor %}
                 </div>
                 {% endif %}
             </a>

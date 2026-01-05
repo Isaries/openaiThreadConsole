@@ -216,7 +216,10 @@ def admin():
                 # Since we just want grouping, order is preserved.
                 pass
 
+    user_map = {u['id']: u['username'] for u in users_list}
+
     return render_template('admin.html', 
+                           user_map=user_map,
                            groups=groups, 
                            active_group=active_group, 
                            threads=threads, 
