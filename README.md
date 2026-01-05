@@ -1,117 +1,116 @@
-# Thread Console (對話紀錄管理系統)
+# Thread Console
 
-這是一個基於 Flask 開發的 OpenAI Thread 對話紀錄管理與搜尋系統。支援多群組管理、角色權限控制 (RBAC)、以及完整的資安防護機制。
+This is an OpenAI Thread Management System designed for education and team collaboration. It allows administrators and teachers to manage multiple conversation groups, provides fast full-text search capabilities, and features comprehensive Role-Based Access Control (RBAC) and security protection mechanisms.
 
-## ✨ 主要功能
+![Admin Panel Screenshot](https://via.placeholder.com/800x400?text=Admin+Panel+Preview)
 
-*   **🔍 公開搜尋介面**:
-    *   支援關鍵字搜尋對話內容。
-    *   支援日期範圍篩選。
-    *   搜尋結果關鍵字高亮顯示。
-    *   XSS 防護 (自動過濾危險 HTML 標籤)。
+## Key Features
 
-*   **⚙️ 強大管理後台**:
-    *   **角色權限控制 (RBAC)**:
-        *   **Admin (超級管理員)**: 可管理所有群組、新增/刪除教師帳號、查看完整系統日誌。
-        *   **Teacher (教師)**: 僅能管理自己建立的群組，確保資料隔離。
-    *   **群組管理 (Groups)**: 支援建立多個對話群組，可個別綁定不同的 OpenAI API Key。
-    *   **資料匯入/匯出**: 支援上傳 Excel (`.xlsx`) 批次新增或刪除 Thread IDs。
-    *   **系統日誌 (Audit Log)**: 記錄所有敏感操作（如登入、建立帳號、刪除群組）。
+### Search and Browsing
+*   **Full-Text Search**: Deep search for conversation content with keyword highlighting.
+*   **Advanced Filtering**: Filter search results by date range.
+*   **Secure Browsing**: Built-in XSS protection (Bleach) automatically filters malicious HTML tags to ensure safe browsing.
+*   **High Performance**: In-Memory search architecture ensures sub-second response times even with large datasets.
 
-*   **🛡️ 資安防護**:
-    *   **帳戶鎖定**: IP 連續登入失敗 5 次，鎖定 15 分鐘 (防暴力破解)。
-    *   **密碼強度**: 強制教師帳號密碼需 10-15 字元，且包含英數混合。
-    *   **資料加密**: API Key 在儲存時進行加密保護。
-    *   **API Key 必填**: 建立群組時強制綁定 API Key，避免配置錯誤。
+### Management Panel
+*   **Role-Based Access Control (RBAC)**:
+    *   **Admin**: Has full access to manage all groups, create/delete/reset teacher passwords, and view system audit logs.
+    *   **Teacher**: Has a dedicated workspace and can only manage groups created by themselves, ensuring data privacy and isolation.
+*   **Group Management**:
+    *   Support for creating multiple project or course groups.
+    *   **Independent API Key**: Each group can be bound to a separate OpenAI API Key for quota control.
+    *   **Validation**: Prevents the creation of groups with duplicate names.
+*   **Account Management**:
+    *   **Password Hint**: Admins can view partial password hints for teachers (e.g., `Le***lo`) to verify identity.
+    *   **Password Reset**: Admins can directly reset teacher passwords.
+*   **Data Import/Export**: Support for uploading Excel (`.xlsx`) files to batch add or remove Thread IDs.
+
+### Security Protection
+*   **Account Lockout**: After 5 consecutive failed login attempts from a single IP, the account is locked for 15 minutes to prevent brute-force attacks.
+*   **Password Policy**: Teacher passwords must be 10-15 characters long and contain both letters and numbers.
+*   **Data Encryption**: API Keys are encrypted using Fernet symmetric encryption before storage.
+*   **Audit Log**: The system records all sensitive operations (login, account creation/deletion, group modification, password reset, etc.) for tracking purposes.
 
 ---
 
-## 🚀 快速開始
+## Deployment Guide
 
-### 1. 環境需求
-*   Python 3.9+
-*   OpenAI API Key
+### Docker Deployment (Recommended)
 
-### 2. 安裝依賴
-```bash
-pip install -r requirements.txt
-```
+This project is fully containerized. It is recommended to use Docker for deployment.
 
-### 3. 設定環境變數
-請複製 `.env.example` 為 `.env` 並填入您的設定：
-```bash
-cp .env.example .env
-```
-
-**`.env` 設定範例**:
+#### 1. Prepare Environment File
+Create a `.env` file in the project root directory:
 ```env
-# OpenAI API Key (系統預設)
-OPENAI_API_KEY=sk-your-key-here
+# Default System OpenAI API Key (Used when a group has no key set)
+OPENAI_API_KEY=sk-proj-xxxxxxxxxxxxxxxxxxxxxxxx
 
-# 管理員密碼 (可設定多組，用逗號分隔)
-ADMIN_PASSWORD=admin123,backup456
+# Admin Passwords (Comma-separated for multiple admins)
+ADMIN_PASSWORD=admin888,root1234
 
-# Session 加密金鑰 (請設定一長串隨機字串)
-SECRET_KEY=your-secret-key-change-me
+# Session Secret Key (Must be a long random string)
+SECRET_KEY=change-this-to-a-very-long-random-secret-key-123456
+
+# Service Port (Internal container port, usually does not need modification)
+PORT=8000
 ```
 
-### 4. 啟動伺服器
+#### 2. Prepare Data Files
+Create necessary empty files on the host to avoid Docker mounting errors:
 ```bash
-python run_server.py
-```
-預設會運行在 `http://0.0.0.0:8000`
-
----
-
-## 🐳 Docker 部署
-
-本專案已包含 `Dockerfile`，可直接建置並運行：
-
-1.  **建置 Image**:
-    ```bash
-    docker build -t thread-console .
-    ```
-
-2.  **運行 Container**:
-    ```bash
-    docker run -d -p 8000:8000 \
-      --name thread-console \
-      --env-file .env \
-      -v $(pwd)/threads.json:/app/threads.json \
-      -v $(pwd)/users.json:/app/users.json \
-      -v $(pwd)/access.log:/app/access.log \
-      -v $(pwd)/audit.log:/app/audit.log \
-      thread-console
-    ```
-    *建議掛載 `.json` 與 `.log` 檔案以確保資料持久化。*
-
----
-
-## 👥 使用者指南
-
-### 登入系統
-*   **Admin**: 直接輸入 `.env` 中設定的 `ADMIN_PASSWORD` 即可登入。
-*   **Teacher**: 輸入 Admin 建立的密碼進行登入。
-
-### 管理後台 (Admin Panel)
-1.  **管理群組**: 左側列表可切換不同群組。Admin 可看到每個群組的建立者。
-2.  **建立教師 (Admin Only)**: 在「教師帳戶管理」區塊新增帳號。
-3.  **匯入資料**: 下載 Excel 範本，填入 `thread_id` 後上傳，即可批次加入對話紀錄。
-
----
-
-## 🔒 資安稽核
-系統會自動產生 `audit.log`，記錄關鍵操作軌跡：
-```log
-[2024-01-03 16:58:00] [User: Administrator] [Action: Create User] [Target: new_teacher] [Status: Success]
-[2024-01-03 17:00:00] [User: teacher_abc] [Action: Delete Group] [Target: Math_Class] [Status: Success]
+touch threads.json users.json audit.log access.log
 ```
 
+#### 3. Start Service
+Run the following commands to build and start the container (Exposed on port `8010`):
+
+```bash
+# 1. Build Image
+docker build -t thread-console .
+
+# 2. Run Container
+docker run -d \
+  --name thread-console \
+  --restart always \
+  -p 8010:8000 \
+  --env-file .env \
+  -v $(pwd)/threads.json:/app/threads.json \
+  -v $(pwd)/users.json:/app/users.json \
+  -v $(pwd)/audit.log:/app/audit.log \
+  -v $(pwd)/access.log:/app/access.log \
+  thread-console
+```
+
+After starting, visit `http://localhost:8010` to access the home page.
+
 ---
 
-## 📂 檔案結構
-*   `app.py`: 核心後端邏輯。
-*   `templates/`: HTML 頁面 (index, login, admin, result)。
-*   `threads.json`: 儲存群組與 Thread ID 資料。
-*   `users.json`: 儲存教師帳號資料 (密碼已 Hash)。
-*   `settings.json`: 系統設定 (Legacy)。
+## Nginx Proxy Manager Setup (SSL / HTTPS)
+
+If you are using Nginx Proxy Manager for reverse proxy, the recommended settings are:
+
+1.  **Domain Names**: `thread.yourdomain.com`
+2.  **Scheme**: `http`
+3.  **Forward Hostname / IP**: `host.docker.internal` (if NPM and App are on the same machine) or `Server IP`
+4.  **Forward Port**: `8010`
+5.  **Block Common Exploits**: Enable
+6.  **SSL**: Request a Let's Encrypt certificate and check `Force SSL`.
+
+---
+
+## Project Structure
+
+*   `app.py`: Core application logic (Flask).
+*   `templates/`: HTML templates.
+    *   `index.html`: Search home page.
+    *   `admin.html`: Admin management panel.
+    *   `login.html`: Login page.
+*   `threads.json`: Stores group structure and Thread IDs.
+*   `users.json`: Stores teacher account information (Hashed passwords).
+*   `audit.log`: System security audit log.
+
+## Developer Info
+
+*   **Author**: Leolo / Isaries
+*   **Version**: 1.2.0
+*   **Last Update**: 2026-01-05
