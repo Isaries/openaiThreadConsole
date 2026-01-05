@@ -264,7 +264,34 @@
             border: 1px solid #e2e8f0;
         }
 
+        /* User Management Layout */
+        .user-mgmt-layout {
+            display: flex;
+            gap: 30px;
+        }
+
+        .user-create-form {
+            flex: 1;
+            background: #fffaf0;
+            padding: 20px;
+            border-radius: 8px;
+        }
+
+        .user-list-panel {
+            flex: 2;
+        }
+
         @media (max-width: 768px) {
+            .user-mgmt-layout {
+                flex-direction: column;
+            }
+
+            .user-create-form,
+            .user-list-panel {
+                flex: none;
+                width: 100%;
+            }
+
             .main-container {
                 flex-direction: column;
                 margin: 20px auto;
@@ -715,9 +742,9 @@
                     <span>👨‍🏫 教師帳戶管理 (Admin Only)</span>
                 </h2>
 
-                <div style="display: flex; gap: 30px;">
+                <div class="user-mgmt-layout">
                     <!-- Create User Form -->
-                    <div style="flex: 1; background: #fffaf0; padding: 20px; border-radius: 8px;">
+                    <div class="user-create-form">
                         <h4 style="margin-top:0;">新增教師</h4>
                         <form action="/admin/user/create" method="POST">
                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -741,7 +768,7 @@
                     </div>
 
                     <!-- User List -->
-                    <div style="flex: 2;">
+                    <div class="user-list-panel">
                         <h4 style="margin-top:0;">現有教師列表</h4>
                         <div class="table-container" style="max-height: 300px;">
                             <table style="font-size:14px;">
