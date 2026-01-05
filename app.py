@@ -779,10 +779,27 @@ def print_view():
 def download_pdf(thread_id):
     if not session.get('user_id'): return redirect(url_for('login'))
     
-    # 1. Fetch Group Context
+    # 1. Fetch Group Context (Find which group contains this thread)
     groups = database.load_groups()
-    active_group = next((g for g in groups if g['group_id'] == session.get('active_group_id')), None) 
-    api_key_enc = active_group['api_key'] if active_group else None
+    api_key_enc = None
+    
+    # We need to find the group that owns this thread_id
+    found_group = None
+    for g in groups:
+        # g['threads'] is a list of dicts like [{'thread_id': '...', ...}]
+        # Check if thread_id exists in this group's threads
+        if any(t.get('thread_id') == thread_id for t in g.get('threads', [])):
+            found_group = g
+            break
+            
+    if found_group:
+         api_key_enc = found_group.get('api_key')
+    else:
+         # Fallback: Try session if defined, or just proceed (might use global key in services)
+         if session.get('active_group_id'):
+             active_group = next((g for g in groups if g['group_id'] == session['active_group_id']), None)
+             if active_group:
+                 api_key_enc = active_group.get('api_key')
 
     # 2. Process Thread
     thread_data = services.process_thread({'thread_id': thread_id}, None, None, None, api_key_enc)
