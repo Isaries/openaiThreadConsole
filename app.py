@@ -263,6 +263,32 @@ def create_group():
     flash(f'群組 "{name}" 建立成功', 'success')
     return redirect(url_for('admin', group_id=new_id))
 
+@app.route('/admin/group/delete', methods=['POST'])
+def delete_group():
+    if not session.get('user_id'): return redirect(url_for('login'))
+    group_id = request.form.get('group_id')
+    
+    groups = database.load_groups()
+    group = next((g for g in groups if g['group_id'] == group_id), None)
+    
+    if not group:
+        flash('群組不存在', 'error')
+        return redirect(url_for('admin'))
+        
+    current_role = session.get('role')
+    user_id = session.get('user_id')
+    
+    if current_role != 'admin' and group.get('created_by') != user_id:
+        flash('權限不足：您只能刪除自己建立的群組', 'error')
+        return redirect(url_for('admin'))
+    
+    groups = [g for g in groups if g['group_id'] != group_id]
+    database.save_groups(groups)
+    
+    database.log_audit(session.get('username'), 'Delete Group', group['name'])
+    flash(f'群組 "{group["name"]}" 已刪除', 'success')
+    return redirect(url_for('admin'))
+
 @app.route('/admin/group/update', methods=['POST'])
 def update_group():
     if not session.get('user_id'): return redirect(url_for('login'))
