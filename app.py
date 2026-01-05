@@ -10,6 +10,14 @@ from logging.handlers import RotatingFileHandler
 import uuid
 import pandas as pd
 from concurrent.futures import ThreadPoolExecutor
+# PDF & Request Dependencies
+import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
+from weasyprint import HTML
+import zipfile
+import io
+import math
 
 # Internal Modules
 import config
@@ -17,6 +25,25 @@ import utils
 import security
 import database
 import services
+
+# --- WeasyPrint Helper ---
+def safe_url_fetcher(url, timeout=30):
+    try:
+        retry_strategy = Retry(total=3, backoff_factor=1, status_forcelist=[429, 500, 502, 503, 504])
+        adapter = HTTPAdapter(max_retries=retry_strategy)
+        session = requests.Session()
+        session.mount("https://", adapter)
+        session.mount("http://", adapter)
+        resp = session.get(url, timeout=timeout, stream=True)
+        resp.raise_for_status()
+        return {'file_obj': io.BytesIO(resp.content), 'mime_type': resp.headers.get('Content-Type'), 'encoding': resp.encoding, 'redirected_url': resp.url}
+    except Exception as e:
+        logging.warning(f"WeasyPrint URL Fetch Failed for {url}: {e}")
+        return None
+
+# --- PDF Generation Helper ---
+def generate_pdf_bytes(html_content):
+    return HTML(string=html_content, url_fetcher=safe_url_fetcher).write_pdf()
 
 app = Flask(__name__)
 app.secret_key = config.SECRET_KEY
@@ -738,72 +765,68 @@ def update_user():
 @app.route('/print-view', methods=['POST'])
 def print_view():
     if not session.get('user_id'): return redirect(url_for('login'))
+    
+    # Deprecated: Redirect to single download if one thread selected
     thread_ids = request.form.getlist('thread_ids')
-    if not thread_ids:
-        return "No threads selected", 400
+    if thread_ids and len(thread_ids) == 1:
+        return redirect(url_for('download_pdf', thread_id=thread_ids[0]))
+    
+    return "Batch print deprecated. Please download threads individually.", 400
+
+@app.route('/download/pdf/<thread_id>')
+def download_pdf(thread_id):
+    if not session.get('user_id'): return redirect(url_for('login'))
+    
+    # 1. Fetch Group Context
+    groups = database.load_groups()
+    active_group = next((g for g in groups if g['group_id'] == session.get('active_group_id')), None) 
+    api_key_enc = active_group['api_key'] if active_group else None
+
+    # 2. Process Thread
+    thread_data = services.process_thread({'thread_id': thread_id}, None, None, None, api_key_enc)
+    
+    if not thread_data or not thread_data.get('data'):
+        return "Thread not found or empty", 404
         
-    # We need to re-fetch or use cached data. To keep it simple and accurate, we'll re-fetch from cache/API 
-    # BUT, actually, the search result already has processed data. 
-    # Re-fetching might be slow. 
-    # Optimization: On result.html, we have the full data in JS.
-    # But for a robust server-side print view, we should re-process.
-    # However, `process_thread` takes time.
-    # Let's see... `process_thread` fetches from API.
-    # For a print view, we hopefully have a target_name context? Maybe not necessary for print.
-    # Let's just re-fetch messages.
+    messages = thread_data['data']['messages']
     
-    # Wait, `request.form` could potentially receive a huge JSON? No, limitations.
-    # Let's use the session or valid parameters.
-    # Or, to be efficient, we can accept JSON body if we POST via JS.
-    # Because we want to re-use the search result data without hitting OpenAI 50 times again.
+    # 3. Split Logic
+    CHUNK_SIZE = 50
+    total_messages = len(messages)
     
-    # Approach: The `result.html` form will POST `thread_ids`.
-    # We will assume we need to re-fetch for now to be safe and use latest data.
-    # OR, we can try to pass the data? No, too big.
-    
-    # Re-fetching is safer but potentially slow.
-    # Let's check `services.process_thread`. It uses `fetch_thread_messages`.
-    # Does `fetch_thread_messages` cache? Not explicitly in the code I saw.
-    # That's a risk. If user selects 20 threads, we make 20 API calls.
-    # BUT, `fetch_thread_messages` is fast if threads are short.
-    
-    # Actually, we can assume the user just searched, so maybe we can't cache easily without a DB.
-    # Let's implement re-fetch for now.
-    
-    selected_threads = []
-    
-    # Get active group API key for context
-    if 'active_group_id' in session:
-        groups = database.load_groups()
-        active_group = next((g for g in groups if g['id'] == session['active_group_id']), None)
-        api_key_enc = active_group['api_key'] if active_group else None
-        # Decryption needed? services.fetch_thread_messages handles it via services.get_headers -> security.get_decrypted_key
-        # Wait, services.get_headers decrypts if passed a raw key?
-        # let's look at services.py again. 
-        # Yes, services.py:get_headers decrypts.
+    # Render full or chunked
+    if total_messages <= CHUNK_SIZE:
+        html = render_template('print_view.html', threads=[thread_data['data']])
+        pdf_bytes = generate_pdf_bytes(html)
+        return io.BytesIO(pdf_bytes), 200, {
+            'Content-Type': 'application/pdf',
+            'Content-Disposition': f'attachment; filename="thread_{thread_id}.pdf"'
+        }
     else:
-        api_key_enc = None
-
-    # We need a dummy target_name to reuse process_thread logic or just use fetch directly?
-    # process_thread formats everything nicely (dates, roles). Let's reuse it.
-    
-    with ThreadPoolExecutor(max_workers=10) as executor:
-        futures = []
-        for tid in thread_ids:
-            # We don't filter by date or keyword for printing, we want the whole thread usually?
-            # Or do we want exactly what was searched?
-            # User probably wants the full context.
-            futures.append(executor.submit(services.process_thread, {'thread_id': tid}, None, None, None, api_key_enc))
-
-        for future in futures:
-            res = future.result()
-            if res and res.get('data'):
-                selected_threads.append(res['data'])
-    
-    # Sort by time
-    selected_threads.sort(key=lambda x: x['timestamp'], reverse=True)
-
-    return render_template('print_view.html', threads=selected_threads)
+        # Split into ZIP
+        chunks = math.ceil(total_messages / CHUNK_SIZE)
+        zip_buffer = io.BytesIO()
+        
+        with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zf:
+            for i in range(chunks):
+                start = i * CHUNK_SIZE
+                end = start + CHUNK_SIZE
+                chunk_msgs = messages[start:end]
+                
+                chunk_data = thread_data['data'].copy()
+                chunk_data['messages'] = chunk_msgs
+                
+                # Append part info to title if possible, or just render
+                html = render_template('print_view.html', threads=[chunk_data])
+                pdf_bytes = generate_pdf_bytes(html)
+                
+                zf.writestr(f"thread_{thread_id}_part_{i+1}.pdf", pdf_bytes)
+                
+        zip_buffer.seek(0)
+        return io.BytesIO(zip_buffer.getvalue()), 200, {
+            'Content-Type': 'application/zip',
+            'Content-Disposition': f'attachment; filename="thread_{thread_id}_split.zip"'
+        }
 
 @app.route('/settings', methods=['POST'])
 def update_settings():

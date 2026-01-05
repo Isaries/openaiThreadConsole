@@ -30,7 +30,9 @@ def sanitize_html(value):
         'a': ['href', 'target', 'rel'],
         'img': ['src', 'alt', 'class', 'loading']
     }
-    cleaned = bleach.clean(value, tags=allowed_tags, attributes=allowed_attrs, strip=True)
+    from bleach.css_sanitizer import CSSSanitizer
+    css_sanitizer = CSSSanitizer(allowed_css_properties=['text-align', 'color', 'background-color'])
+    cleaned = bleach.clean(value, tags=allowed_tags, attributes=allowed_attrs, strip=True, css_sanitizer=css_sanitizer)
     return Markup(cleaned)
 
 # --- Date/Time Helpers ---

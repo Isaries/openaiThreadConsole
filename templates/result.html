@@ -303,7 +303,10 @@
 
             .thread-meta {
                 flex: 0 0 100%;
-                align-items: flex-start;
+                align-items: flex-end;
+                gap: 10px;
+                flex-direction: row;
+                justify-content: flex-end;
             }
         }
 
@@ -342,76 +345,60 @@
 
         <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 
-        <form id="printForm" action="/print-view" method="POST" target="_blank">
+        <!-- Removed Form Wrapper -->
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
-            <div class="action-bar-sticky" id="actionBar"
-                style="display:none; position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: white; padding: 15px 25px; border-radius: 50px; box-shadow: 0 5px 20px rgba(0,0,0,0.2); z-index: 999; align-items: center; gap: 15px;">
-                <span style="font-weight: bold; color: #333;">已選取 <span id="selectedCount">0</span> 個對話</span>
-                <div style="height: 20px; width: 1px; background: #ddd;"></div>
-                <button type="submit" class="btn-action btn-merge"
-                    style="background: #667eea; color: white; border: none; padding: 8px 16px; border-radius: 20px; cursor: pointer; display: flex; align-items: center; gap: 5px;">
-                    🖨️ 合併列印
-                </button>
-                <button type="button" onclick="downloadSeparatePDFs()" class="btn-action btn-separate"
-                    style="background: #48bb78; color: white; border: none; padding: 8px 16px; border-radius: 20px; cursor: pointer; display: flex; align-items: center; gap: 5px;">
-                    ⬇️ 分開下載
-                </button>
-                <button type="button" onclick="clearSelection()"
-                    style="background: transparent; border: none; color: #888; cursor: pointer; margin-left: 5px;">✕</button>
-            </div>
+        <!-- Removed Action Bar -->
 
-            <div style="margin-bottom: 10px; display: flex; justify-content: flex-end;">
-                <label style="cursor: pointer; user-select: none; display: flex; align-items: center; gap: 5px;">
-                    <input type="checkbox" onchange="toggleAll(this)"> 全選 / 取消全選
-                </label>
-            </div>
+        <!-- Removed Select All -->
 
-            {% if results|length == 0 %}
-            <div class="no-result">
-                <div class="icon">😕</div>
-                <h3>找不到相關對話</h3>
-                <p>沒有找到包含 "{{ target_name }}" 的對話紀錄</p>
-            </div>
-            {% else %}
-            {% for thread in results %}
-            <div class="thread-card expanded" id="thread-{{ thread.thread_id }}">
-                <div class="thread-header">
-                    <!-- Checkbox Integration -->
-                    <div style="margin-right: 15px;" onclick="event.stopPropagation()">
-                        <input type="checkbox" name="thread_ids" value="{{ thread.thread_id }}" class="thread-checkbox"
-                            onchange="updateSelection()">
-                    </div>
+        {% if results|length == 0 %}
+        <div class="no-result">
+            <div class="icon">😕</div>
+            <h3>找不到相關對話</h3>
+            <p>沒有找到包含 "{{ target_name }}" 的對話紀錄</p>
+        </div>
+        {% else %}
+        {% for thread in results %}
+        <div class="thread-card expanded" id="thread-{{ thread.thread_id }}">
+            <div class="thread-header" onclick="toggleThread(this)">
+                <!-- Checkbox Integration -->
+                <!-- Removed Checkbox -->
 
-                    <div class="thread-title-group" onclick="toggleThread(this.parentElement)">
-                        <h3>對話 #{{ loop.index }}</h3>
-                    </div>
-                    <div class="thread-center-action" onclick="toggleThread(this.parentElement)">
-                        <span class="toggle-icon">▼</span>
-                    </div>
-                    <div class="thread-meta" onclick="toggleThread(this.parentElement)">
-                        <span class="thread-time">📅 {{ thread.time }}</span>
-                        <span class="thread-id">ID: {{ thread.thread_id }}</span>
-                    </div>
+                <div class="thread-title-group">
+                    <h3>對話 #{{ loop.index }}</h3>
                 </div>
-                <div class="thread-body">
-                    <div class="messages">
-                        {% for msg in thread.messages %}
-                        <div class="message {{ msg.role_class }}">
-                            <div class="message-header">
-                                <span class="role-name">{{ msg.time }}</span>
-                                <span class="role-icon">{{ msg.role_icon }}</span>
-                                <span class="role-name">{{ msg.role_name }}</span>
-                            </div>
-                            <div class="message-content">{{ msg.content | render_images | sanitize_html }}</div>
+                <div class="thread-center-action">
+                    <span class="toggle-icon">▼</span>
+                </div>
+                <div class="thread-meta">
+                    <span class="thread-time">📅 {{ thread.time }}</span>
+                    <span class="thread-id" style="margin-bottom: 5px;">ID: {{ thread.thread_id }}</span>
+                    <a href="/download/pdf/{{ thread.thread_id }}" onclick="event.stopPropagation()" class="btn-pdf"
+                        style="text-decoration: none; background: #667eea; color: white; padding: 4px 10px; border-radius: 4px; font-size: 12px; display: flex; align-items: center; gap: 4px; transition: opacity 0.2s;">
+                        📄 PDF
+                    </a>
+                </div>
+            </div>
+            <div class="thread-body">
+                <div class="messages">
+                    {% for msg in thread.messages %}
+                    <div class="message {{ msg.role_class }}">
+                        <div class="message-header">
+                            <span class="role-name">{{ msg.time }}</span>
+                            <span class="role-icon">{{ msg.role_icon }}</span>
+                            <span class="role-name">{{ msg.role_name }}</span>
                         </div>
-                        {% endfor %}
+                        <div class="message-content">{{ msg.content | render_images | sanitize_html }}</div>
                     </div>
+                    {% endfor %}
                 </div>
             </div>
-            {% endfor %}
-            {% endif %}
+        </div>
+        {% endfor %}
+        {% endif %}
 
-        </form>
+        <!-- End Form Replacement -->
 
         <div class="back-btn-container">
             <a href="/" class="back-button">← 返回搜尋</a>
@@ -429,82 +416,6 @@
             }
         }
 
-        // --- Selection Logic ---
-        function updateSelection() {
-            const checkboxes = document.querySelectorAll('.thread-checkbox:checked');
-            const count = checkboxes.length;
-            const bar = document.getElementById('actionBar');
-            const counter = document.getElementById('selectedCount');
-
-            counter.innerText = count;
-            if (count > 0) {
-                bar.style.display = 'flex';
-            } else {
-                bar.style.display = 'none';
-            }
-        }
-
-        function toggleAll(source) {
-            const checkboxes = document.querySelectorAll('.thread-checkbox');
-            checkboxes.forEach(cb => cb.checked = source.checked);
-            updateSelection();
-        }
-
-        function clearSelection() {
-            const checkboxes = document.querySelectorAll('.thread-checkbox');
-            checkboxes.forEach(cb => cb.checked = false);
-            updateSelection();
-        }
-
-        // --- Separate PDF Download Logic ---
-        async function downloadSeparatePDFs() {
-            const checkboxes = document.querySelectorAll('.thread-checkbox:checked');
-            if (checkboxes.length === 0) return;
-
-            const btn = document.querySelector('.btn-separate');
-            const originalText = btn.innerHTML;
-            btn.innerHTML = '⏳ 處理中...';
-            btn.disabled = true;
-
-            for (let i = 0; i < checkboxes.length; i++) {
-                const threadId = checkboxes[i].value;
-                const card = document.getElementById('thread-' + threadId);
-
-                // Clone the card to clean it up for printing (remove header checkbox, etc)
-                const clone = card.cloneNode(true);
-
-                // Remove checkbox from clone
-                const cbContainer = clone.querySelector('input[type="checkbox"]').parentElement;
-                cbContainer.remove();
-
-                // Force expand
-                clone.style.height = 'auto';
-                clone.querySelector('.thread-body').style.maxHeight = 'none';
-                clone.querySelector('.thread-body').style.opacity = '1';
-
-                // Add padding for PDF
-                clone.style.padding = "20px";
-
-                const opt = {
-                    margin: 10,
-                    filename: `thread_${threadId}.pdf`,
-                    image: { type: 'jpeg', quality: 0.98 },
-                    html2canvas: { scale: 2, useCORS: true }, // useCORS important for images
-                    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-                };
-
-                try {
-                    await html2pdf().set(opt).from(clone).save();
-                    // Small delay to prevent browser locking
-                    await new Promise(r => setTimeout(r, 500));
-                } catch (e) {
-                    console.error("PDF Fail", e);
-                }
-            }
-
-            btn.innerHTML = originalText;
-            btn.disabled = false;
-        }
 
         const scrollToTopBtn = document.getElementById("scrollTopBtn");
 
