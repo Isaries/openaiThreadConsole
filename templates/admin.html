@@ -404,9 +404,6 @@
 
                             <div
                                 style="margin-top:30px; padding-top:20px; border-top:1px solid #edf2f7; display:flex; justify-content:space-between; align-items:center;">
-                                <button type="submit" class="btn btn-primary"
-                                    style="padding:10px 30px; font-weight:600; font-size:15px; box-shadow:0 4px 6px rgba(50, 50, 93, 0.11), 0 1px 3px rgba(0, 0, 0, 0.08);">儲存變更</button>
-
                                 <button type="submit" formaction="/admin/group/delete" formmethod="POST" class="btn"
                                     style="color:#e53e3e; background:white; border:1px solid #fed7d7; font-size:13px; padding:8px 20px; border-radius:6px; transition:0.2s;"
                                     onmouseover="this.style.background='#fff5f5'"
@@ -414,6 +411,9 @@
                                     onclick="return confirm('⚠️ 危險操作：確定刪除此群組？這將無法復原！')">
                                     🗑️ 刪除此群組
                                 </button>
+
+                                <button type="submit" class="btn btn-primary"
+                                    style="padding:10px 30px; font-weight:600; font-size:15px; box-shadow:0 4px 6px rgba(50, 50, 93, 0.11), 0 1px 3px rgba(0, 0, 0, 0.08);">儲存變更</button>
                             </div>
                         </form>
                     </div>
