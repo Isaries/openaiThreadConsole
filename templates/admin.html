@@ -344,34 +344,79 @@
                 </h2>
 
                 <!-- Hidden Settings Panel -->
-                <div id="settingsSection">
-                    <form action="/admin/group/update" method="POST">
-                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                        <input type="hidden" name="group_id" value="{{ active_group.group_id }}">
+                <div id="settingsSection"
+                    style="display:none; margin-top:20px; background:#fff; border:1px solid #e2e8f0; border-radius:8px; overflow:hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
+                    <div
+                        style="padding:15px 25px; background:#f8fafc; border-bottom:1px solid #e2e8f0; display:flex; align-items:center;">
+                        <span style="font-size:18px; margin-right:10px;">⚙️</span>
+                        <h4 style="margin:0; color:#2d3748; font-size:16px;">群組設定</h4>
+                    </div>
+                    <div style="padding:25px;">
+                        <form action="/admin/group/update" method="POST">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <input type="hidden" name="group_id" value="{{ active_group.group_id }}">
 
-                        <div style="margin-bottom:15px">
-                            <label style="display:block; font-weight:600; margin-bottom:5px;">修改名稱</label>
-                            <input type="text" name="name" value="{{ active_group.name }}" required>
-                        </div>
-                        <div style="margin-bottom:15px">
-                            <label style="display:block; font-weight:600; margin-bottom:5px;">OpenAI API Key
-                                (綁定此群組)</label>
-                            <div style="font-size:12px; color:#718096; margin-bottom:5px;">目前狀態: {{ masked_key }}</div>
-                            <input type="text" name="api_key" placeholder="輸入 sk-... 以更新或覆蓋系統預設值 (留空則不修改)"
-                                maxlength="200">
-                        </div>
-                        <div style="display:flex; justify-content:space-between; align-items:center;">
-                            <div>
-                                <button type="submit" class="btn btn-primary">儲存設定</button>
-                                <button type="submit" name="clear_key" value="true" class="btn btn-secondary"
-                                    onclick="return confirm('確定清除？將改用系統預設 Key')">清除 Key</button>
+                            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:30px;">
+                                <!-- Column 1: Rename -->
+                                <div>
+                                    <label
+                                        style="display:block; font-size:13px; font-weight:700; color:#4a5568; margin-bottom:8px;">群組名稱</label>
+                                    <input type="text" name="name" value="{{ active_group.name }}" required
+                                        style="width:100%; padding:10px 12px; border:1px solid #cbd5e0; border-radius:6px; font-size:15px; transition:all 0.2s; outline:none;"
+                                        onfocus="this.style.borderColor='#4299e1'; this.style.boxShadow='0 0 0 3px rgba(66, 153, 225, 0.2)';"
+                                        onblur="this.style.borderColor='#cbd5e0'; this.style.boxShadow='none';">
+                                </div>
+
+                                <!-- Column 2: API Key -->
+                                <div>
+                                    <label
+                                        style="display:block; font-size:13px; font-weight:700; color:#4a5568; margin-bottom:8px;">
+                                        OpenAI API Key
+                                        {% if masked_key != 'Not Set' %}
+                                        <span
+                                            style="background:#def7ec; color:#03543f; padding:2px 8px; border-radius:12px; font-size:11px; margin-left:8px; font-weight:normal;">已連結</span>
+                                        {% else %}
+                                        <span
+                                            style="background:#fed7d7; color:#9b2c2c; padding:2px 8px; border-radius:12px; font-size:11px; margin-left:8px; font-weight:normal;">未設定</span>
+                                        {% endif %}
+                                    </label>
+                                    <div style="display:flex; gap:10px;">
+                                        <input type="text" name="api_key" placeholder="sk-..." maxlength="200"
+                                            style="flex:1; padding:10px 12px; border:1px solid #cbd5e0; border-radius:6px; font-size:15px; outline:none;"
+                                            onfocus="this.style.borderColor='#4299e1'; this.style.boxShadow='0 0 0 3px rgba(66, 153, 225, 0.2)';"
+                                            onblur="this.style.borderColor='#cbd5e0'; this.style.boxShadow='none';">
+                                        {% if masked_key != 'Not Set' %}
+                                        <button type="submit" name="clear_key" value="true" class="btn btn-secondary"
+                                            style="padding:0 15px; white-space:nowrap; height:42px;"
+                                            onclick="return confirm('確定清除？將改用系統預設 Key')">清除</button>
+                                        {% endif %}
+                                    </div>
+                                    <p style="margin:5px 0 0; font-size:12px; color:#718096;">
+                                        {% if masked_key != 'Not Set' %}
+                                        目前使用: <code
+                                            style="background:#edf2f7; padding:2px 4px; border-radius:4px; font-family:monospace;">{{ masked_key }}</code>
+                                        {% else %}
+                                        目前與系統預設共用
+                                        {% endif %}
+                                    </p>
+                                </div>
                             </div>
 
-                            <button type="submit" formaction="/admin/group/delete" formmethod="POST"
-                                class="btn btn-danger btn-sm"
-                                onclick="return confirm('確定刪除此群組嗎？所有對話 ID 將會消失！')">刪除此群組</button>
-                        </div>
-                    </form>
+                            <div
+                                style="margin-top:30px; padding-top:20px; border-top:1px solid #edf2f7; display:flex; justify-content:space-between; align-items:center;">
+                                <button type="submit" class="btn btn-primary"
+                                    style="padding:10px 30px; font-weight:600; font-size:15px; box-shadow:0 4px 6px rgba(50, 50, 93, 0.11), 0 1px 3px rgba(0, 0, 0, 0.08);">儲存變更</button>
+
+                                <button type="submit" formaction="/admin/group/delete" formmethod="POST" class="btn"
+                                    style="color:#e53e3e; background:white; border:1px solid #fed7d7; font-size:13px; padding:8px 20px; border-radius:6px; transition:0.2s;"
+                                    onmouseover="this.style.background='#fff5f5'"
+                                    onmouseout="this.style.background='white'"
+                                    onclick="return confirm('⚠️ 危險操作：確定刪除此群組？這將無法復原！')">
+                                    🗑️ 刪除此群組
+                                </button>
+                            </div>
+                        </form>
+                    </div>
                 </div>
 
                 <div class="stats-grid">
