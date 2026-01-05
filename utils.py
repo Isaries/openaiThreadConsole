@@ -8,12 +8,27 @@ def nl2br(value):
     # Escape first, then replace newline with <br>
     return Markup(str(escape(value)).replace('\n', '<br>'))
 
+def render_markdown_images(value):
+    if not value: return ""
+    # Replace ![alt](url) with <img src="url" alt="alt" class="chat-image">
+    # Note: Regex allows for optional text in [] and non-empty url in ()
+    import re
+    pattern = re.compile(r'!\[(.*?)\]\((.*?)\)')
+    
+    def replace_func(match):
+        alt = match.group(1)
+        src = match.group(2)
+        return f'<img src="{src}" alt="{alt}" class="chat-image" loading="lazy">'
+    
+    return pattern.sub(replace_func, value)
+
 def sanitize_html(value):
     if not value: return ""
-    allowed_tags = ['b', 'i', 'u', 'em', 'strong', 'a', 'p', 'br', 'span', 'div', 'mark', 'code', 'pre', 'ul', 'li', 'ol']
+    allowed_tags = ['b', 'i', 'u', 'em', 'strong', 'a', 'p', 'br', 'span', 'div', 'mark', 'code', 'pre', 'ul', 'li', 'ol', 'img']
     allowed_attrs = {
         '*': ['class', 'style'],
-        'a': ['href', 'target', 'rel']
+        'a': ['href', 'target', 'rel'],
+        'img': ['src', 'alt', 'class', 'loading']
     }
     cleaned = bleach.clean(value, tags=allowed_tags, attributes=allowed_attrs, strip=True)
     return Markup(cleaned)

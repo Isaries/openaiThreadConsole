@@ -306,6 +306,15 @@
                 align-items: flex-start;
             }
         }
+
+        .chat-image {
+            max-width: 100%;
+            height: auto;
+            border-radius: 8px;
+            margin: 5px 0;
+            display: block;
+            border: 1px solid #ddd;
+        }
     </style>
 </head>
 
@@ -361,7 +370,7 @@
                             <span class="role-icon">{{ msg.role_icon }}</span>
                             <span class="role-name">{{ msg.role_name }}</span>
                         </div>
-                        <div class="message-content">{{ msg.content | sanitize_html }}</div>
+                        <div class="message-content">{{ msg.content | render_images | sanitize_html }}</div>
                     </div>
                     {% endfor %}
                 </div>

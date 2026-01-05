@@ -25,6 +25,7 @@ app.config['MAX_CONTENT_LENGTH'] = config.MAX_CONTENT_LENGTH
 
 # --- Register Template Filters ---
 app.jinja_env.filters['nl2br'] = utils.nl2br
+app.jinja_env.filters['render_images'] = utils.render_markdown_images
 app.jinja_env.filters['sanitize_html'] = utils.sanitize_html
 app.jinja_env.filters['format_timestamp'] = utils.unix_to_utc8
 
