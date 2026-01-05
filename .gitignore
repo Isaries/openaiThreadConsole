@@ -147,3 +147,5 @@ settings.json
 audit.log
 access.log
 *.xlsx
+groups.json
+ip_bans.json
