@@ -423,11 +423,21 @@ def upload_file():
 
     try:
         df = pd.read_excel(file)
-        if 'Thread ID' not in df.columns:
+        
+        # Find column case-insensitively
+        target_col = None
+        for col in df.columns:
+             # Check for "thread id" or "thread_id" in any casing
+             clean_col = str(col).strip().lower()
+             if clean_col == 'thread id' or clean_col == 'thread_id':
+                 target_col = col
+                 break
+                 
+        if not target_col:
             flash('Excel 必須包含 "Thread ID" 欄位', 'error')
             return redirect(url_for('admin', group_id=group_id))
             
-        new_ids = df['Thread ID'].dropna().astype(str).tolist()
+        new_ids = df[target_col].dropna().astype(str).tolist()
         new_ids = [tid.strip() for tid in new_ids if tid.strip().startswith('thread_')]
         
         current_ids = {t['thread_id'] for t in group['threads']}
