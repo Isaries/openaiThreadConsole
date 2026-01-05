@@ -121,9 +121,12 @@ def process_thread(thread_data, target_name, start_date, end_date, api_key=None)
             date_str = utils.unix_to_date_str(msg_ts)
             
             content_value = ""
-            if msg.get('content') and msg['content']:
-                text_content = msg['content'][0].get('text', {})
-                content_value = text_content.get('value', '')
+            if msg.get('content'):
+                for part in msg['content']:
+                    if part.get('type') == 'text':
+                         content_value += part.get('text', {}).get('value', '')
+                    elif part.get('type') == 'image_file':
+                         content_value += "[圖片]"
 
             if target_name:
                 if target_name.lower() in content_value.lower() and role == 'user':
