@@ -380,7 +380,7 @@ def delete_one():
 def delete_multi():
     if not session.get('user_id'): return redirect(url_for('login'))
     group_id = request.form.get('group_id')
-    thread_ids = request.form.getlist('thread_ids') # list of checked IDs
+    thread_ids = request.form.getlist('selected_ids') # list of checked IDs
     
     if not thread_ids:
         flash('未選擇任何 Thread', 'error')
