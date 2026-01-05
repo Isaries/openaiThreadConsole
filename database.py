@@ -84,7 +84,8 @@ def load_groups():
              return [{"group_id": "default", "name": "預設群組", "api_key": "", "threads": []}]
 
         return data 
-    except: 
+    except Exception as e:
+        logging.getLogger().error(f"Failed to load groups from {config.GROUPS_FILE}: {e}")
         return [{"group_id": "default", "name": "預設群組", "api_key": "", "threads": []}]
 
 def save_groups(groups):
@@ -93,7 +94,9 @@ def save_groups(groups):
             with open(config.GROUPS_FILE, 'w', encoding='utf-8') as f:
                 json.dump(groups, f, indent=2, ensure_ascii=False)
             return True
-        except: return False
+        except Exception as e:
+            logging.getLogger().error(f"Failed to save groups to {config.GROUPS_FILE}: {e}")
+            return False
 
 def get_group_by_id(group_id):
     groups = load_groups()
