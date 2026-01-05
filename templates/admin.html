@@ -399,12 +399,16 @@
                                     <label
                                         style="display:block; font-size:13px; font-weight:700; color:#4a5568; margin-bottom:8px;">
                                         OpenAI API Key
-                                        {% if masked_key != 'Not Set' %}
+                                        {% if '金鑰失效' in masked_key %}
+                                        <span
+                                            style="background:#fed7d7; color:#9b2c2c; padding:2px 8px; border-radius:12px; font-size:11px; margin-left:8px; font-weight:bold;">失效
+                                            - 需重新輸入</span>
+                                        {% elif masked_key != '尚未設定 (使用環境變數/預設)' %}
                                         <span
                                             style="background:#def7ec; color:#03543f; padding:2px 8px; border-radius:12px; font-size:11px; margin-left:8px; font-weight:normal;">已連結</span>
                                         {% else %}
                                         <span
-                                            style="background:#fed7d7; color:#9b2c2c; padding:2px 8px; border-radius:12px; font-size:11px; margin-left:8px; font-weight:normal;">未設定</span>
+                                            style="background:#edf2f7; color:#4a5568; padding:2px 8px; border-radius:12px; font-size:11px; margin-left:8px; font-weight:normal;">未設定</span>
                                         {% endif %}
                                     </label>
                                     <div style="display:flex; gap:10px;">
@@ -412,14 +416,14 @@
                                             style="flex:1; padding:10px 12px; border:1px solid #cbd5e0; border-radius:6px; font-size:15px; outline:none;"
                                             onfocus="this.style.borderColor='#4299e1'; this.style.boxShadow='0 0 0 3px rgba(66, 153, 225, 0.2)';"
                                             onblur="this.style.borderColor='#cbd5e0'; this.style.boxShadow='none';">
-                                        {% if masked_key != 'Not Set' %}
+                                        {% if '尚未設定' not in masked_key %}
                                         <button type="submit" name="clear_key" value="true" class="btn btn-secondary"
                                             style="padding:0 15px; white-space:nowrap; height:42px;"
                                             onclick="return confirm('確定清除？將改用系統預設 Key')">清除</button>
                                         {% endif %}
                                     </div>
                                     <p style="margin:5px 0 0; font-size:12px; color:#718096;">
-                                        {% if masked_key != 'Not Set' %}
+                                        {% if '尚未設定' not in masked_key %}
                                         目前使用: <code
                                             style="background:#edf2f7; padding:2px 4px; border-radius:4px; font-family:monospace;">{{ masked_key }}</code>
                                         {% else %}

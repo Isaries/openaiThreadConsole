@@ -38,6 +38,11 @@ def get_decrypted_key(key_string):
     decrypted = decrypt_data(key_string)
     if decrypted: return decrypted
     
+    # If decryption fails and it looks like a Fernet token, it's invalid
+    if key_string.startswith("gAAAA"):
+        return "INVALID_KEY_RESET_REQUIRED"
+        
+    # Otherwise assume it was plaintext (legacy support)
     return key_string
 
 # --- Password Validation ---

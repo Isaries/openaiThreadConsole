@@ -166,7 +166,13 @@ def admin():
     # Decrypt Key for Display
     first_key = active_group.get('api_key') if active_group else None
     decrypted_show = security.get_decrypted_key(first_key)
-    masked_key = f"{decrypted_show[:8]}...{decrypted_show[-4:]}" if decrypted_show and len(decrypted_show) > 12 else "尚未設定 (使用環境變數/預設)"
+    
+    if decrypted_show == "INVALID_KEY_RESET_REQUIRED":
+        masked_key = "⚠️ 金鑰失效 (需重設)"
+    elif decrypted_show and len(decrypted_show) > 12:
+        masked_key = f"{decrypted_show[:8]}...{decrypted_show[-4:]}"
+    else:
+        masked_key = "尚未設定 (使用環境變數/預設)"
     
     logs = database.load_logs()
     
