@@ -151,7 +151,7 @@ def admin():
         groups = all_groups
     else:
         # Teacher only sees own groups
-        groups = [g for g in all_groups if g.get('created_by') == current_user_id]
+        groups = [g for g in all_groups if str(g.get('created_by')) == str(current_user_id)]
     
     group_id = request.args.get('group_id')
     active_group = None
