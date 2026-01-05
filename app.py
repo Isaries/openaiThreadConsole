@@ -34,7 +34,9 @@ def safe_url_fetcher(url, timeout=30):
         session = requests.Session()
         session.mount("https://", adapter)
         session.mount("http://", adapter)
-        resp = session.get(url, timeout=timeout, stream=True)
+        # Mimic browser to avoid blocking
+        headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'}
+        resp = session.get(url, timeout=timeout, stream=True, headers=headers)
         resp.raise_for_status()
         return {'file_obj': io.BytesIO(resp.content), 'mime_type': resp.headers.get('Content-Type'), 'encoding': resp.encoding, 'redirected_url': resp.url}
     except Exception as e:
@@ -653,6 +655,11 @@ def create_user():
     users = database.load_users()
     if any(u['username'] == username for u in users):
         flash('Username 已存在', 'error')
+        return redirect(url_for('admin'))
+
+    # Check for duplicate email
+    if email and any(u.get('email') == email for u in users):
+        flash('Email 已存在', 'error')
         return redirect(url_for('admin'))
         
     # Validate Password
