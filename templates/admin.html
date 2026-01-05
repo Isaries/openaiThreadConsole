@@ -355,6 +355,7 @@
                         <form action="/admin/group/update" method="POST">
                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                             <input type="hidden" name="group_id" value="{{ active_group.group_id }}">
+                            <input type="hidden" name="version" value="{{ active_group.get('version', 1) }}">
 
                             <div style="display:grid; grid-template-columns: 1fr 1fr; gap:30px;">
                                 <!-- Column 1: Rename -->

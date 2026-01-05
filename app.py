@@ -64,8 +64,8 @@ def record_login_attempt(ip, success):
         LOGIN_ATTEMPTS[ip] = record
 
 def validate_password_strength(password):
-    if len(password) < 10 or len(password) > 15:
-        return False, "密碼長度需為 10-15 字元"
+    if len(password) < 10 or len(password) > 20:
+        return False, "密碼長度需為 10-20 字元"
     
     has_alpha = any(c.isalpha() for c in password)
     has_num = any(c.isdigit() for c in password)
@@ -731,6 +731,7 @@ def create_group():
         "api_key": encrypted_key,
         "created_by": session.get('user_id'), # Assign Owner
         "is_visible": True,
+        "version": 1,
         "threads": []
     }
     
@@ -750,6 +751,7 @@ def update_group():
     clear_key = request.form.get('clear_key')
     new_owner_id = request.form.get('owner_id') # For Ownership Transfer
     is_visible = request.form.get('is_visible') == 'on' # From checkbox
+    client_version = request.form.get('version', type=int)
     
     groups = load_groups()
     group = next((g for g in groups if g['group_id'] == group_id), None)
@@ -765,7 +767,15 @@ def update_group():
     # Admin can edit any group; Teacher can only edit own groups
     if current_role != 'admin' and group.get('created_by') != user_id:
         flash('權限不足：您只能編輯自己建立的群組', 'error')
+        flash('權限不足：您只能編輯自己建立的群組', 'error')
         return redirect(url_for('admin'))
+
+    # Optimistic Locking Check
+    # If group has no version (legacy), assume 1. If client sent nothing, assume force (or should we fail? lets fail safely)
+    current_version = group.get('version', 1)
+    if client_version is not None and client_version != current_version:
+        flash('資料已被其他人修改，請重新整理頁面後再試', 'error')
+        return redirect(url_for('admin', group_id=group_id))
 
     if name: 
         # Check duplicate name if changing name
@@ -803,6 +813,9 @@ def update_group():
             group['api_key'] = encrypt_data(api_key)
             flash('API Key 更新成功', 'success')
             log_audit(session.get('username'), 'Update Group', f"{group['name']} (Update Key)")
+
+    # Increment Version
+    group['version'] = group.get('version', 1) + 1
 
     save_groups(groups)
     if name: log_audit(session.get('username'), 'Update Group', f"{group['name']} (Rename)")
