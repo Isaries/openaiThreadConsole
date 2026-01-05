@@ -272,6 +272,8 @@ def create_group():
         flash('API Key 不能為空', 'error')
         return redirect(url_for('admin'))
         
+    groups = database.load_groups()
+    if any(g['name'] == name for g in groups):
         flash('Project 名稱已存在，請使用不同名稱', 'error')
         return redirect(url_for('admin'))
 
