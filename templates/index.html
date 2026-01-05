@@ -151,6 +151,34 @@
                 transform: rotate(360deg);
             }
         }
+        }
+
+        .github-avatar-link {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            z-index: 1000;
+            transition: all 0.3s ease;
+            border: 2px solid white;
+            opacity: 0.8;
+        }
+
+        .github-avatar-link:hover {
+            transform: scale(1.1) rotate(5deg);
+            opacity: 1;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .github-avatar-link img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
     </style>
 </head>
 
@@ -211,113 +239,116 @@
         </div>
     </div>
 
-    <script>
-        const form = document.getElementById('searchForm');
-        const loading = document.getElementById('loading');
-        const btn = document.querySelector('button[type="submit"]');
-        const targetName = document.getElementById('target_name');
-        const startDate = document.getElementById('start_date');
-        const endDate = document.getElementById('end_date');
-        const dateInfo = document.getElementById('dateInfo');
-        const errorMessage = document.getElementById('errorMessage');
+    <!-- GitHub Avatar -->
+    <a href="https://github.com/Isaries" target="_blank" class="github-avatar-link" title="Visit Isaries's GitHub">
+        <img src="https://github.com/Isaries.png" alt="Isaries">
+    </a>
+    const form = document.getElementById('searchForm');
+    const loading = document.getElementById('loading');
+    const btn = document.querySelector('button[type="submit"]');
+    const targetName = document.getElementById('target_name');
+    const startDate = document.getElementById('start_date');
+    const endDate = document.getElementById('end_date');
+    const dateInfo = document.getElementById('dateInfo');
+    const errorMessage = document.getElementById('errorMessage');
 
-        // 日期範圍驗證與提示
-        function updateDateInfo() {
-            const start = startDate.value;
-            const end = endDate.value;
+    // 日期範圍驗證與提示
+    function updateDateInfo() {
+    const start = startDate.value;
+    const end = endDate.value;
 
-            if (start && end) {
-                if (start > end) {
-                    dateInfo.innerHTML = '⚠️ 結束日期不可早於開始日期';
-                    dateInfo.style.background = '#fff3cd';
-                    dateInfo.style.color = '#856404';
-                } else if (start === end) {
-                    dateInfo.innerHTML = '📅 搜尋單一日期: ' + start;
-                    dateInfo.style.background = '#d1ecf1';
-                    dateInfo.style.color = '#0c5460';
-                } else {
-                    dateInfo.innerHTML = '📅 搜尋範圍: ' + start + ' 至 ' + end;
-                    dateInfo.style.background = '#d4edda';
-                    dateInfo.style.color = '#155724';
-                }
-            } else if (start && !end) {
-                dateInfo.innerHTML = '📅 搜尋 ' + start + ' 之後的紀錄';
-                dateInfo.style.background = '#f8f9ff';
-                dateInfo.style.color = '#666';
-            } else if (!start && end) {
-                dateInfo.innerHTML = '📅 搜尋 ' + end + ' 之前的紀錄';
-                dateInfo.style.background = '#f8f9ff';
-                dateInfo.style.color = '#666';
-            } else {
-                dateInfo.innerHTML = '💡 至少需要填寫「關鍵字」或「日期」其中一項';
-                dateInfo.style.background = '#f8f9ff';
-                dateInfo.style.color = '#666';
-            }
-        }
+    if (start && end) {
+    if (start > end) {
+    dateInfo.innerHTML = '⚠️ 結束日期不可早於開始日期';
+    dateInfo.style.background = '#fff3cd';
+    dateInfo.style.color = '#856404';
+    } else if (start === end) {
+    dateInfo.innerHTML = '📅 搜尋單一日期: ' + start;
+    dateInfo.style.background = '#d1ecf1';
+    dateInfo.style.color = '#0c5460';
+    } else {
+    dateInfo.innerHTML = '📅 搜尋範圍: ' + start + ' 至 ' + end;
+    dateInfo.style.background = '#d4edda';
+    dateInfo.style.color = '#155724';
+    }
+    } else if (start && !end) {
+    dateInfo.innerHTML = '📅 搜尋 ' + start + ' 之後的紀錄';
+    dateInfo.style.background = '#f8f9ff';
+    dateInfo.style.color = '#666';
+    } else if (!start && end) {
+    dateInfo.innerHTML = '📅 搜尋 ' + end + ' 之前的紀錄';
+    dateInfo.style.background = '#f8f9ff';
+    dateInfo.style.color = '#666';
+    } else {
+    dateInfo.innerHTML = '💡 至少需要填寫「關鍵字」或「日期」其中一項';
+    dateInfo.style.background = '#f8f9ff';
+    dateInfo.style.color = '#666';
+    }
+    }
 
-        // 當選擇開始日期時,自動將結束日期設為相同
-        startDate.addEventListener('change', function () {
-            if (startDate.value && !endDate.value) {
-                endDate.value = startDate.value;
-            }
-            updateDateInfo();
-            errorMessage.classList.remove('show');
-        });
+    // 當選擇開始日期時,自動將結束日期設為相同
+    startDate.addEventListener('change', function () {
+    if (startDate.value && !endDate.value) {
+    endDate.value = startDate.value;
+    }
+    updateDateInfo();
+    errorMessage.classList.remove('show');
+    });
 
-        // 當選擇結束日期時,如果開始日期為空,則自動設定開始日期
-        endDate.addEventListener('change', function () {
-            if (endDate.value && !startDate.value) {
-                startDate.value = endDate.value;
-            }
-            updateDateInfo();
-            errorMessage.classList.remove('show');
-        });
+    // 當選擇結束日期時,如果開始日期為空,則自動設定開始日期
+    endDate.addEventListener('change', function () {
+    if (endDate.value && !startDate.value) {
+    startDate.value = endDate.value;
+    }
+    updateDateInfo();
+    errorMessage.classList.remove('show');
+    });
 
-        // 當輸入關鍵字時,隱藏錯誤訊息
-        targetName.addEventListener('input', function () {
-            if (targetName.value.trim()) {
-                errorMessage.classList.remove('show');
-            }
-        });
+    // 當輸入關鍵字時,隱藏錯誤訊息
+    targetName.addEventListener('input', function () {
+    if (targetName.value.trim()) {
+    errorMessage.classList.remove('show');
+    }
+    });
 
-        // 表單驗證
-        form.addEventListener('submit', function (e) {
-            const keyword = targetName.value.trim();
-            const start = startDate.value;
-            const end = endDate.value;
+    // 表單驗證
+    form.addEventListener('submit', function (e) {
+    const keyword = targetName.value.trim();
+    const start = startDate.value;
+    const end = endDate.value;
 
-            // 檢查是否至少填寫了關鍵字或日期其中一項
-            if (!keyword && !start && !end) {
-                e.preventDefault();
-                errorMessage.classList.add('show');
-                errorMessage.innerHTML = '⚠️ 請至少填寫「關鍵字」或「日期」其中一項!';
-                return false;
-            }
+    // 檢查是否至少填寫了關鍵字或日期其中一項
+    if (!keyword && !start && !end) {
+    e.preventDefault();
+    errorMessage.classList.add('show');
+    errorMessage.innerHTML = '⚠️ 請至少填寫「關鍵字」或「日期」其中一項!';
+    return false;
+    }
 
-            // 檢查日期邏輯
-            if (start && end && start > end) {
-                e.preventDefault();
-                errorMessage.classList.add('show');
-                errorMessage.innerHTML = '⚠️ 結束日期不可早於開始日期!';
-                return false;
-            }
+    // 檢查日期邏輯
+    if (start && end && start > end) {
+    e.preventDefault();
+    errorMessage.classList.add('show');
+    errorMessage.innerHTML = '⚠️ 結束日期不可早於開始日期!';
+    return false;
+    }
 
-            // 隱藏錯誤訊息並顯示載入狀態
-            errorMessage.classList.remove('show');
-            loading.classList.add('active');
-            btn.disabled = true;
-            btn.textContent = '搜尋中...';
-        });
+    // 隱藏錯誤訊息並顯示載入狀態
+    errorMessage.classList.remove('show');
+    loading.classList.add('active');
+    btn.disabled = true;
+    btn.textContent = '搜尋中...';
+    });
 
-        // 處理瀏覽器返回
-        window.addEventListener('pageshow', function (event) {
-            if (event.persisted || (window.performance && window.performance.navigation.type === 2)) {
-                loading.classList.remove('active');
-                btn.disabled = false;
-                btn.textContent = '開始搜尋';
-                errorMessage.classList.remove('show');
-            }
-        });
+    // 處理瀏覽器返回
+    window.addEventListener('pageshow', function (event) {
+    if (event.persisted || (window.performance && window.performance.navigation.type === 2)) {
+    loading.classList.remove('active');
+    btn.disabled = false;
+    btn.textContent = '開始搜尋';
+    errorMessage.classList.remove('show');
+    }
+    });
     </script>
 
 </body>
