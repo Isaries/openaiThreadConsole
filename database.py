@@ -81,7 +81,22 @@ def load_groups():
             return [migrated_group]
         
         if isinstance(data, list) and len(data) == 0:
-             return [{"group_id": "default", "name": "預設群組", "api_key": "", "threads": []}]
+             return [{"group_id": "default", "name": "預設群組", "api_key": "", "threads": [], "owners": []}]
+
+        # Migration: 'created_by' (str) -> 'owners' (list)
+        migrated = False
+        for g in data:
+            if 'created_by' in g:
+                if 'owners' not in g:
+                    g['owners'] = [g['created_by']] if g['created_by'] and g['created_by'] != 'admin' else []
+                del g['created_by']
+                migrated = True
+            elif 'owners' not in g:
+                g['owners'] = []
+                migrated = True
+        
+        if migrated:
+            save_groups(data)
 
         return data 
     except Exception as e:

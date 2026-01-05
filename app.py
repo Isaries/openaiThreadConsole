@@ -3,7 +3,7 @@ from flask_wtf.csrf import CSRFProtect
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from werkzeug.security import check_password_hash, generate_password_hash
-from datetime import datetime
+from datetime import datetime, timedelta
 import time
 import logging
 from logging.handlers import RotatingFileHandler
@@ -20,7 +20,7 @@ import services
 
 app = Flask(__name__)
 app.secret_key = config.SECRET_KEY
-app.permanent_session_lifetime = utils.timedelta(hours=1)
+app.permanent_session_lifetime = timedelta(hours=1)
 app.config['MAX_CONTENT_LENGTH'] = config.MAX_CONTENT_LENGTH
 
 # --- Register Template Filters ---
@@ -152,7 +152,7 @@ def admin():
         groups = all_groups
     else:
         # Teacher only sees own groups
-        groups = [g for g in all_groups if str(g.get('created_by')) == str(current_user_id)]
+        groups = [g for g in all_groups if str(current_user_id) in [str(o) for o in g.get('owners', [])]]
     
     group_id = request.args.get('group_id')
     active_group = None
@@ -250,7 +250,7 @@ def create_group():
         "group_id": new_id,
         "name": name,
         "api_key": encrypted_key,
-        "created_by": session.get('user_id'),
+        "owners": [session.get('user_id')] if session.get('role') != 'admin' else [],
         "is_visible": True,
         "version": 1,
         "threads": []
@@ -278,7 +278,7 @@ def delete_group():
     current_role = session.get('role')
     user_id = session.get('user_id')
     
-    if current_role != 'admin' and group.get('created_by') != user_id:
+    if current_role != 'admin' and user_id not in group.get('owners', []):
         flash('權限不足：您只能刪除自己建立的群組', 'error')
         return redirect(url_for('admin'))
     
@@ -296,7 +296,7 @@ def update_group():
     name = request.form.get('name', '').strip()
     api_key = request.form.get('api_key', '').strip()
     clear_key = request.form.get('clear_key')
-    new_owner_id = request.form.get('owner_id')
+    new_owner_ids = request.form.getlist('owner_ids')
     is_visible = request.form.get('is_visible') == 'on'
     client_version = request.form.get('version', type=int)
     
@@ -310,7 +310,7 @@ def update_group():
     current_role = session.get('role')
     user_id = session.get('user_id')
     
-    if current_role != 'admin' and group.get('created_by') != user_id:
+    if current_role != 'admin' and user_id not in group.get('owners', []):
         flash('權限不足：您只能編輯自己建立的群組', 'error')
         return redirect(url_for('admin'))
 
@@ -328,17 +328,11 @@ def update_group():
 
     group['is_visible'] = is_visible
 
-    if current_role == 'admin' and new_owner_id:
-        if new_owner_id == 'admin':
-            group['created_by'] = 'admin'
-            database.log_audit(session.get('username'), 'Transfer Group', f"{group['name']} -> Admin")
-        else:
-            users = database.load_users()
-            new_owner = next((u for u in users if u['id'] == new_owner_id), None)
-            if new_owner:
-                group['created_by'] = new_owner_id
-                flash(f'群組已轉移給 {new_owner["username"]}', 'success')
-                database.log_audit(session.get('username'), 'Transfer Group', f"{group['name']} -> {new_owner['username']}")
+    if current_role == 'admin':
+        # Admin can update owners
+        # new_owner_ids is a list of user IDs
+        group['owners'] = new_owner_ids
+        database.log_audit(session.get('username'), 'Update Group Owners', f"{group['name']} -> {len(new_owner_ids)} owners")
     
     if clear_key:
         group['api_key'] = ""
@@ -374,7 +368,7 @@ def add_one_thread():
     if not group: return redirect(url_for('admin'))
     
     # Permission Check
-    if session.get('role') != 'admin' and group.get('created_by') != session.get('user_id'):
+    if session.get('role') != 'admin' and session.get('user_id') not in group.get('owners', []):
          return redirect(url_for('admin'))
 
     if 'threads' not in group: group['threads'] = []
@@ -401,7 +395,7 @@ def delete_one():
     group = next((g for g in groups if g['group_id'] == group_id), None)
     if not group: return redirect(url_for('admin'))
     
-    if session.get('role') != 'admin' and group.get('created_by') != session.get('user_id'):
+    if session.get('role') != 'admin' and session.get('user_id') not in group.get('owners', []):
          return redirect(url_for('admin'))
 
     original_len = len(group['threads'])
@@ -429,7 +423,7 @@ def delete_multi():
     group = next((g for g in groups if g['group_id'] == group_id), None)
     if not group: return redirect(url_for('admin'))
 
-    if session.get('role') != 'admin' and group.get('created_by') != session.get('user_id'):
+    if session.get('role') != 'admin' and session.get('user_id') not in group.get('owners', []):
          return redirect(url_for('admin'))
 
     original_len = len(group['threads'])
@@ -457,7 +451,7 @@ def upload_file():
     group = next((g for g in groups if g['group_id'] == group_id), None)
     if not group: return redirect(url_for('admin'))
 
-    if session.get('role') != 'admin' and group.get('created_by') != session.get('user_id'):
+    if session.get('role') != 'admin' and session.get('user_id') not in group.get('owners', []):
          return redirect(url_for('admin'))
 
     try:
@@ -677,12 +671,21 @@ def delete_user():
     users = [u for u in users if u['id'] != user_id]
     
     if len(users) < original_len:
+    if len(users) < original_len:
         database.save_users(users)
-        # Also handle orphaned groups?
-        # Logic: Groups owned by deleted user remain but created_by points to non-existent ID.
-        # Admin can still see them (created_by != current_id, but Admin sees all).
-        # Teacher who made them is gone.
-        # We could transfer them to Admin, but for now leave as is.
+        
+        # Handle Orphaned Groups: Remove user from 'owners' lists
+        all_groups = database.load_groups()
+        groups_modified = False
+        for g in all_groups:
+             if 'owners' in g and user_id in g['owners']:
+                 g['owners'].remove(user_id)
+                 groups_modified = True
+                 # If list becomes empty, it implicitly becomes Admin-managed (owners=[])
+        
+        if groups_modified:
+            database.save_groups(all_groups)
+            
         database.log_audit(session.get('username'), 'Delete User', user_id)
         flash('用戶已刪除', 'success')
         
