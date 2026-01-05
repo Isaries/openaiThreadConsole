@@ -671,7 +671,6 @@ def delete_user():
     users = [u for u in users if u['id'] != user_id]
     
     if len(users) < original_len:
-    if len(users) < original_len:
         database.save_users(users)
         
         # Handle Orphaned Groups: Remove user from 'owners' lists
