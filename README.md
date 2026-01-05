@@ -2,8 +2,6 @@
 
 This is an OpenAI Thread Management System designed for education and team collaboration. It allows administrators and teachers to manage multiple conversation groups, provides fast full-text search capabilities, and features comprehensive Role-Based Access Control (RBAC) and security protection mechanisms.
 
-![Admin Panel Screenshot](https://via.placeholder.com/800x400?text=Admin+Panel+Preview)
-
 ## Key Features
 
 ### Search and Browsing
