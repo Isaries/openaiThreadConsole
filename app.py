@@ -783,9 +783,7 @@ def update_user():
 
 @app.route('/print-view', methods=['POST'])
 def print_view():
-    if not session.get('user_id'): return redirect(url_for('login'))
-    
-    # Deprecated: Redirect to single download if one thread selected
+    # Allow visitors
     thread_ids = request.form.getlist('thread_ids')
     if thread_ids and len(thread_ids) == 1:
         return redirect(url_for('download_pdf', thread_id=thread_ids[0]))
@@ -794,7 +792,7 @@ def print_view():
 
 @app.route('/download/pdf/<thread_id>')
 def download_pdf(thread_id):
-    if not session.get('user_id'): return redirect(url_for('login'))
+    # Allow visitors, but check visibility later
     
     # 1. Fetch Group Context (Find which group contains this thread)
     groups = database.load_groups()
@@ -808,6 +806,19 @@ def download_pdf(thread_id):
         if any(t.get('thread_id') == thread_id for t in g.get('threads', [])):
             found_group = g
             break
+            
+    if not found_group:
+        return "Thread not found or not assigned to any project", 404
+
+    # --- Security Check: if group is hidden, verify session ---
+    if not found_group.get('is_visible', True):
+        user_id = session.get('user_id')
+        role = session.get('role')
+        if not user_id:
+            return redirect(url_for('login'))
+        # If not admin, must be an owner
+        if role != 'admin' and user_id not in found_group.get('owners', []):
+            return "Permission Denied: This Project is private.", 403
             
     if found_group:
          api_key_enc = found_group.get('api_key')
