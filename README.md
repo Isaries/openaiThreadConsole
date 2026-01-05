@@ -16,16 +16,16 @@ This is a Flask-based management system for OpenAI Assistant Threads. It allows 
 *   **Group Management**:
     *   Create, rename, and delete groups.
     *   **Role Assignment**: Assign groups to specific teachers or transfer ownership to the administrator.
-    *   **API Key Management**: Supports group-specific OpenAI API Keys (stored with AES-256 encryption) or falls back to the system default key.
+    *   **API Key Management**: Supports group-specific OpenAI API Keys (stored with AES-256 encryption) or falls back to the system default key. Invalid keys are clearly flagged.
     *   **Visibility Toggle**: Hide or show groups with a single click.
 *   **Thread Data Management**:
-    *   **Batch Processing**: Supports uploading Excel files (`.xlsx`) to batch add or delete Thread IDs (column names are case-insensitive).
+    *   **Batch Processing**: Supports uploading Excel files (.xlsx) to batch add or delete Thread IDs (column names are case-insensitive).
     *   Single entry add/delete functionality.
     *   **Optimistic Locking**: Prevents data overwrite issues when multiple users edit simultaneously.
 *   **User Management**:
     *   Administrators can create, delete, and edit teacher accounts.
-    *   Reset user passwords.
-    *   Password strength validation and encrypted storage (PBKDF2).
+    *   **Password Hints**: First and last 2 characters of passwords are stored as hints for easy recovery/verification (only for new/reset accounts).
+    *   **Session Info**: Displays logged-in user email in the dashboard navbar.
 
 ### 3. Security & Monitoring
 *   **IP Access Monitoring**:
@@ -45,76 +45,93 @@ This is a Flask-based management system for OpenAI Assistant Threads. It allows 
 
 The project follows a modular architecture to ensure maintainability:
 
-*   **`app.py`**: Route Controller, handling HTTP requests and page navigation.
-*   **`config.py`**: System configuration, managing environment variables and constants.
-*   **`database.py`**: Persistence Layer, handling JSON file I/O (`users.json`, `groups.json`) and Audit Logs.
-*   **`security.py`**: Security module, handling encryption (Fernet), password hashing, IP ban logic, and lockout mechanisms.
-*   **`services.py`**: Business logic and external services, including OpenAI API calls and data processing.
-*   **`utils.py`**: Utility functions, including HTML sanitization and time formatting.
+*   **app.py**: Route Controller, handling HTTP requests and page navigation.
+*   **config.py**: System configuration, managing environment variables and constants.
+*   **database.py**: Persistence Layer, handling JSON file I/O (users.json, groups.json) and Audit Logs.
+*   **security.py**: Security module, handling encryption (Fernet), password hashing, IP ban logic, and lockout mechanisms.
+*   **services.py**: Business logic and external services, including OpenAI API calls and data processing.
+*   **utils.py**: Utility functions, including HTML sanitization and time formatting.
 
 ---
 
-## Installation & Usage
+## Installation & Deployment
 
-### 1. Requirements
-*   Python 3.8+
-*   Pip (Python Package Manager)
+### Method 1: Docker (Recommended)
 
-### 2. Install Dependencies
-```bash
-pip install flask flask-wtf flask-limiter cryptography bleach pandas requests openpyxl python-dotenv
-```
+1.  **Clone Repository**
+    ```bash
+    git clone <repository_url>
+    cd openaiThreadConsole
+    ```
 
-### 3. Environment Variables (.env)
-Create a `.env` file in the project root directory:
-```ini
-# Flask Secret Key (Critical for session encryption)
-SECRET_KEY=your-super-secret-key-change-this
+2.  **Configure Environment**
+    Create a .env file with your credentials:
+    ```ini
+    SECRET_KEY=your-random-secure-secret-key
+    OPENAI_API_KEY=sk-proj-your-default-openai-key
+    ADMIN_PASSWORD=your-admin-password
+    ```
 
-# OpenAI API Key (System default fallback key)
-OPENAI_API_KEY=sk-proj-...
+3.  **Prepare Data Files**
+    You must create these files locally to ensure Docker mounts them as files (not directories) and to ensure you have write permissions.
+    ```bash
+    touch groups.json ip_bans.json audit.log access.log users.json
+    echo "[]" > groups.json
+    echo "{}" > ip_bans.json
+    echo "[]" > users.json
+    ```
 
-# Admin Password (Root administrator password)
-ADMIN_PASSWORD=your-admin-password
-```
+4.  **Build and Run**
+    ```bash
+    docker build -t thread-console .
+    
+    docker run -d \
+      --name thread-console \
+      --restart always \
+      -p 8010:8000 \
+      --env-file .env \
+      -v $(pwd)/users.json:/app/users.json \
+      -v $(pwd)/groups.json:/app/groups.json \
+      -v $(pwd)/ip_bans.json:/app/ip_bans.json \
+      -v $(pwd)/audit.log:/app/audit.log \
+      -v $(pwd)/access.log:/app/access.log \
+      thread-console
+    ```
 
-### 4. Run Server
-```bash
-python app.py
-```
-The server will start at `http://localhost:5000` by default.
+### Method 2: Local Python Environment
+
+1.  **Install Dependencies**
+    ```bash
+    pip install flask flask-wtf flask-limiter cryptography bleach pandas requests openpyxl python-dotenv
+    ```
+
+2.  **Run Server**
+    ```bash
+    python app.py
+    ```
+    The server will start at http://localhost:5000 by default.
 
 ---
 
 ## Data Storage
 
-This system uses JSON files as a lightweight database, eliminating the need for a SQL server:
+This system uses JSON files as a lightweight database:
 
-*   `users.json`: Stores user account information (User ID, Username, Email, Password Hash).
-*   `groups.json`: Stores group information, Thread ID lists, and encrypted API Keys.
-*   `settings.json`: Stores global settings.
-*   `ip_bans.json`: Stores the list of banned IP addresses.
-*   `audit.log`: Stores system operation audit logs.
+*   **users.json**: User account information (ID, Username, Email, Password Hash, Hints).
+*   **groups.json**: Group information, Thread ID lists, and encrypted API Keys.
+*   **ip_bans.json**: Registry of banned IP addresses.
+*   **audit.log**: System operation audit logs.
 
-> **Note**: All `.json` and `.log` files should be excluded from version control (except example files) to prevent sensitive data leakage.
+> **Note**: These files are excluded from git by default to prevent sensitive data leakage.
 
 ---
 
 ## Security Mechanisms
 
-1.  **Data Encryption**: All API Keys are encrypted using `Fernet` (symmetric encryption) before being written to `groups.json`. The key is derived from the `SECRET_KEY`. Attackers cannot retrieve the actual API Key even if they gain access to the JSON files.
-2.  **Input Sanitization**: All user inputs and OpenAI responses are processed by `bleach` to retain only safe tags (e.g., `<b>`, `<mark>`), preventing XSS attacks.
-3.  **Rate Limiting**: Rate limits are applied to login and search interfaces (e.g., 10 requests per minute) to prevent brute-force attacks and DoS.
+1.  **Data Encryption**: API Keys are encrypted using Fernet (AES-128 mode) before storage. The key is derived from the SECRET_KEY environment variable. If the SECRET_KEY changes, old API keys will be flagged as invalid rather than displaying garbled text.
+2.  **Input Sanitization**: User inputs and OpenAI responses are processed by Bleach to retain only safe tags, preventing XSS attacks.
+3.  **Rate Limiting**: Applied to login and search interfaces to maintain service stability.
 
 ---
 
-## Recent Updates
-*   **Refactor**: Split monolithic `app.py` into MVC-structured modules.
-*   **Feat**: Added IP monitoring panel and ban functionality.
-*   **Feat**: Added support for batch add/delete via Excel (case-insensitive column headers).
-*   **Fix**: Fixed issue where `<mark>` tags in search results were being escaped.
-*   **UX**: Added modern animated gradient background to the search page.
-
----
-
-&copy; 2024 Thread Console System.
+Copyright (c) 2024 Thread Console System.
