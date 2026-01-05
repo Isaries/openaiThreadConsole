@@ -440,22 +440,42 @@ def upload_file():
         new_ids = df[target_col].dropna().astype(str).tolist()
         new_ids = [tid.strip() for tid in new_ids if tid.strip().startswith('thread_')]
         
-        current_ids = {t['thread_id'] for t in group['threads']}
-        added_count = 0
+        action = request.form.get('action', 'add')
         
-        for tid in new_ids:
-            if tid not in current_ids:
-                group['threads'].append({'thread_id': tid})
-                current_ids.add(tid)
-                added_count += 1
-        
-        if added_count > 0:
-            group['version'] = group.get('version', 1) + 1
-            database.save_groups(groups)
-            flash(f'成功匯入 {added_count} 筆 Thread', 'success')
-            database.log_audit(session.get('username'), 'Import Excel', f"{added_count} threads to {group['name']}")
+        if action == 'delete':
+            # Batch Delete Logic
+            target_ids = set(new_ids)
+            original_len = len(group['threads'])
+            group['threads'] = [t for t in group['threads'] if t['thread_id'] not in target_ids]
+            
+            removed_count = original_len - len(group['threads'])
+            
+            if removed_count > 0:
+                group['version'] = group.get('version', 1) + 1
+                database.save_groups(groups)
+                flash(f'成功刪除 {removed_count} 筆 Thread', 'success')
+                database.log_audit(session.get('username'), 'Batch Delete Excel', f"{removed_count} threads from {group['name']}")
+            else:
+                 flash('沒有刪除任何 Thread (Excel 中的 ID 在群組中找不到)', 'warning')
+
         else:
-            flash('沒有新增任何 Thread (可能已存在或格式不符)', 'warning')
+            # Batch Add Logic
+            current_ids = {t['thread_id'] for t in group['threads']}
+            added_count = 0
+            
+            for tid in new_ids:
+                if tid not in current_ids:
+                    group['threads'].append({'thread_id': tid})
+                    current_ids.add(tid)
+                    added_count += 1
+            
+            if added_count > 0:
+                group['version'] = group.get('version', 1) + 1
+                database.save_groups(groups)
+                flash(f'成功匯入 {added_count} 筆 Thread', 'success')
+                database.log_audit(session.get('username'), 'Import Excel', f"{added_count} threads to {group['name']}")
+            else:
+                flash('沒有新增任何 Thread (可能已存在或格式不符)', 'warning')
             
     except Exception as e:
         flash(f'檔案處理失敗: {str(e)}', 'error')
