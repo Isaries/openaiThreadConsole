@@ -122,3 +122,63 @@ def save_settings(data):
             json.dump(data, f, indent=2)
         return True
     except: return False
+
+# --- IP Bans ---
+def load_ip_bans():
+    if not os.path.exists(config.IP_BANS_FILE):
+        return {}
+    try:
+        with open(config.IP_BANS_FILE, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    except: return {}
+
+def save_ip_bans(bans):
+    with data_lock:
+        try:
+            with open(config.IP_BANS_FILE, 'w', encoding='utf-8') as f:
+                json.dump(bans, f, indent=2, ensure_ascii=False)
+            return True
+        except: return False
+
+# --- Audit Analysis ---
+def load_audit_logs():
+    """
+    Parses the raw audit.log file into structured data.
+    Returns a list of dicts: {'time', 'user', 'action', 'target', 'status', 'ip'}
+    """
+    if not os.path.exists(config.AUDIT_LOG_FILE):
+        return []
+        
+    logs = []
+    import re
+    
+    # Regex to parse format: [Time] [User: U] [Action: A] [Target: T] [Status: S] details... IP: X
+    # Example: [2024-01-01 10:00:00] [User: Admin] [Action: Login] [Target: Panel] [Status: Success] IP: 127.0.0.1
+    pattern = re.compile(r'\[(.*?)\] \[User: (.*?)\] \[Action: (.*?)\] \[Target: (.*?)\] \[Status: (.*?)\] (.*)')
+    
+    try:
+        with open(config.AUDIT_LOG_FILE, 'r', encoding='utf-8') as f:
+            for line in f:
+                line = line.strip()
+                match = pattern.match(line)
+                if match:
+                    details = match.group(6)
+                    ip = "Unknown"
+                    if "IP: " in details:
+                        parts = details.split("IP: ")
+                        if len(parts) > 1:
+                            ip = parts[1].strip()
+                            
+                    logs.append({
+                        'time': match.group(1),
+                        'user': match.group(2),
+                        'action': match.group(3),
+                        'target': match.group(4),
+                        'status': match.group(5),
+                        'ip': ip,
+                        'raw': line
+                    })
+    except: pass
+    
+    # Return reversed (newest first)
+    return list(reversed(logs))

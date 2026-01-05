@@ -639,6 +639,162 @@
                     </div>
                 </div>
             </div>
+
+            <!-- IP Monitoring and Ban Control -->
+            <div class="section-card" style="border-top: 4px solid #E53E3E; margin-top: 30px;">
+                <h2 style="cursor: pointer;" onclick="toggleSection('ipMonitorSection')">
+                    <span>🛡️ IP 訪問監控與封鎖</span>
+                    <span style="font-size: 14px; color: #666;">▼</span>
+                </h2>
+                <div id="ipMonitorSection" style="display: none;">
+
+                    <!-- 1. Banned IPs List -->
+                    <div
+                        style="background: #fff5f5; border: 1px solid #feb2b2; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+                        <h4 style="margin-top:0; color: #c53030;">🚫 已封鎖列表 (Ban List)</h4>
+                        {% if banned_ips %}
+                        <div class="table-container" style="max-height: 200px;">
+                            <table style="font-size: 14px;">
+                                <thead>
+                                    <tr>
+                                        <th>IP</th>
+                                        <th>原因</th>
+                                        <th>到期時間</th>
+                                        <th>操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for ip, info in banned_ips.items() %}
+                                    <tr>
+                                        <td>{{ ip }}</td>
+                                        <td>{{ info.reason }}</td>
+                                        <td>
+                                            {% if info.until <= 0 %} <span
+                                                style="background:#000; color:#fff; padding:2px 6px; border-radius:4px; font-size:12px;">
+                                                永久</span>
+                                                {% else %}
+                                                {{ info.until | format_timestamp }}
+                                                {% endif %}
+                                        </td>
+                                        <td>
+                                            <form action="/admin/ip/unban" method="POST"
+                                                onsubmit="return confirm('確定解除封鎖？')">
+                                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                                <input type="hidden" name="ip" value="{{ ip }}">
+                                                <button type="submit" class="btn btn-secondary btn-sm">解除封鎖
+                                                    (Unban)</button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        {% else %}
+                        <p style="color: #666; margin-bottom: 0;">目前沒有被封鎖的 IP。</p>
+                        {% endif %}
+                    </div>
+
+                    <!-- 2. Active IPs Activity Log -->
+                    <h4 style="margin-bottom: 15px;">🌐 近期 IP 活動 (Active IPs)</h4>
+                    <div style="display: flex; flex-direction: column; gap: 10px;">
+                        {% for ip, data in ip_activity.items() %}
+                        <div
+                            style="border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; background: white;">
+                            <!-- Header -->
+                            <div
+                                style="background: #f7fafc; padding: 10px 15px; display: flex; justify-content: space-between; align-items: center;">
+                                <div style="display: flex; align-items: center; gap: 10px;">
+                                    <span style="font-weight: bold; color: #2d3748;">{{ ip }}</span>
+                                    {% if data.user != 'Guest' %}
+                                    <span
+                                        style="background: #ebf8ff; color: #3182ce; padding: 2px 8px; border-radius: 12px; font-size: 12px;">👤
+                                        {{ data.user }}</span>
+                                    {% else %}
+                                    <span
+                                        style="background: #edf2f7; color: #718096; padding: 2px 8px; border-radius: 12px; font-size: 12px;">訪客</span>
+                                    {% endif %}
+                                    <span style="font-size: 12px; color: #a0aec0;">(Records: {{ data.logs|length
+                                        }})</span>
+                                </div>
+                                <div style="display: flex; gap: 10px; align-items: center;">
+                                    <button class="btn btn-secondary btn-sm"
+                                        onclick="toggleIpDetails('details-{{ loop.index }}')">詳細紀錄 ▼</button>
+
+                                    <!-- Ban Form -->
+                                    <form action="/admin/ip/ban" method="POST" style="display: flex; gap: 5px;">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                        <input type="hidden" name="ip" value="{{ ip }}">
+                                        <select name="duration"
+                                            style="padding: 4px; border-radius: 4px; border: 1px solid #cbd5e0; font-size: 12px;">
+                                            <option value="900">封鎖 15 分鐘</option>
+                                            <option value="3600">封鎖 1 小時</option>
+                                            <option value="28800">封鎖 8 小時</option>
+                                            <option value="86400">封鎖 1 天</option>
+                                            <option value="2592000">封鎖 30 天</option>
+                                            <option value="-1">永久封鎖</option>
+                                        </select>
+                                        <button type="submit" class="btn btn-danger btn-sm"
+                                            onclick="return confirm('確定要封鎖此 IP？')">封鎖 (Ban)</button>
+                                    </form>
+                                </div>
+                            </div>
+                            <!-- Logs Content (Hidden) -->
+                            <div id="details-{{ loop.index }}" style="display: none; padding: 0;">
+                                <table style="width: 100%; font-size: 13px; border-top: 1px solid #eee;">
+                                    <thead style="background: #fff;">
+                                        <tr>
+                                            <th
+                                                style="padding: 8px 15px; color: #718096; background: #fff; font-size: 12px;">
+                                                時間</th>
+                                            <th
+                                                style="padding: 8px 15px; color: #718096; background: #fff; font-size: 12px;">
+                                                使用者</th>
+                                            <th
+                                                style="padding: 8px 15px; color: #718096; background: #fff; font-size: 12px;">
+                                                動作</th>
+                                            <th
+                                                style="padding: 8px 15px; color: #718096; background: #fff; font-size: 12px;">
+                                                目標</th>
+                                            <th
+                                                style="padding: 8px 15px; color: #718096; background: #fff; font-size: 12px;">
+                                                狀態</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for log in data.logs[:50] %}
+                                        <tr>
+                                            <td style="padding: 6px 15px; border-bottom: 1px solid #f7fafc;">{{ log.time
+                                                }}</td>
+                                            <td style="padding: 6px 15px; border-bottom: 1px solid #f7fafc;">{{ log.user
+                                                }}</td>
+                                            <td style="padding: 6px 15px; border-bottom: 1px solid #f7fafc;">{{
+                                                log.action }}</td>
+                                            <td style="padding: 6px 15px; border-bottom: 1px solid #f7fafc;">{{
+                                                log.target }}</td>
+                                            <td style="padding: 6px 15px; border-bottom: 1px solid #f7fafc;">
+                                                {% if log.status == 'Success' %}
+                                                <span style="color: green;">✔</span>
+                                                {% else %}
+                                                <span style="color: red;">✘</span>
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                                {% if data.logs|length > 50 %}
+                                <div
+                                    style="text-align: center; padding: 5px; font-size: 12px; color: #999; border-top: 1px solid #eee;">
+                                    ... 僅顯示最近 50 筆 ...</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+
         </div>
     </div>
     {% endif %}
@@ -731,6 +887,16 @@
 
         function closeEditUserModal() {
             document.getElementById('editUserModal').style.display = 'none';
+        }
+
+        function toggleSection(id) {
+            var el = document.getElementById(id);
+            el.style.display = (el.style.display === 'none') ? 'block' : 'none';
+        }
+
+        function toggleIpDetails(id) {
+            var el = document.getElementById(id);
+            el.style.display = (el.style.display === 'none') ? 'block' : 'none';
         }
     </script>
 </body>

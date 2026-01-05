@@ -62,6 +62,21 @@ def index():
     groups = [g for g in all_groups if g.get('is_visible', True)]
     return render_template('index.html', groups=groups)
 
+@app.before_request
+def check_ip_ban():
+    # Helper to check if IP is banned
+    ip = get_remote_address()
+    is_banned, reason, remaining = security.check_ban(ip)
+    
+    if is_banned:
+        # Check if it's a static file request or something innocuous? 
+        # Usually we want to block everything.
+        if request.endpoint and 'static' in request.endpoint:
+            return None
+            
+        remaining_str = "永久" if remaining == -1 else f"{int(remaining)} 秒"
+        return render_template('login.html', error=f"您的 IP ({ip}) 已被封鎖。原因: {reason}。剩餘時間: {remaining_str}"), 403
+
 @app.route('/login', methods=['GET', 'POST'])
 @limiter.limit("10 per minute", methods=['POST']) 
 def login():
@@ -149,10 +164,37 @@ def admin():
     
     logs = database.load_logs()
     
+    logs = database.load_logs()
+    
     users_list = []
+    ip_activity = {}
+    banned_ips = {}
+    
     if current_role == 'admin':
         users_list = database.load_users()
-    
+        
+        # Load IP Bans
+        banned_ips = database.load_ip_bans()
+        
+        # Process Audit Logs for IP Activity
+        audit_logs = database.load_audit_logs()
+        for log in audit_logs:
+            ip = log['ip']
+            if ip not in ip_activity:
+                ip_activity[ip] = {'logs': [], 'user': 'Guest', 'last_seen': 0}
+            
+            ip_activity[ip]['logs'].append(log)
+            
+            # Update last user seen on this IP
+            if log['user'] and log['user'] != 'Unknown':
+                 ip_activity[ip]['user'] = log['user']
+                 
+            # Note: logs are reversed (newest first), so first one is latest
+            if ip_activity[ip]['last_seen'] == 0:
+                # Parse time? Or just iterate. 
+                # Since we just want grouping, order is preserved.
+                pass
+
     return render_template('admin.html', 
                            groups=groups, 
                            active_group=active_group, 
@@ -160,7 +202,9 @@ def admin():
                            masked_key=masked_key, 
                            logs=logs,
                            users=users_list,
-                           current_role=current_role)
+                           current_role=current_role,
+                           ip_activity=ip_activity,
+                           banned_ips=banned_ips)
 
 @app.route('/admin/group/create', methods=['POST'])
 def create_group():
@@ -612,6 +656,36 @@ def update_settings():
     database.save_settings(settings)
     database.log_audit(session.get('username'), 'Update Global Settings', 'OpenAI Key')
     return jsonify({'success': True})
+
+@app.route('/admin/ip/ban', methods=['POST'])
+def ban_ip_route():
+    if not session.get('user_id') or session.get('role') != 'admin':
+        return redirect(url_for('login'))
+        
+    ip = request.form.get('ip')
+    duration = request.form.get('duration', type=int) # seconds
+    reason = request.form.get('reason', 'Admin Action')
+    
+    if ip:
+        security.ban_ip(ip, duration, reason)
+        database.log_audit(session.get('username'), 'Ban IP', f"{ip} for {duration}s")
+        flash(f'IP {ip} 已封鎖', 'success')
+        
+    return redirect(url_for('admin'))
+
+@app.route('/admin/ip/unban', methods=['POST'])
+def unban_ip_route():
+    if not session.get('user_id') or session.get('role') != 'admin':
+        return redirect(url_for('login'))
+        
+    ip = request.form.get('ip')
+    
+    if ip:
+        security.unban_ip(ip)
+        database.log_audit(session.get('username'), 'Unban IP', ip)
+        flash(f'IP {ip} 已解除封鎖', 'success')
+        
+    return redirect(url_for('admin'))
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)

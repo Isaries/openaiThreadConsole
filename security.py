@@ -84,3 +84,59 @@ def record_login_attempt(ip, success):
         if record['count'] >= LOCKOUT_THRESHOLD:
             record['lockout_until'] = time.time() + LOCKOUT_DURATION
         LOGIN_ATTEMPTS[ip] = record
+
+# --- IP Banning System ---
+import database
+
+# Cache for bans to avoid reading file on every request (simple in-memory cache)
+# However, for multi-worker, we should read file or use redis.
+# Given simple json persistence, we will load on check to be safe or cache with short TTL.
+# Let's load on check for accuracy as performance impact is low for small file.
+
+def check_ban(ip):
+    """
+    Returns (True, reason, remaining_seconds) if banned.
+    Returns (False, "", 0) if allowed.
+    """
+    bans = database.load_ip_bans()
+    if ip not in bans:
+        return False, "", 0
+        
+    ban_info = bans[ip]
+    until = ban_info.get('until')
+    
+    # If until is 0 or -1, it means permanent
+    if until <= 0:
+        return True, ban_info.get('reason', 'Banned'), -1
+        
+    now = time.time()
+    if now < until:
+        return True, ban_info.get('reason', 'Banned'), int(until - now)
+    else:
+        # Expired, clean up?
+        # Ideally yes, but lazy cleanup is fine.
+        return False, "", 0
+
+def ban_ip(ip, duration_seconds, reason="Admin Ban"):
+    """
+    bans ip for duration_seconds. If duration_seconds <= 0, permanent.
+    """
+    bans = database.load_ip_bans()
+    
+    until = 0 # Permanent
+    if duration_seconds > 0:
+        until = time.time() + duration_seconds
+        
+    bans[ip] = {
+        'until': until,
+        'reason': reason,
+        'created_at': time.time()
+    }
+    return database.save_ip_bans(bans)
+
+def unban_ip(ip):
+    bans = database.load_ip_bans()
+    if ip in bans:
+        del bans[ip]
+        return database.save_ip_bans(bans)
+    return True

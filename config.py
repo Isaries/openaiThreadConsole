@@ -9,6 +9,7 @@ USERS_FILE = 'users.json'
 SETTINGS_FILE = 'settings.json'
 LOG_FILE = 'search_logs.json'
 AUDIT_LOG_FILE = 'audit.log'
+IP_BANS_FILE = 'ip_bans.json'
 
 # Security Config
 SECRET_KEY = os.getenv('SECRET_KEY', 'default_secret_key_change_me')
