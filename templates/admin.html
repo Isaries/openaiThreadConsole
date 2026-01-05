@@ -597,7 +597,8 @@
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <input type="hidden" name="group_id" value="{{ active_group.group_id }}">
                     <div class="input-group" style="margin-top:15px;">
-                        <input type="text" name="thread_id" placeholder="輸入 Thread ID..." required maxlength="100">
+                        <input type="text" id="manual_thread_input" name="thread_id"
+                            placeholder="輸入 Thread ID (或貼上完整網址)..." required maxlength="120">
                         <button type="submit" class="btn btn-primary">新增</button>
                     </div>
                 </form>
@@ -1074,6 +1075,18 @@
         function toggleIpDetails(id) {
             var el = document.getElementById(id);
             el.style.display = (el.style.display === 'none') ? 'block' : 'none';
+        }
+
+        // Smart Thread ID Extraction for Manual Add
+        const manualInput = document.getElementById('manual_thread_input');
+        if (manualInput) {
+            manualInput.addEventListener('input', function () {
+                const val = this.value;
+                const threadMatch = val.match(/(thread_[A-Za-z0-9]+)/);
+                if (threadMatch && val !== threadMatch[1]) {
+                    this.value = threadMatch[1];
+                }
+            });
         }
     </script>
 </body>
