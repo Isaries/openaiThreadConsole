@@ -4,6 +4,7 @@ from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from werkzeug.security import check_password_hash, generate_password_hash
 from datetime import datetime
+import time
 import logging
 from logging.handlers import RotatingFileHandler
 import uuid
@@ -407,35 +408,31 @@ def upload_file():
         
     return redirect(url_for('admin', group_id=group_id))
 
-@app.route('/api/search', methods=['POST'])
+@app.route('/search', methods=['POST'])
 @limiter.limit("20 per minute")
 def search():
-    data = request.json
-    group_id = data.get('group_id')
-    target_name = data.get('target_name', '').strip()
-    date_from = data.get('date_from')
-    date_to = data.get('date_to')
+    # Standard Form Submission
+    group_id = request.form.get('group_id')
+    target_name = request.form.get('target_name', '').strip()
+    date_from = request.form.get('start_date')
+    date_to = request.form.get('end_date')
     
     # 1. Permission/Group Check
-    # Public search page: anyone can search visible groups? 
-    # Yes, per original logic.
     group = database.get_group_by_id(group_id)
     if not group: 
-        return jsonify({'error': 'Group not found'}), 404
+        return "Group not found", 404
+        # Ideally render a nice error page or redirect with flash
         
-    # Check visibility? Original code didn't strictly block hidden groups API, 
-    # only UI filtering. But let's block if hidden? 
-    # User requirement: "Visible setting impacts whether a group can be seen or selected".
-    # Assuming hidden groups shouldn't be searchable via API either.
     if not group.get('is_visible', True):
-        return jsonify({'error': 'Group is hidden'}), 403
+        return "Group is hidden", 403
 
     threads_list = group.get('threads', [])
     if not threads_list:
-        return jsonify({'results': [], 'stats': {'total':0, 'kept':0}})
+        return render_template('result.html', results=[], target_name=target_name, count=0, debug_log=[])
 
     # Start Processing
     results = []
+    debug_log = []
     
     # Get Key
     api_key = group.get('api_key')
@@ -451,6 +448,8 @@ def search():
     }
     database.save_log(log_entry)
 
+    start_time = time.time()
+
     with ThreadPoolExecutor(max_workers=5) as executor:
         futures = []
         for t in threads_list:
@@ -458,19 +457,24 @@ def search():
             
         for future in futures:
             res = future.result()
+            debug_log.append(res)
             if res['keep']:
-                results.append(res)
+                results.append(res['data'])
+    
+    end_time = time.time()
+    duration = end_time - start_time
+    target_time = f"{duration:.2f} 秒"
     
     # Sort by date descending
-    results.sort(key=lambda x: x['data']['timestamp'], reverse=True)
+    results.sort(key=lambda x: x['timestamp'], reverse=True)
     
-    return jsonify({
-        'results': results,
-        'stats': {
-            'total': len(threads_list),
-            'kept': len(results)
-        }
-    })
+    return render_template('result.html', 
+        results=results, 
+        target_name=target_name, 
+        count=len(results),
+        target_time=target_time,
+        debug_log=debug_log
+    )
 
 # --- User Management (Admin) ---
 @app.route('/admin/user/create', methods=['POST'])
