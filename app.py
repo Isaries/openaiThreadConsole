@@ -93,28 +93,34 @@ def login():
         return render_template('login.html', error=f"登入失敗次數過多，請於 {int(remaining//60)+1} 分鐘後再試")
 
     if request.method == 'POST':
+        email = request.form.get('email', '').strip()
         pwd = request.form.get('password', '')
+        
         if len(pwd) > 100:
-            app.logger.warning("Admin login failed: Password too long")
+            app.logger.warning("Login failed: Password too long")
             return render_template('login.html', error="輸入過長")
             
-        # 1. Check Admin (Env)
-        if pwd in config.ADMIN_PASSWORDS:
-            session.clear()
-            session.permanent = True
-            session['is_admin'] = True 
-            session['role'] = 'admin'
-            session['user_id'] = 'admin'
-            session['username'] = 'Administrator'
-            
-            security.record_login_attempt(ip, True)
-            database.log_audit('Administrator', 'Login', 'Admin Panel', 'Success', f"IP: {ip}")
-            return redirect(url_for('admin'))
+        # 1. Check Admin (No Email or Email is 'admin')
+        if not email or email.lower() == 'admin':
+            if pwd in config.ADMIN_PASSWORDS:
+                session.clear()
+                session.permanent = True
+                session['is_admin'] = True 
+                session['role'] = 'admin'
+                session['user_id'] = 'admin'
+                session['username'] = 'Administrator'
+                
+                security.record_login_attempt(ip, True)
+                database.log_audit('Administrator', 'Login', 'Admin Panel', 'Success', f"IP: {ip}")
+                return redirect(url_for('admin'))
         
-        # 2. Check Teachers
-        users = database.load_users()
-        for user in users:
-            if check_password_hash(user['password_hash'], pwd):
+        # 2. Check Teachers (Must verify Email + Password)
+        if email:
+            users = database.load_users()
+            # Case-insensitive email match
+            user = next((u for u in users if u.get('email', '').lower() == email.lower()), None)
+            
+            if user and check_password_hash(user['password_hash'], pwd):
                 session.clear()
                 session.permanent = True
                 session['is_admin'] = False
@@ -129,8 +135,10 @@ def login():
 
         # Record Failure
         security.record_login_attempt(ip, False)
-        database.log_audit('Unknown', 'Login', 'Admin Panel', 'Fail', f"IP: {ip}")
-        return render_template('login.html', error="密碼錯誤")
+        # Log which (Email) failed if provided
+        log_user = email if email else 'Unknown'
+        database.log_audit(log_user, 'Login', 'Admin Panel', 'Fail', f"IP: {ip}")
+        return render_template('login.html', error="帳號或密碼錯誤")
     return render_template('login.html')
 
 @app.route('/logout')
