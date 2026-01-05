@@ -601,6 +601,7 @@ def create_user():
         "username": username,
         "email": email,
         "password_hash": generate_password_hash(password),
+        "password_hint": security.generate_password_hint(password),
         "created_at": int(datetime.now().timestamp())
     }
     
@@ -631,6 +632,7 @@ def reset_user_password():
         return redirect(url_for('admin'))
         
     user['password_hash'] = generate_password_hash(new_password)
+    user['password_hint'] = security.generate_password_hint(new_password)
     database.save_users(users)
     database.log_audit(session.get('username'), 'Reset Password', user['username'])
     flash(f'用戶 {user["username"]} 密碼重設成功', 'success')
