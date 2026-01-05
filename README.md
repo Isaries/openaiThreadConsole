@@ -1,114 +1,120 @@
-# Thread Console
+# OpenAI Thread Console
 
-This is an OpenAI Thread Management System designed for education and team collaboration. It allows administrators and teachers to manage multiple conversation groups, provides fast full-text search capabilities, and features comprehensive Role-Based Access Control (RBAC) and security protection mechanisms.
+This is a Flask-based management system for OpenAI Assistant Threads. It allows educational institutions or teams to manage multiple thread groups, providing role-based access control (Admin/Teacher), keyword searching, conversation viewing, and a comprehensive backend monitoring system.
+
+---
 
 ## Key Features
 
-### Search and Browsing
-*   **Full-Text Search**: Deep search for conversation content with keyword highlighting.
-*   **Advanced Filtering**: Filter search results by date range.
-*   **Secure Browsing**: Built-in XSS protection (Bleach) automatically filters malicious HTML tags to ensure safe browsing.
-*   **High Performance**: In-Memory search architecture ensures sub-second response times even with large datasets.
+### 1. Search Portal
+*   **Cross-Group Search**: Users can select specific groups to search through conversation history.
+*   **Keyword Highlighting**: Keywords in search results are highlighted with a yellow background.
+*   **Date Filtering**: Supports filtering conversations by start and end dates.
+*   **Visibility Control**: Only displays groups marked as "Visible".
 
-### Management Panel
-*   **Role-Based Access Control (RBAC)**:
-    *   **Admin**: Has full access to manage all groups, create/delete/reset teacher passwords, and view system audit logs.
-    *   **Teacher**: Has a dedicated workspace and can only manage groups created by themselves, ensuring data privacy and isolation.
+### 2. Admin Panel
 *   **Group Management**:
-    *   Support for creating multiple project or course groups.
-    *   **Independent API Key**: Each group can be bound to a separate OpenAI API Key for quota control.
-    *   **Validation**: Prevents the creation of groups with duplicate names.
-*   **Account Management**:
-    *   **Password Hint**: Admins can view partial password hints for teachers (e.g., `Le***lo`) to verify identity.
-    *   **Password Reset**: Admins can directly reset teacher passwords.
-*   **Data Import/Export**: Support for uploading Excel (`.xlsx`) files to batch add or remove Thread IDs.
+    *   Create, rename, and delete groups.
+    *   **Role Assignment**: Assign groups to specific teachers or transfer ownership to the administrator.
+    *   **API Key Management**: Supports group-specific OpenAI API Keys (stored with AES-256 encryption) or falls back to the system default key.
+    *   **Visibility Toggle**: Hide or show groups with a single click.
+*   **Thread Data Management**:
+    *   **Batch Processing**: Supports uploading Excel files (`.xlsx`) to batch add or delete Thread IDs (column names are case-insensitive).
+    *   Single entry add/delete functionality.
+    *   **Optimistic Locking**: Prevents data overwrite issues when multiple users edit simultaneously.
+*   **User Management**:
+    *   Administrators can create, delete, and edit teacher accounts.
+    *   Reset user passwords.
+    *   Password strength validation and encrypted storage (PBKDF2).
 
-### Security Protection
-*   **Account Lockout**: After 5 consecutive failed login attempts from a single IP, the account is locked for 15 minutes to prevent brute-force attacks.
-*   **Password Policy**: Teacher passwords must be 10-15 characters long and contain both letters and numbers.
-*   **Data Encryption**: API Keys are encrypted using Fernet symmetric encryption before storage.
-*   **Audit Log**: The system records all sensitive operations (login, account creation/deletion, group modification, password reset, etc.) for tracking purposes.
+### 3. Security & Monitoring
+*   **IP Access Monitoring**:
+    *   Real-time monitoring of all IP activities (Login, Search, Visit, Data Modification).
+    *   Smart Identification: Automatically tags known teacher usernames based on session data.
+    *   Activity Logs: Detailed history of actions performed by each IP.
+*   **Ban System**:
+    *   Support for temporary (15m, 1h, 8h...) or permanent IP bans.
+    *   **Self-Ban Protection**: The system prevents administrators from banning their own current IP address.
+*   **Login Protection**:
+    *   Automatic IP lockout after multiple failed login attempts (Brute-force protection).
+    *   CSRF protection on all forms.
 
 ---
 
-## Deployment Guide
+## Architecture
 
-### Docker Deployment (Recommended)
+The project follows a modular architecture to ensure maintainability:
 
-This project is fully containerized. It is recommended to use Docker for deployment.
+*   **`app.py`**: Route Controller, handling HTTP requests and page navigation.
+*   **`config.py`**: System configuration, managing environment variables and constants.
+*   **`database.py`**: Persistence Layer, handling JSON file I/O (`users.json`, `groups.json`) and Audit Logs.
+*   **`security.py`**: Security module, handling encryption (Fernet), password hashing, IP ban logic, and lockout mechanisms.
+*   **`services.py`**: Business logic and external services, including OpenAI API calls and data processing.
+*   **`utils.py`**: Utility functions, including HTML sanitization and time formatting.
 
-#### 1. Prepare Environment File
+---
+
+## Installation & Usage
+
+### 1. Requirements
+*   Python 3.8+
+*   Pip (Python Package Manager)
+
+### 2. Install Dependencies
+```bash
+pip install flask flask-wtf flask-limiter cryptography bleach pandas requests openpyxl python-dotenv
+```
+
+### 3. Environment Variables (.env)
 Create a `.env` file in the project root directory:
-```env
-# Default System OpenAI API Key (Used when a group has no key set)
-OPENAI_API_KEY=sk-proj-xxxxxxxxxxxxxxxxxxxxxxxx
+```ini
+# Flask Secret Key (Critical for session encryption)
+SECRET_KEY=your-super-secret-key-change-this
 
-# Admin Passwords (Comma-separated for multiple admins)
-ADMIN_PASSWORD=admin888,root1234
+# OpenAI API Key (System default fallback key)
+OPENAI_API_KEY=sk-proj-...
 
-# Session Secret Key (Must be a long random string)
-SECRET_KEY=change-this-to-a-very-long-random-secret-key-123456
-
-# Service Port (Internal container port, usually does not need modification)
-PORT=8000
+# Admin Password (Root administrator password)
+ADMIN_PASSWORD=your-admin-password
 ```
 
-#### 2. Prepare Data Files
-Create necessary empty files on the host to avoid Docker mounting errors:
+### 4. Run Server
 ```bash
-touch threads.json users.json audit.log access.log
+python app.py
 ```
-
-#### 3. Start Service
-Run the following commands to build and start the container (Exposed on port `8010`):
-
-```bash
-# 1. Build Image
-docker build -t thread-console .
-
-# 2. Run Container
-docker run -d \
-  --name thread-console \
-  --restart always \
-  -p 8010:8000 \
-  --env-file .env \
-  -v $(pwd)/threads.json:/app/threads.json \
-  -v $(pwd)/users.json:/app/users.json \
-  -v $(pwd)/audit.log:/app/audit.log \
-  -v $(pwd)/access.log:/app/access.log \
-  thread-console
-```
-
-After starting, visit `http://localhost:8010` to access the home page.
+The server will start at `http://localhost:5000` by default.
 
 ---
 
-## Nginx Proxy Manager Setup (SSL / HTTPS)
+## Data Storage
 
-If you are using Nginx Proxy Manager for reverse proxy, the recommended settings are:
+This system uses JSON files as a lightweight database, eliminating the need for a SQL server:
 
-1.  **Domain Names**: `thread.yourdomain.com`
-2.  **Scheme**: `http`
-3.  **Forward Hostname / IP**: `host.docker.internal` (if NPM and App are on the same machine) or `Server IP`
-4.  **Forward Port**: `8010`
-5.  **Block Common Exploits**: Enable
-6.  **SSL**: Request a Let's Encrypt certificate and check `Force SSL`.
+*   `users.json`: Stores user account information (User ID, Username, Email, Password Hash).
+*   `groups.json`: Stores group information, Thread ID lists, and encrypted API Keys.
+*   `settings.json`: Stores global settings.
+*   `ip_bans.json`: Stores the list of banned IP addresses.
+*   `audit.log`: Stores system operation audit logs.
+
+> **Note**: All `.json` and `.log` files should be excluded from version control (except example files) to prevent sensitive data leakage.
 
 ---
 
-## Project Structure
+## Security Mechanisms
 
-*   `app.py`: Core application logic (Flask).
-*   `templates/`: HTML templates.
-    *   `index.html`: Search home page.
-    *   `admin.html`: Admin management panel.
-    *   `login.html`: Login page.
-*   `threads.json`: Stores group structure and Thread IDs.
-*   `users.json`: Stores teacher account information (Hashed passwords).
-*   `audit.log`: System security audit log.
+1.  **Data Encryption**: All API Keys are encrypted using `Fernet` (symmetric encryption) before being written to `groups.json`. The key is derived from the `SECRET_KEY`. Attackers cannot retrieve the actual API Key even if they gain access to the JSON files.
+2.  **Input Sanitization**: All user inputs and OpenAI responses are processed by `bleach` to retain only safe tags (e.g., `<b>`, `<mark>`), preventing XSS attacks.
+3.  **Rate Limiting**: Rate limits are applied to login and search interfaces (e.g., 10 requests per minute) to prevent brute-force attacks and DoS.
 
-## Developer Info
+---
 
-*   **Author**: Leolo / Isaries
-*   **Version**: 1.2.0
-*   **Last Update**: 2026-01-05
+## Recent Updates
+*   **Refactor**: Split monolithic `app.py` into MVC-structured modules.
+*   **Feat**: Added IP monitoring panel and ban functionality.
+*   **Feat**: Added support for batch add/delete via Excel (case-insensitive column headers).
+*   **Fix**: Fixed issue where `<mark>` tags in search results were being escaped.
+*   **UX**: Added modern animated gradient background to the search page.
+
+---
+
+&copy; 2024 Thread Console System.
