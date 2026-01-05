@@ -521,6 +521,7 @@
                                 <thead>
                                     <tr>
                                         <th>名稱</th>
+                                        <th>密碼提示</th>
                                         <th>建立時間</th>
                                         <th>操作</th>
                                     </tr>
@@ -529,9 +530,14 @@
                                     {% for u in users %}
                                     <tr>
                                         <td>{{ u.username }}</td>
+                                        <td><span
+                                                style="font-family:monospace; background:#eee; padding:2px 4px; border-radius:3px;">{{
+                                                u.password_hint or '****' }}</span></td>
                                         <td>{{ u.created_at | format_timestamp }}</td>
                                         <!-- Note: You might want a filter to format this timestamp properly -->
                                         <td>
+                                            <button type="button" class="btn btn-secondary btn-sm"
+                                                onclick="openResetModal('{{ u.id }}', '{{ u.username }}')">重設密碼</button>
                                             <form action="/admin/user/delete" method="POST" style="display:inline;">
                                                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                                 <input type="hidden" name="user_id" value="{{ u.id }}">
@@ -542,7 +548,7 @@
                                     </tr>
                                     {% else %}
                                     <tr>
-                                        <td colspan="3" style="text-align:center; color:#999;">目前沒有教師帳戶</td>
+                                        <td colspan="4" style="text-align:center; color:#999;">目前沒有教師帳戶</td>
                                     </tr>
                                     {% endfor %}
                                 </tbody>
@@ -555,6 +561,32 @@
     </div>
     {% endif %}
 
+    <div id="resetPasswordModal"
+        style="display:none; position:fixed; right:0; top:0; width:100%; height:100%; z-index:2000; align-items:center; justify-content:center; pointer-events: none;">
+        <!-- Overlay -->
+        <div style="position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); pointer-events: auto;"
+            onclick="closeResetModal()"></div>
+        <!-- Modal Content -->
+        <div
+            style="background:white; padding:20px; border-radius:8px; width:300px; box-shadow:0 4px 6px rgba(0,0,0,0.1); z-index:2001; pointer-events: auto; position: relative;">
+            <h3 style="margin-top:0;">重設密碼</h3>
+            <p>正在重設 <span id="resetTargetUser" style="font-weight:bold;"></span> 的密碼</p>
+            <form action="/admin/user/reset" method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="user_id" id="resetUserId">
+                <div style="margin-bottom:15px;">
+                    <label>新密碼</label>
+                    <input type="text" name="new_password" required placeholder="輸入新密碼 (10-15 字元)"
+                        style="width:100%; padding:8px; margin-top:5px; border:1px solid #ddd; border-radius:4px;">
+                </div>
+                <div style="display:flex; justify-content:flex-end; gap:10px;">
+                    <button type="button" class="btn btn-secondary" onclick="closeResetModal()">取消</button>
+                    <button type="submit" class="btn btn-primary">確認重設</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <script>
         function toggleAll(source) {
             checkboxes = document.getElementsByName('selected_ids');
@@ -565,6 +597,16 @@
         function toggleSettings() {
             var el = document.getElementById('settingsSection');
             el.style.display = (el.style.display === 'block') ? 'none' : 'block';
+        }
+
+        function openResetModal(userId, username) {
+            document.getElementById('resetUserId').value = userId;
+            document.getElementById('resetTargetUser').innerText = username;
+            document.getElementById('resetPasswordModal').style.display = 'flex';
+        }
+
+        function closeResetModal() {
+            document.getElementById('resetPasswordModal').style.display = 'none';
         }
     </script>
 </body>

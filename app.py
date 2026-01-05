@@ -75,6 +75,11 @@ def validate_password_strength(password):
         
     return True, ""
 
+def generate_password_hint(password):
+    if not password: return ""
+    if len(password) <= 4: return "*" * len(password)
+    return f"{password[:2]}***{password[-2:]}"
+
 load_dotenv()
 
 app = Flask(__name__)
@@ -797,6 +802,7 @@ def create_user():
         "id": str(uuid.uuid4()),
         "username": username,
         "password_hash": generate_password_hash(password),
+        "password_hint": generate_password_hint(password),
         "role": "teacher",
         "created_at": int(datetime.now().timestamp())
     }
@@ -826,6 +832,41 @@ def delete_user():
     
     log_audit(session.get('username'), 'Delete User', username)
     flash('帳戶已刪除', 'success')
+    return redirect(url_for('admin'))
+
+@app.route('/admin/user/reset', methods=['POST'])
+def reset_password():
+    if not session.get('user_id'): return redirect(url_for('login'))
+    if session.get('role') != 'admin':
+        flash('權限不足', 'error')
+        return redirect(url_for('admin'))
+
+    user_id = request.form.get('user_id')
+    new_password = request.form.get('new_password', '').strip()
+
+    if not user_id or not new_password:
+        flash('請輸入新密碼', 'error')
+        return redirect(url_for('admin'))
+
+    # Password Strength Check
+    is_valid, err_msg = validate_password_strength(new_password)
+    if not is_valid:
+        flash(f'密碼強度不足: {err_msg}', 'error')
+        return redirect(url_for('admin'))
+
+    users = load_users()
+    target_user = next((u for u in users if u['id'] == user_id), None)
+
+    if not target_user:
+        flash('找不到該使用者', 'error')
+        return redirect(url_for('admin'))
+
+    target_user['password_hash'] = generate_password_hash(new_password)
+    target_user['password_hint'] = generate_password_hint(new_password)
+    save_users(users)
+
+    log_audit(session.get('username'), 'Reset Password', target_user['username'])
+    flash(f'{target_user["username"]} 密碼重設成功', 'success')
     return redirect(url_for('admin'))
 
 @app.route('/admin/group/delete', methods=['POST'])
