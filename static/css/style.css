@@ -480,7 +480,11 @@ label {
 }
 
 .floating-message {
-    position: fixed;
+    position: absolute;
+    bottom: 100%;
+    right: 50%;
+    transform: translateX(50%);
+    /* Centered horizontally */
     color: white;
     /* Will override based on theme if needed, but white is safe on dark/glass/color */
     font-weight: 600;
@@ -489,6 +493,9 @@ label {
     z-index: 2000;
     text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
     font-size: 0.9rem;
+    white-space: nowrap;
+    margin-bottom: 10px;
+    /* Start slightly above avatar */
 }
 
 /* Theme 4: Plain Gray (Light) */
