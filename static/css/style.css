@@ -467,9 +467,9 @@ label {
     }
 }
 
-/* Theme 4: Plain White */
-.auth-layout.bg-white {
-    background-color: #ffffff;
+/* Theme 4: Plain Gray (Light) */
+.auth-layout.bg-gray {
+    background-color: #f3f4f6;
     background-image: none;
     z-index: 0;
 }
