@@ -325,23 +325,27 @@ label {
 }
 
 /* --- Page Specific: Index / Auth --- */
+/* Base Auth Layout (Default: Original Dark Gradient) */
 .auth-layout {
     min-height: 100vh;
     display: flex;
     align-items: center;
     justify-content: center;
+    padding: var(--spacing-md);
+    position: relative;
+    overflow: hidden;
+    transition: background 0.5s ease;
+}
+
+/* Default Theme (Classic) */
+.auth-layout.bg-default {
     background: radial-gradient(at 0% 0%, hsla(253, 16%, 7%, 1) 0, transparent 50%),
         radial-gradient(at 50% 0%, hsla(225, 39%, 30%, 1) 0, transparent 50%),
         radial-gradient(at 100% 0%, hsla(339, 49%, 30%, 1) 0, transparent 50%);
     background-color: #0f172a;
-    /* Dark fallback */
-    padding: var(--spacing-md);
-    position: relative;
-    overflow: hidden;
 }
 
-/* Enhanced Animated Background */
-.auth-layout::before {
+.auth-layout.bg-default::before {
     content: '';
     position: absolute;
     top: -50%;
@@ -351,6 +355,99 @@ label {
     background: radial-gradient(circle at center, transparent 30%, #000 70%);
     z-index: 0;
     pointer-events: none;
+}
+
+/* Theme 1: Animated Aurora */
+.auth-layout.bg-aurora {
+    background: linear-gradient(-45deg, #ee7752, #e73c7e, #23a6d5, #23d5ab);
+    background-size: 400% 400%;
+    animation: gradientBG 15s ease infinite;
+}
+
+@keyframes gradientBG {
+    0% {
+        background-position: 0% 50%;
+    }
+
+    50% {
+        background-position: 100% 50%;
+    }
+
+    100% {
+        background-position: 0% 50%;
+    }
+}
+
+/* Theme 2: Cyber Grid */
+.auth-layout.bg-grid {
+    background-color: #050505;
+    background-image: linear-gradient(rgba(50, 255, 100, 0.1) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(50, 255, 100, 0.1) 1px, transparent 1px);
+    background-size: 40px 40px;
+    animation: moveGrid 20s linear infinite;
+    position: relative;
+}
+
+.auth-layout.bg-grid::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at center, transparent 0%, #000 90%);
+    pointer-events: none;
+}
+
+@keyframes moveGrid {
+    0% {
+        background-position: 0 0;
+    }
+
+    100% {
+        background-position: 40px 40px;
+    }
+}
+
+/* Theme 3: Glassmorphism (Floating Orbs) */
+.auth-layout.bg-glass {
+    background-color: #f0f4f8;
+    position: relative;
+    z-index: 0;
+}
+
+.auth-layout.bg-glass .orb-1,
+.auth-layout.bg-glass .orb-2 {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(80px);
+    z-index: -1;
+    animation: floatOrb 10s infinite alternate;
+    opacity: 0.6;
+}
+
+.auth-layout.bg-glass .orb-1 {
+    width: 400px;
+    height: 400px;
+    background: #a78bfa;
+    top: 10%;
+    left: 20%;
+}
+
+.auth-layout.bg-glass .orb-2 {
+    width: 300px;
+    height: 300px;
+    background: #3b82f6;
+    bottom: 20%;
+    right: 20%;
+    animation-delay: -5s;
+}
+
+@keyframes floatOrb {
+    0% {
+        transform: translate(0, 0);
+    }
+
+    100% {
+        transform: translate(50px, 50px);
+    }
 }
 
 .auth-card {
