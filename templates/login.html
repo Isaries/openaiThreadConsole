@@ -1,126 +1,53 @@
 <!DOCTYPE html>
-<html>
+<html lang="zh-Hant">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>管理員登入</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
-        }
-
-        .login-card {
-            background: white;
-            padding: 40px;
-            border-radius: 16px;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-            width: 100%;
-            max-width: 400px;
-            text-align: center;
-        }
-
-        h2 {
-            margin-bottom: 20px;
-            color: #333;
-        }
-
-        .form-group {
-            margin-bottom: 20px;
-            text-align: left;
-        }
-
-        label {
-            display: block;
-            margin-bottom: 8px;
-            color: #666;
-            font-size: 14px;
-        }
-
-        input {
-            width: 100%;
-            padding: 12px;
-            border: 2px solid #e0e0e0;
-            border-radius: 8px;
-            font-size: 16px;
-            transition: border-color 0.3s;
-        }
-
-        input:focus {
-            outline: none;
-            border-color: #667eea;
-        }
-
-        button {
-            width: 100%;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 12px;
-            border: none;
-            border-radius: 8px;
-            font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
-        }
-
-        button:hover {
-            opacity: 0.9;
-        }
-
-        .alert {
-            background: #fee2e2;
-            color: #991b1b;
-            padding: 12px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            font-size: 14px;
-        }
-
-        .back-link {
-            display: block;
-            margin-top: 20px;
-            color: #666;
-            text-decoration: none;
-            font-size: 14px;
-        }
-
-        .back-link:hover {
-            text-decoration: underline;
-        }
-    </style>
+    <title>登入 - Thread Console</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
 
-<body>
-    <div class="login-card">
-        <h2>🔒 管理員登入</h2>
-        {% if error %}
-        <div class="alert">{{ error }}</div>
-        {% endif %}
+<body class="auth-layout">
+
+    <div class="card auth-card">
+        <div style="text-align: center; margin-bottom: 2rem;">
+            <h1 style="font-size: 1.75rem; color: var(--text-main);">📂 資料管理登入</h1>
+            <p class="text-secondary text-sm">請輸入憑證以繼續</p>
+        </div>
+
         <form method="POST">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+
             <div class="form-group">
                 <label>Email (教師登入需填寫)</label>
-                <input type="email" name="email" placeholder="教師請輸入 Email (管理員留空)" style="margin-bottom:10px;">
+                <input type="email" name="email" class="input" placeholder="教師請輸入 Email" style="margin-bottom:1rem;">
 
                 <label>密碼</label>
-                <input type="password" name="password" placeholder="請輸入密碼" required maxlength="100">
+                <input type="password" name="password" class="input" placeholder="請輸入密碼" required maxlength="100">
             </div>
-            <button type="submit">登入</button>
+
+            {% if error %}
+            <div class="alert alert-error">
+                ⚠️ {{ error }}
+            </div>
+            {% endif %}
+
+            <button type="submit" class="btn btn-primary btn-block" style="padding: 0.75rem; margin-top: 1rem;">
+                登入系統
+            </button>
         </form>
-        <a href="/" class="back-link">← 回到搜尋首頁</a>
+
+        <div
+            style="text-align: center; margin-top: 2rem; border-top: 1px solid var(--surface-border); padding-top: 1rem;">
+            <a href="/" class="btn btn-secondary btn-sm"
+                style="background: transparent; border: none; color: var(--text-secondary);">
+                ⬅️ 返回搜尋首頁
+            </a>
+        </div>
     </div>
+
 </body>
 
 </html>

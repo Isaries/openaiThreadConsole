@@ -1,417 +1,84 @@
 <!DOCTYPE html>
-<html>
+<html lang="zh-Hant">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Thread 資料管理</title>
-    <style>
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: #f5f7fa;
-            color: #333;
-            min-height: 100vh;
-        }
-
-        .navbar {
-            background: white;
-            padding: 15px 30px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            position: sticky;
-            top: 0;
-            z-index: 100;
-        }
-
-        .logo {
-            font-weight: bold;
-            font-size: 18px;
-            color: #4a5568;
-            text-decoration: none;
-        }
-
-        .nav-actions a {
-            text-decoration: none;
-            color: #666;
-            font-size: 14px;
-            margin-left: 20px;
-            transition: color 0.2s;
-        }
-
-        .nav-actions a:hover {
-            color: #667eea;
-        }
-
-        .nav-actions .logout {
-            color: #e53e3e;
-        }
-
-        /* Layout */
-        .main-container {
-            display: flex;
-            max-width: 1200px;
-            margin: 30px auto;
-            padding: 0 20px;
-            gap: 30px;
-            align-items: flex-start;
-        }
-
-        .sidebar {
-            flex: 0 0 250px;
-            background: white;
-            border-radius: 12px;
-            padding: 20px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
-            position: sticky;
-            top: 90px;
-        }
-
-        .content-area {
-            flex: 1;
-            min-width: 0;
-        }
-
-        /* Sub-components */
-        .section-card {
-            background: white;
-            border-radius: 12px;
-            padding: 25px;
-            margin-bottom: 25px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
-        }
-
-        h2 {
-            margin-bottom: 20px;
-            font-size: 20px;
-            border-bottom: 2px solid #f0f0f0;
-            padding-bottom: 15px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .group-item {
-            display: block;
-            padding: 12px 15px;
-            border-radius: 8px;
-            color: #4a5568;
-            text-decoration: none;
-            margin-bottom: 8px;
-            transition: background 0.2s;
-            border: 1px solid transparent;
-        }
-
-        .group-item:hover {
-            background: #f7fafc;
-        }
-
-        .group-item.active {
-            background: #ebf4ff;
-            color: #5a67d8;
-            border-color: #c3dafe;
-            font-weight: 600;
-        }
-
-        .group-list-header {
-            font-size: 14px;
-            font-weight: 600;
-            color: #718096;
-            margin-bottom: 15px;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-        }
-
-        .btn {
-            padding: 8px 16px;
-            border: none;
-            border-radius: 6px;
-            font-weight: 600;
-            cursor: pointer;
-            font-size: 14px;
-            transition: all 0.2s;
-        }
-
-        .btn-sm {
-            padding: 4px 8px;
-            font-size: 12px;
-        }
-
-        .btn-primary {
-            background: #667eea;
-            color: white;
-        }
-
-        .btn-primary:hover {
-            background: #5a6fd6;
-        }
-
-        .btn-danger {
-            background: #fc8181;
-            color: white;
-        }
-
-        .btn-danger:hover {
-            background: #f56565;
-        }
-
-        .btn-secondary {
-            background: #edf2f7;
-            color: #4a5568;
-        }
-
-        .btn-secondary:hover {
-            background: #e2e8f0;
-        }
-
-        .input-group {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 15px;
-        }
-
-        input[type="text"],
-        input[type="file"] {
-            flex: 1;
-            padding: 10px;
-            border: 2px solid #e0e0e0;
-            border-radius: 8px;
-            font-size: 14px;
-        }
-
-        /* Stats */
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            gap: 15px;
-        }
-
-        .stat-box {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 15px;
-            border-radius: 10px;
-            text-align: center;
-        }
-
-        .stat-number {
-            font-size: 28px;
-            font-weight: bold;
-        }
-
-        .stat-label {
-            font-size: 13px;
-            opacity: 0.9;
-        }
-
-        /* Table */
-        .table-container {
-            overflow-x: auto;
-            max-height: 600px;
-            border: 1px solid #eee;
-            border-radius: 8px;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 14px;
-        }
-
-        th,
-        td {
-            text-align: left;
-            padding: 12px 15px;
-            border-bottom: 1px solid #eee;
-        }
-
-        th {
-            background: #f8fafc;
-            font-weight: 600;
-            position: sticky;
-            top: 0;
-            z-index: 10;
-        }
-
-        tr:hover {
-            background: #f8f9fa;
-        }
-
-        .alert {
-            padding: 15px;
-            margin-bottom: 20px;
-            border-radius: 8px;
-        }
-
-        .alert-success {
-            background: #c6f6d5;
-            color: #276749;
-        }
-
-        .alert-error {
-            background: #fed7d7;
-            color: #9b2c2c;
-        }
-
-        /* Modal for Create/Edit Group */
-        #settingsSection {
-            background: #f8fafc;
-            padding: 20px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            display: none;
-            border: 1px solid #e2e8f0;
-        }
-
-        /* User Management Layout */
-        .user-mgmt-layout {
-            display: flex;
-            gap: 30px;
-        }
-
-        .user-create-form {
-            flex: 1;
-            background: #fffaf0;
-            padding: 20px;
-            border-radius: 8px;
-        }
-
-        .user-list-panel {
-            flex: 2;
-        }
-
-        @media (max-width: 768px) {
-            .user-mgmt-layout {
-                flex-direction: column;
-            }
-
-            .user-create-form,
-            .user-list-panel {
-                flex: none;
-                width: 100%;
-            }
-
-            .main-container {
-                flex-direction: column;
-                margin: 20px auto;
-                padding: 0 15px;
-            }
-
-            .sidebar {
-                flex: none;
-                width: 100%;
-                margin-bottom: 20px;
-                position: static;
-            }
-
-            .navbar {
-                padding: 15px 20px;
-                flex-direction: column;
-                gap: 15px;
-                align-items: flex-start;
-            }
-
-            .nav-actions {
-                width: 100%;
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                flex-wrap: wrap;
-                gap: 10px;
-            }
-
-            .nav-actions a {
-                margin-left: 0;
-                margin-right: 15px;
-            }
-
-            /* Table Responsive */
-            .table-container {
-                overflow-x: auto;
-                -webkit-overflow-scrolling: touch;
-            }
-
-            table {
-                min-width: 600px;
-                /* Force scroll if too narrow */
-            }
-
-            .section-card {
-                padding: 15px;
-            }
-
-            h2 {
-                flex-direction: column;
-                align-items: flex-start;
-                gap: 10px;
-            }
-
-            h2 button {
-                width: 100%;
-            }
-
-            .stats-grid {
-                grid-template-columns: 1fr;
-            }
-        }
-    </style>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
 
 <body>
-    <div class="navbar">
-        <a href="/admin" class="logo">⚙️ Thread 管理後台</a>
-        <div class="nav-actions">
-            <span style="font-size:14px; color:#666; margin-right:15px;">
+
+    <!-- Overlay for Mobile Sidebar -->
+    <div class="mobile-overlay" id="mobileOverlay" onclick="toggleSidebar()"></div>
+
+    <!-- Top Navbar -->
+    <div
+        style="background: white; border-bottom: 1px solid var(--surface-border); padding: 0 var(--spacing-md); height: 60px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: var(--z-nav);">
+        <div class="flex items-center">
+            <!-- Mobile Menu Button -->
+            <button class="mobile-menu-toggle btn btn-secondary btn-sm" onclick="toggleSidebar()"
+                style="margin-right: 1rem;">
+                ☰
+            </button>
+            <a href="/admin" class="font-bold text-main" style="font-size: 1.125rem;">⚙️ Thread 管理後台</a>
+        </div>
+
+        <div class="flex items-center gap-4">
+            <div class="text-sm text-secondary desktop-only">
                 👤 {{ session.get('username') }}
-                {% if session.get('email') %}
-                <span style="font-size:12px; color:#999;">({{ session.get('email') }})</span>
-                {% endif %}
-            </span>
-            <a href="/">🔍 前往搜尋頁</a>
-            <a href="/logout" class="logout">登出</a>
+            </div>
+            <a href="/" class="btn btn-secondary btn-sm">🔍 前往搜尋</a>
+            <a href="/logout" class="btn btn-danger btn-sm">登出</a>
         </div>
     </div>
 
-    <div class="main-container">
-        <!-- Sidebar: Group List -->
-        <div class="sidebar">
-            <div class="group-list-header">Project 列表 (Projects)</div>
-            {% for g in groups %}
-            <a href="/admin?group_id={{ g.group_id }}"
-                class="group-item {% if active_group.group_id == g.group_id %}active{% endif %}">
-                {{ g.name }}
-                {% if current_role == 'admin' and g.owners %}
-                <div
-                    style="font-size:11px; color:#a0aec0; margin-top:2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-                    👤
-                    {% for oid in g.owners %}
-                    {{ user_map.get(oid, 'Unknown') }}{% if not loop.last %}, {% endif %}
-                    {% endfor %}
-                </div>
-                {% endif %}
-            </a>
-            {% endfor %}
-            <hr style="margin: 15px 0; border: 0; border-top: 1px solid #eee;">
-
-            <div style="margin-top:10px;">
-                <button onclick="document.getElementById('createGroupForm').style.display = 'block'"
-                    class="btn btn-secondary" style="width:100%">+ 新增 Project</button>
+    <div class="admin-wrapper">
+        <!-- Sidebar -->
+        <div class="sidebar" id="sidebar">
+            <div
+                style="margin-bottom: 1.5rem; font-size: 0.75rem; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em;">
+                Project 列表
             </div>
 
-            <form id="createGroupForm" action="/admin/group/create" method="POST"
-                style="display:none; margin-top:15px; background:#f7fafc; padding:10px; border-radius:8px;">
+            <div class="flex flex-col gap-2">
+                {% for g in groups %}
+                <a href="/admin?group_id={{ g.group_id }}"
+                    class="btn btn-block sidebar-item {{ 'active' if active_group.group_id == g.group_id else '' }}">
+                    📁 {{ g.name }}
+                    {% if current_role == 'admin' and g.owners %}
+                    <span style="font-size: 0.7rem; margin-left: auto; opacity: 0.6;">
+                        {{ g.owners|length }} 👤
+                    </span>
+                    {% endif %}
+                </a>
+                {% endfor %}
+            </div>
+
+            <hr style="margin: 1.5rem 0; border: 0; border-top: 1px solid var(--surface-border);">
+
+            <button onclick="document.getElementById('createGroupForm').style.display = 'block'"
+                class="btn btn-secondary btn-block">
+                + 新增 Project
+            </button>
+
+            <form id="createGroupForm" action="/admin/group/create" method="POST" class="card"
+                style="display:none; margin-top: 1rem; padding: 1rem; border: 1px solid var(--surface-border);">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <div style="margin-bottom:8px;">
-                    <label style="font-size:12px; font-weight:600;">Project 名稱</label>
-                    <input type="text" name="name" required style="width:100%; padding:6px; margin-top:4px;">
+
+                <div class="form-group">
+                    <label class="text-xs">Project 名稱</label>
+                    <input type="text" name="name" required class="input" style="padding: 0.4rem;">
                 </div>
-                <div style="margin-bottom:8px;">
-                    <label style="font-size:12px; font-weight:600;">API Key (必填)</label>
-                    <input type="text" name="api_key" placeholder="sk-..." required
-                        style="width:100%; padding:6px; margin-top:4px;">
+                <div class="form-group">
+                    <label class="text-xs">API Key</label>
+                    <input type="text" name="api_key" placeholder="sk-..." required class="input"
+                        style="padding: 0.4rem;">
                 </div>
-                <div style="display:flex; gap:5px;">
+
+                <div class="flex gap-2">
                     <button type="submit" class="btn btn-primary btn-sm" style="flex:1">建立</button>
                     <button type="button" onclick="this.form.style.display='none'"
                         class="btn btn-secondary btn-sm">取消</button>
@@ -420,227 +87,198 @@
         </div>
 
         <!-- Main Content -->
-        <div class="content-area">
+        <div class="main-content">
 
             {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
             {% for category, message in messages %}
-            <div class="alert alert-{{ category }}">{{ message }}</div>
+            <div class="alert alert-{{ category }}">
+                {{ message }}
+            </div>
             {% endfor %}
             {% endif %}
             {% endwith %}
 
             {% if not active_group %}
-            <div class="section-card" style="text-align: center; padding: 50px;">
-                <div style="font-size: 48px; margin-bottom: 20px;">📂</div>
-                <h3>目前沒有選擇 Project 或無 Project</h3>
-                <p style="color: #666; margin-bottom: 20px;">請從左側選單選擇一個 Project，或是建立一個新 Project。</p>
+            <div class="card" style="text-align: center; padding: 4rem 2rem;">
+                <div style="font-size: 3rem; margin-bottom: 1rem;">📂</div>
+                <h3>目前沒有選擇 Project</h3>
+                <p class="text-secondary">請從左側選單選擇或建立一個 Project。</p>
             </div>
             {% else %}
 
-            <div class="section-card">
-                <h2>
-                    <span>📁 當前 Project: {{ active_group.name }}</span>
+            <!-- Project Header & Settings -->
+            <div class="card">
+                <div class="flex items-center justify-between"
+                    style="padding-bottom: 1rem; border-bottom: 1px solid var(--surface-border); margin-bottom: 1rem;">
+                    <h2>{{ active_group.name }}</h2>
                     <button onclick="toggleSettings()" class="btn btn-secondary btn-sm">⚙️ 設定</button>
-                </h2>
+                </div>
 
-                <!-- Hidden Settings Panel -->
+                <!-- Settings Panel -->
                 <div id="settingsSection"
-                    style="display:none; margin-top:20px; background:#fff; border:1px solid #e2e8f0; border-radius:8px; overflow:hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
-                    <div
-                        style="padding:15px 25px; background:#f8fafc; border-bottom:1px solid #e2e8f0; display:flex; align-items:center;">
-                        <span style="font-size:18px; margin-right:10px;">⚙️</span>
-                        <h4 style="margin:0; color:#2d3748; font-size:16px;">Project 設定</h4>
-                    </div>
-                    <div style="padding:25px;">
-                        <form action="/admin/group/update" method="POST">
-                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                            <input type="hidden" name="group_id" value="{{ active_group.group_id }}">
-                            <input type="hidden" name="version" value="{{ active_group.get('version', 1) }}">
+                    style="display:none; background: var(--surface-bg); padding: 1.5rem; border-radius: var(--radius-md); margin-bottom: 1.5rem;">
+                    <form action="/admin/group/update" method="POST">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <input type="hidden" name="group_id" value="{{ active_group.group_id }}">
+                        <input type="hidden" name="version" value="{{ active_group.get('version', 1) }}">
 
-                            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:30px;">
-                                <!-- Column 1: Rename -->
-                                <div>
-                                    <label
-                                        style="display:block; font-size:13px; font-weight:700; color:#4a5568; margin-bottom:8px;">Project
-                                        名稱</label>
+                        <div
+                            style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem;">
+                            <div>
+                                <div class="form-group">
+                                    <label>Project 名稱</label>
                                     <input type="text" name="name" value="{{ active_group.name }}" required
-                                        style="width:100%; padding:10px 12px; border:1px solid #cbd5e0; border-radius:6px; font-size:15px; transition:all 0.2s; outline:none; margin-bottom:15px;"
-                                        onfocus="this.style.borderColor='#4299e1'; this.style.boxShadow='0 0 0 3px rgba(66, 153, 225, 0.2)';"
-                                        onblur="this.style.borderColor='#cbd5e0'; this.style.boxShadow='none';">
+                                        class="input">
+                                </div>
 
-                                    {% if current_role == 'admin' %}
-                                    <label
-                                        style="display:block; font-size:13px; font-weight:700; color:#4a5568; margin-bottom:8px;">Project
-                                        擁有者
-                                        (派發給...)</label>
+                                {% if current_role == 'admin' %}
+                                <div class="form-group">
+                                    <label>擁有者 (Owners)</label>
                                     <div
-                                        style="border:1px solid #cbd5e0; border-radius:6px; background:#fff; max-height:150px; overflow-y:auto; padding:10px;">
-                                        <div
-                                            style="font-size:12px; color:#718096; margin-bottom:8px; display:flex; align-items:center;">
-                                            <span
-                                                style="background:#e2e8f0; color:#4a5568; padding:2px 6px; border-radius:4px; margin-right:5px; font-weight:bold;">Admin</span>
-                                            本身即擁有權限
-                                        </div>
+                                        style="background: white; border: 1px solid var(--surface-border); padding: 0.5rem; border-radius: var(--radius-md); max-height: 120px; overflow-y: auto;">
                                         {% for u in users %}
-                                        <div style="margin-bottom:6px; display:flex; align-items:center;">
+                                        <div
+                                            style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem;">
                                             <input type="checkbox" name="owner_ids" value="{{ u.id }}"
                                                 id="owner_{{ u.id }}" {% if u.id in active_group.get('owners', [])
-                                                %}checked{% endif %} style="margin-right:8px; cursor:pointer;">
+                                                %}checked{% endif %}>
                                             <label for="owner_{{ u.id }}"
-                                                style="font-size:14px; cursor:pointer; color:#2d3748; margin:0;">
-                                                {{ u.username }} <span style="color:#a0aec0; font-size:12px;">({{
-                                                    u.email or 'No Email' }})</span>
+                                                style="margin:0; font-weight: normal; font-size: 0.8rem;">
+                                                {{ u.username }}
                                             </label>
                                         </div>
                                         {% endfor %}
                                     </div>
-                                    {% endif %}
-
-                                    <div style="margin-top: 20px; display: flex; align-items: center; gap: 10px;">
-                                        <input type="checkbox" name="is_visible" id="is_visible" {% if
-                                            active_group.get('is_visible', True) %}checked{% endif %}
-                                            style="width: 20px; height: 20px; cursor: pointer;">
-                                        <label for="is_visible"
-                                            style="font-size: 15px; font-weight: 700; color: #4a5568; cursor: pointer; margin-bottom: 0;">
-                                            顯示於搜尋頁面 (公開可見)
-                                        </label>
-                                    </div>
                                 </div>
+                                {% endif %}
 
-                                <!-- Column 2: API Key -->
-                                <div>
-                                    <label
-                                        style="display:block; font-size:13px; font-weight:700; color:#4a5568; margin-bottom:8px;">
+                                <div style="display: flex; align-items: center; gap: 0.5rem; margin-top: 1rem;">
+                                    <input type="checkbox" name="is_visible" id="is_visible" {% if
+                                        active_group.get('is_visible', True) %}checked{% endif %}
+                                        style="width: 1.25rem; height: 1.25rem;">
+                                    <label for="is_visible" style="margin:0;">顯示於搜尋頁面</label>
+                                </div>
+                            </div>
+
+                            <div>
+                                <div class="form-group">
+                                    <label>
                                         OpenAI API Key
                                         {% if '金鑰失效' in masked_key %}
-                                        <span
-                                            style="background:#fed7d7; color:#9b2c2c; padding:2px 8px; border-radius:12px; font-size:11px; margin-left:8px; font-weight:bold;">失效
-                                            - 需重新輸入</span>
+                                        <span class="badge badge-red">失效</span>
                                         {% elif masked_key != '尚未設定 (使用環境變數/預設)' %}
-                                        <span
-                                            style="background:#def7ec; color:#03543f; padding:2px 8px; border-radius:12px; font-size:11px; margin-left:8px; font-weight:normal;">已連結</span>
-                                        {% else %}
-                                        <span
-                                            style="background:#edf2f7; color:#4a5568; padding:2px 8px; border-radius:12px; font-size:11px; margin-left:8px; font-weight:normal;">未設定</span>
+                                        <span class="badge badge-green">已連結</span>
                                         {% endif %}
                                     </label>
-                                    <div style="display:flex; gap:10px;">
-                                        <input type="text" name="api_key" placeholder="sk-..." maxlength="200"
-                                            style="flex:1; padding:10px 12px; border:1px solid #cbd5e0; border-radius:6px; font-size:15px; outline:none;"
-                                            onfocus="this.style.borderColor='#4299e1'; this.style.boxShadow='0 0 0 3px rgba(66, 153, 225, 0.2)';"
-                                            onblur="this.style.borderColor='#cbd5e0'; this.style.boxShadow='none';">
+                                    <div class="flex gap-2">
+                                        <input type="text" name="api_key" placeholder="輸入新 Key 以更新..." class="input">
                                         {% if '尚未設定' not in masked_key %}
-                                        <button type="submit" name="clear_key" value="true" class="btn btn-secondary"
-                                            style="padding:0 15px; white-space:nowrap; height:42px;"
-                                            onclick="return confirm('確定清除？將改用系統預設 Key')">清除</button>
+                                        <button type="submit" name="clear_key" value="true"
+                                            class="btn btn-secondary btn-sm"
+                                            onclick="return confirm('確定清除？')">清除</button>
                                         {% endif %}
                                     </div>
-                                    <p style="margin:5px 0 0; font-size:12px; color:#718096;">
-                                        {% if '尚未設定' not in masked_key %}
-                                        目前使用: <code
-                                            style="background:#edf2f7; padding:2px 4px; border-radius:4px; font-family:monospace;">{{ masked_key }}</code>
-                                        {% else %}
-                                        目前與系統預設共用
-                                        {% endif %}
-                                    </p>
+                                    <p class="text-xs text-secondary mt-1">目前: <code>{{ masked_key }}</code></p>
                                 </div>
                             </div>
+                        </div>
 
-                            <div
-                                style="margin-top:30px; padding-top:20px; border-top:1px solid #edf2f7; display:flex; justify-content:space-between; align-items:center;">
-                                <button type="submit" formaction="/admin/group/delete" formmethod="POST" class="btn"
-                                    style="color:#e53e3e; background:white; border:1px solid #fed7d7; font-size:13px; padding:8px 20px; border-radius:6px; transition:0.2s;"
-                                    onmouseover="this.style.background='#fff5f5'"
-                                    onmouseout="this.style.background='white'"
-                                    onclick="return confirm('⚠️ 危險操作：確定刪除此 Project？這將無法復原！')">
-                                    🗑️ 刪除此 Project
-                                </button>
-
-                                <button type="submit" class="btn btn-primary"
-                                    style="padding:10px 30px; font-weight:600; font-size:15px; box-shadow:0 4px 6px rgba(50, 50, 93, 0.11), 0 1px 3px rgba(0, 0, 0, 0.08);">儲存變更</button>
-                            </div>
-                        </form>
-                    </div>
+                        <div class="flex items-center justify-between"
+                            style="margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid var(--surface-border);">
+                            <button type="submit" formaction="/admin/group/delete" formmethod="POST"
+                                class="btn btn-danger btn-sm" onclick="return confirm('⚠️ 確定刪除 Project？無法復原！')">
+                                🗑️ 刪除 Project
+                            </button>
+                            <button type="submit" class="btn btn-primary">儲存變更</button>
+                        </div>
+                    </form>
                 </div>
 
-                <div class="stats-grid">
-                    <div class="stat-box">
-                        <div class="stat-number">{{ threads|length }}</div>
-                        <div class="stat-label">此 Project Threads</div>
+                <!-- Stats -->
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 1rem;">
+                    <div
+                        style="background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%); color: white; padding: 1.5rem; border-radius: var(--radius-lg); text-align: center;">
+                        <div style="font-size: 2rem; font-weight: bold;">{{ threads|length }}</div>
+                        <div style="opacity: 0.9; font-size: 0.875rem;">Threads 總數</div>
                     </div>
                 </div>
             </div>
 
-            <!-- Upload -->
-            <div class="section-card">
-                <h3>📤 批次匯入 / 刪除 (Excel)</h3>
-                <form action="/admin/threads/upload" method="POST" enctype="multipart/form-data">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <input type="hidden" name="group_id" value="{{ active_group.group_id }}">
-                    <div class="input-group" style="margin-top:15px;">
-                        <input type="file" name="file" accept=".xlsx" required>
-                    </div>
-                    <div class="hint">請上傳 .xlsx 檔案，必須包含 <code>thread_id</code> 欄位</div>
-                    <div class="upload-actions">
-                        <button type="submit" name="action" value="add" class="btn btn-primary">📥 匯入新增</button>
-                        <button type="submit" name="action" value="delete" class="btn btn-danger"
-                            onclick="return confirm('確定要從目前的 List 中移除這些 ID 嗎？')">🗑️ 批次刪除</button>
-                    </div>
-                </form>
+            <!-- Tools: Upload & Add -->
+            <div
+                style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem; margin-bottom: 1.5rem;">
+                <!-- Upload -->
+                <div class="card" style="margin-bottom: 0;">
+                    <h3>📥 批次匯入 / 刪除 (Excel)</h3>
+                    <form action="/admin/threads/upload" method="POST" enctype="multipart/form-data"
+                        style="margin-top: 1rem;">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <input type="hidden" name="group_id" value="{{ active_group.group_id }}">
+
+                        <input type="file" name="file" accept=".xlsx" required class="input" style="padding: 0.5rem;">
+                        <p class="text-xs text-secondary" style="margin: 0.5rem 0;">需包含 <code>thread_id</code> 欄位</p>
+
+                        <div class="flex gap-2">
+                            <button type="submit" name="action" value="add" class="btn btn-primary btn-sm flex-1">📥
+                                匯入</button>
+                            <button type="submit" name="action" value="delete" class="btn btn-danger btn-sm flex-1"
+                                onclick="return confirm('確定依 Excel 清單刪除？')">🗑️ 刪除</button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Single Add -->
+                <div class="card" style="margin-bottom: 0;">
+                    <h3>➕ 單筆新增</h3>
+                    <form action="/admin/threads/add_one" method="POST" style="margin-top: 1rem;">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <input type="hidden" name="group_id" value="{{ active_group.group_id }}">
+
+                        <div class="flex gap-2">
+                            <input type="text" id="manual_thread_input" name="thread_id" placeholder="Thread ID 或完整網址"
+                                required class="input">
+                            <button type="submit" class="btn btn-primary">新增</button>
+                        </div>
+                    </form>
+                </div>
             </div>
 
-            <!-- Single Add -->
-            <div class="section-card">
-                <h3>➕ 單筆新增</h3>
-                <form action="/admin/threads/add_one" method="POST">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <input type="hidden" name="group_id" value="{{ active_group.group_id }}">
-                    <div class="input-group" style="margin-top:15px;">
-                        <input type="text" id="manual_thread_input" name="thread_id"
-                            placeholder="輸入 Thread ID (或貼上完整網址)..." required maxlength="120">
-                        <button type="submit" class="btn btn-primary">新增</button>
-                    </div>
-                </form>
-            </div>
-
-            <!-- List and Delete Multi -->
-            <div class="section-card">
+            <!-- Thread List -->
+            <div class="card">
                 <form action="/admin/threads/delete_multi" method="POST" id="deleteMultiForm">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <input type="hidden" name="group_id" value="{{ active_group.group_id }}">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+
+                    <div class="flex items-center justify-between mb-4" style="margin-bottom: 1rem;">
                         <h3>📋 資料列表</h3>
-                        <button type="submit" class="btn btn-danger btn-sm"
-                            onclick="return confirm('確定刪除選取的項目？')">刪除選取項目</button>
+                        <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('確定刪除選取項目？')">
+                            刪除選取
+                        </button>
                     </div>
 
-                    <div class="table-container">
+                    <div class="table-responsive" style="max-height: 600px; overflow-y: auto;">
                         <table>
                             <thead>
                                 <tr>
-                                    <th class="col-check"><input type="checkbox" onclick="toggleAll(this)"></th>
+                                    <th style="width: 40px;"><input type="checkbox" onclick="toggleAll(this)"></th>
                                     <th>Thread ID</th>
-                                    <th>備註 (Note)</th>
-                                    <th class="col-actions">操作</th>
+                                    <th>備註</th>
+                                    <th style="width: 80px;">操作</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {% for thread in threads %}
                                 <tr>
-                                    <td class="col-check"><input type="checkbox" name="selected_ids"
-                                            value="{{ thread.thread_id }}"></td>
-                                    <td>{{ thread.thread_id }}</td>
-                                    <td>-</td>
-                                    <td class="col-actions">
-                                        <form action="/admin/threads/delete" method="POST" style="display:inline;">
-                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                            <input type="hidden" name="group_id" value="{{ active_group.group_id }}">
-                                            <input type="hidden" name="thread_id" value="{{ thread.thread_id }}">
-                                            <button type="submit" class="action-icon"
-                                                style="background:none; border:none; cursor:pointer;"
-                                                onclick="return confirm('確定刪除？')">🗑️</button>
-                                        </form>
+                                    <td><input type="checkbox" name="selected_ids" value="{{ thread.thread_id }}"></td>
+                                    <td data-label="Thread ID" class="font-medium text-main">{{ thread.thread_id }}</td>
+                                    <td data-label="備註">-</td>
+                                    <td data-label="操作">
+                                        <button type="submit" formaction="/admin/threads/delete" name="thread_id"
+                                            value="{{ thread.thread_id }}" class="btn btn-danger btn-sm"
+                                            style="padding: 0.25rem 0.5rem;" onclick="return confirm('刪除？')">
+                                            🗑️
+                                        </button>
                                     </td>
                                 </tr>
                                 {% endfor %}
@@ -652,10 +290,10 @@
             {% endif %}
 
             <!-- Logs -->
-            <div class="section-card">
-                <h3>📜 近期搜尋紀錄 (System Logs)</h3>
-                <div class="table-container" style="max-height: 300px; margin-top:15px;">
-                    <table style="font-size:12px;">
+            <div class="card">
+                <h3>📜 近期搜尋紀錄</h3>
+                <div class="table-responsive" style="margin-top: 1rem; max-height: 300px; overflow-y: auto;">
+                    <table style="font-size: 0.8rem;">
                         <thead>
                             <tr>
                                 <th>時間</th>
@@ -667,58 +305,46 @@
                         <tbody>
                             {% for log in logs %}
                             <tr>
-                                <td>{{ log.time }}</td>
-                                <td>{{ log.group or '-' }}</td>
-                                <td>{{ log.target }}</td>
-                                <td>{{ log.matches }} / {{ log.total }}</td>
+                                <td data-label="時間">{{ log.time }}</td>
+                                <td data-label="Project">{{ log.group or '-' }}</td>
+                                <td data-label="關鍵字">{{ log.target }}</td>
+                                <td data-label="結果">
+                                    <span class="badge {{ 'badge-green' if log.matches > 0 else 'badge-gray' }}">
+                                        {{ log.matches }} / {{ log.total }}
+                                    </span>
+                                </td>
                             </tr>
                             <tr>
                                 <td colspan="4" style="padding: 0; border: none;">
-                                    <details style="margin: 5px 15px;">
-                                        <summary
-                                            style="cursor: pointer; color: #667eea; font-weight: bold; margin-bottom: 5px; outline: none; font-size: 12px;">
-                                            👉 查看詳細 API 回應 (Debug Info)
+                                    <details style="margin: 0.5rem 1rem;">
+                                        <summary class="text-xs text-info"
+                                            style="cursor: pointer; margin-bottom: 0.5rem;">
+                                            👉 詳細 API Log
                                         </summary>
                                         <div
-                                            style="background: #f8f9fa; padding: 10px; border-radius: 6px; margin-bottom: 10px; border: 1px solid #e2e8f0;">
+                                            style="background: var(--surface-bg); padding: 0.5rem; border-radius: var(--radius-sm); font-size: 0.75rem;">
                                             {% if log.api_results %}
-                                            <div style="font-size: 11px; margin-bottom: 5px; color: #666;">
-                                                Search Duration: <strong>{{ log.api_results|length }} threads
-                                                    checked</strong>
-                                            </div>
                                             {% for res in log.api_results %}
                                             <div
-                                                style="margin-bottom: 10px; border-bottom: 1px dashed #cbd5e0; padding-bottom: 10px;">
-                                                <div
-                                                    style="display: flex; justify-content: space-between; margin-bottom: 5px;">
-                                                    <span style="font-weight: bold; color: #2d3748;">🧵 Thread: {{
-                                                        res.thread_id }}</span>
-                                                    <span
-                                                        style="{% if res.keep %}color: #38a169;{% else %}color: #e53e3e;{% endif %} font-weight: bold;">
-                                                        [{{ res.status }}]
+                                                style="border-bottom: 1px dashed var(--surface-border); padding-bottom: 0.5rem; margin-bottom: 0.5rem;">
+                                                <div class="flex justify-between">
+                                                    <span>{{ res.thread_id }}</span>
+                                                    <span class="{{ 'text-success' if res.keep else 'text-danger' }}">
+                                                        {{ res.status }}
                                                     </span>
                                                 </div>
-
                                                 {% if res.raw_messages %}
-                                                <div style="margin-top: 5px;">
-                                                    <details>
-                                                        <summary
-                                                            style="cursor: pointer; color: #4a5568; font-size: 11px;">
-                                                            📄 Raw JSON Response ({{ res.raw_messages|length }} msgs)
-                                                        </summary>
-                                                        <pre
-                                                            style="font-size: 11px; background: #2d3748; color: #a3bffa; padding: 10px; border-radius: 6px; max-height: 250px; overflow-y: auto; margin-top: 5px; white-space: pre-wrap; font-family: monospace;">{{ res.raw_messages | tojson(indent=2) }}</pre>
-                                                    </details>
-                                                </div>
-                                                {% else %}
-                                                <div style="color: #a0aec0; font-size: 11px; padding-left: 10px;">⚠️ No
-                                                    Raw Data Retrieved</div>
+                                                <details>
+                                                    <summary class="text-xs" style="cursor: pointer; opacity: 0.7;">JSON
+                                                        ({{ res.raw_messages|length }})</summary>
+                                                    <pre
+                                                        style="background:#1e293b; color:#cbd5e1; padding:0.5rem; border-radius:4px; margin-top:0.25rem; overflow-x:auto;">{{ res.raw_messages | tojson(indent=2) }}</pre>
+                                                </details>
                                                 {% endif %}
                                             </div>
                                             {% endfor %}
                                             {% else %}
-                                            <span style="color: #a0aec0; font-size: 12px;">(此紀錄無詳細 API 資料 / Legacy
-                                                Log)</span>
+                                            <span class="text-secondary">No details</span>
                                             {% endif %}
                                         </div>
                                     </details>
@@ -730,84 +356,70 @@
                 </div>
             </div>
 
-        </div>
-    </div>
+            <!-- Admin Only: User & IP Mgmt -->
+            {% if current_role == 'admin' %}
+            <div class="card" style="border-top: 4px solid var(--warning);">
+                <div class="flex justify-between items-center mb-4">
+                    <h3>👨‍🏫 教師帳戶管理</h3>
+                </div>
 
-    <!-- User Management Section (Admin Only) -->
-    {% if current_role == 'admin' %}
-    <div class="main-container" style="margin-top: 0; padding-top: 0;">
-        <div class="content-area" style="width: 100%;">
-            <div class="section-card" style="border-top: 4px solid #F6AD55;">
-                <h2>
-                    <span>👨‍🏫 教師帳戶管理 (Admin Only)</span>
-                </h2>
-
-                <div class="user-mgmt-layout">
-                    <!-- Create User Form -->
-                    <div class="user-create-form">
-                        <h4 style="margin-top:0;">新增教師</h4>
-                        <form action="/admin/user/create" method="POST">
+                <div class="flex flex-col md:flex-row gap-4">
+                    <!-- Create User -->
+                    <div style="flex: 1; background: #fffaf0; padding: 1rem; border-radius: var(--radius-md);">
+                        <h4>新增教師</h4>
+                        <form action="/admin/user/create" method="POST" style="margin-top: 1rem;">
                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                            <div style="margin-bottom:10px;">
-                                <label style="font-weight:600; font-size:13px;">顯示名稱</label>
-                                <input type="text" name="username" required maxlength="50"
-                                    style="width:100%; padding:8px; margin-top:5px; border:1px solid #ddd; border-radius:4px;">
+                            <div class="form-group">
+                                <label>顯示名稱</label>
+                                <input type="text" name="username" required class="input">
                             </div>
-                            <div style="margin-bottom:10px;">
-                                <label style="font-weight:600; font-size:13px;">Email (用於登入)</label>
-                                <input type="email" name="email" placeholder="選填 (若要登入則必填)" maxlength="100"
-                                    style="width:100%; padding:8px; margin-top:5px; border:1px solid #ddd; border-radius:4px;">
+                            <div class="form-group">
+                                <label>Email</label>
+                                <input type="email" name="email" class="input">
                             </div>
-                            <div style="margin-bottom:15px;">
-                                <label style="font-weight:600; font-size:13px;">登入密碼</label>
-                                <input type="text" name="password" required
-                                    style="width:100%; padding:8px; margin-top:5px; border:1px solid #ddd; border-radius:4px;">
+                            <div class="form-group">
+                                <label>密碼</label>
+                                <input type="text" name="password" required class="input">
                             </div>
-                            <button type="submit" class="btn btn-primary" style="width:100%;">建立帳戶</button>
+                            <button type="submit" class="btn btn-primary btn-block">建立帳戶</button>
                         </form>
                     </div>
 
                     <!-- User List -->
-                    <div class="user-list-panel">
-                        <h4 style="margin-top:0;">現有教師列表</h4>
-                        <div class="table-container" style="max-height: 300px;">
-                            <table style="font-size:14px;">
+                    <div style="flex: 2;">
+                        <h4 style="margin-bottom: 1rem;">現有教師</h4>
+                        <div class="table-responsive">
+                            <table>
                                 <thead>
                                     <tr>
                                         <th>名稱</th>
                                         <th>Email</th>
-                                        <th>密碼提示</th>
-                                        <th>建立時間</th>
                                         <th>操作</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {% for u in users %}
+                                    {% set u_email = u.email or '' %}
+                                    {% set escaped_username = u.username | replace('"', '\\"') %}
                                     <tr>
-                                        <td>{{ u.username }}</td>
-                                        <td>{{ u.email or '-' }}</td>
-                                        <td><span
-                                                style="font-family:monospace; background:#eee; padding:2px 4px; border-radius:3px;">{{
-                                                u.password_hint or '****' }}</span></td>
-                                        <td>{{ u.created_at | format_timestamp }}</td>
-                                        <!-- Note: You might want a filter to format this timestamp properly -->
-                                        <td>
-                                            {% set u_email = u.email or '' %}
+                                        <td data-label="名稱">{{ u.username }}</td>
+                                        <td data-label="Email">{{ u.email or '-' }}</td>
+                                        <td data-label="操作" class="flex gap-2">
                                             <button type="button" class="btn btn-secondary btn-sm"
-                                                onclick="openEditUserModal('{{ u.id }}', '{{ u.username }}', '{{ u_email }}')">編輯</button>
+                                                onclick='openEditUserModal("{{ u.id }}", "{{ escaped_username }}", "{{ u_email }}")'>
+                                                編輯
+                                            </button>
                                             <button type="button" class="btn btn-secondary btn-sm"
-                                                onclick="openResetModal('{{ u.id }}', '{{ u.username }}')">重設密碼</button>
+                                                onclick="openResetModal('{{ u.id }}', '{{ u.username }}')">
+                                                重設密碼
+                                            </button>
                                             <form action="/admin/user/delete" method="POST" style="display:inline;">
                                                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                                 <input type="hidden" name="user_id" value="{{ u.id }}">
                                                 <button type="submit" class="btn btn-danger btn-sm"
-                                                    onclick="return confirm('確定刪除此帳戶？')">刪除</button>
+                                                    onclick="return confirm('刪除此帳戶？')">刪除</button>
                                             </form>
                                         </td>
-                                    </tr>
-                                    {% else %}
-                                    <tr>
-                                        <td colspan="4" style="text-align:center; color:#999;">目前沒有教師帳戶</td>
                                     </tr>
                                     {% endfor %}
                                 </tbody>
@@ -817,26 +429,25 @@
                 </div>
             </div>
 
-            <!-- IP Monitoring and Ban Control -->
-            <div class="section-card" style="border-top: 4px solid #E53E3E; margin-top: 30px;">
-                <h2 style="cursor: pointer;" onclick="toggleSection('ipMonitorSection')">
-                    <span>🛡️ IP 訪問監控與封鎖</span>
-                    <span style="font-size: 14px; color: #666;">▼</span>
-                </h2>
-                <div id="ipMonitorSection" style="display: none;">
-
-                    <!-- 1. Banned IPs List -->
-                    <div
-                        style="background: #fff5f5; border: 1px solid #feb2b2; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
-                        <h4 style="margin-top:0; color: #c53030;">🚫 已封鎖列表 (Ban List)</h4>
+            <!-- IP Monitor -->
+            <div class="card" style="border-top: 4px solid var(--danger);">
+                <h3 style="cursor: pointer; display: flex; justify-content: space-between;"
+                    onclick="toggleSection('ipMonitorSection')">
+                    <span>🛡️ IP 監控</span>
+                    <span>▼</span>
+                </h3>
+                <div id="ipMonitorSection" style="display: none; margin-top: 1rem;">
+                    <!-- Banned IPs -->
+                    <div class="alert alert-error" style="background: #fff5f5; border-color: #feb2b2;">
+                        <h4>🚫 已封鎖清單</h4>
                         {% if banned_ips %}
-                        <div class="table-container" style="max-height: 200px;">
-                            <table style="font-size: 14px;">
+                        <div class="table-responsive"
+                            style="max-height: 200px; overflow-y: auto; background: white; margin-top: 0.5rem;">
+                            <table>
                                 <thead>
                                     <tr>
                                         <th>IP</th>
                                         <th>原因</th>
-                                        <th>到期時間</th>
                                         <th>操作</th>
                                     </tr>
                                 </thead>
@@ -846,20 +457,11 @@
                                         <td>{{ ip }}</td>
                                         <td>{{ info.reason }}</td>
                                         <td>
-                                            {% if info.until <= 0 %} <span
-                                                style="background:#000; color:#fff; padding:2px 6px; border-radius:4px; font-size:12px;">
-                                                永久</span>
-                                                {% else %}
-                                                {{ info.until | format_timestamp }}
-                                                {% endif %}
-                                        </td>
-                                        <td>
                                             <form action="/admin/ip/unban" method="POST"
-                                                onsubmit="return confirm('確定解除封鎖？')">
+                                                onsubmit="return confirm('解除？')">
                                                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                                 <input type="hidden" name="ip" value="{{ ip }}">
-                                                <button type="submit" class="btn btn-secondary btn-sm">解除封鎖
-                                                    (Unban)</button>
+                                                <button class="btn btn-secondary btn-sm">解除</button>
                                             </form>
                                         </td>
                                     </tr>
@@ -868,202 +470,128 @@
                             </table>
                         </div>
                         {% else %}
-                        <p style="color: #666; margin-bottom: 0;">目前沒有被封鎖的 IP。</p>
+                        <p class="text-sm">無封鎖 IP</p>
                         {% endif %}
                     </div>
 
-                    <!-- 2. Active IPs Activity Log -->
-                    <h4 style="margin-bottom: 15px;">🌐 近期 IP 活動 (Active IPs)</h4>
-                    <div style="display: flex; flex-direction: column; gap: 10px;">
+                    <!-- Active IPs -->
+                    <h4 style="margin: 1rem 0;">🌐 近期活動 IP</h4>
+                    <div class="flex flex-col gap-2">
                         {% for ip, data in ip_activity.items() %}
                         <div
-                            style="border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; background: white;">
-                            <!-- Header -->
+                            style="border: 1px solid var(--surface-border); border-radius: var(--radius-md); overflow: hidden;">
                             <div
-                                style="background: #f7fafc; padding: 10px 15px; display: flex; justify-content: space-between; align-items: center;">
-                                <div style="display: flex; align-items: center; gap: 10px;">
-                                    <span style="font-weight: bold; color: #2d3748;">{{ ip }}</span>
-                                    {% if data.user != 'Guest' %}
-                                    <span
-                                        style="background: #ebf8ff; color: #3182ce; padding: 2px 8px; border-radius: 12px; font-size: 12px;">👤
-                                        {{ data.user }}</span>
-                                    {% else %}
-                                    <span
-                                        style="background: #edf2f7; color: #718096; padding: 2px 8px; border-radius: 12px; font-size: 12px;">訪客</span>
-                                    {% endif %}
-                                    <span style="font-size: 12px; color: #a0aec0;">(Records: {{ data.logs|length
-                                        }})</span>
+                                style="background: var(--surface-bg); padding: 0.5rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
+                                <div class="flex items-center gap-2">
+                                    <strong>{{ ip }}</strong>
+                                    <span class="badge badge-gray">{{ data.user }}</span>
+                                    <span class="text-xs text-secondary">({{ data.logs|length }} logs)</span>
                                 </div>
-                                <div style="display: flex; gap: 10px; align-items: center;">
+                                <div class="flex gap-2">
                                     <button class="btn btn-secondary btn-sm"
-                                        onclick="toggleIpDetails('details-{{ loop.index }}')">詳細紀錄 ▼</button>
-
-                                    <!-- Ban Form -->
-                                    <form action="/admin/ip/ban" method="POST" style="display: flex; gap: 5px;">
+                                        onclick="toggleIpDetails('details-{{ loop.index }}')">詳細</button>
+                                    <form action="/admin/ip/ban" method="POST" class="flex gap-1">
                                         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                         <input type="hidden" name="ip" value="{{ ip }}">
-                                        <select name="duration"
-                                            style="padding: 4px; border-radius: 4px; border: 1px solid #cbd5e0; font-size: 12px;">
-                                            <option value="900">封鎖 15 分鐘</option>
-                                            <option value="3600">封鎖 1 小時</option>
-                                            <option value="28800">封鎖 8 小時</option>
-                                            <option value="86400">封鎖 1 天</option>
-                                            <option value="2592000">封鎖 30 天</option>
-                                            <option value="-1">永久封鎖</option>
+                                        <select name="duration" class="select"
+                                            style="padding: 2px; font-size: 12px; width: auto;">
+                                            <option value="3600">1H</option>
+                                            <option value="-1">永久</option>
                                         </select>
-                                        <button type="submit" class="btn btn-danger btn-sm"
-                                            onclick="return confirm('確定要封鎖此 IP？')">封鎖 (Ban)</button>
+                                        <button class="btn btn-danger btn-sm">封鎖</button>
                                     </form>
                                 </div>
                             </div>
-                            <!-- Logs Content (Hidden) -->
-                            <div id="details-{{ loop.index }}" style="display: none; padding: 0;">
-                                <table style="width: 100%; font-size: 13px; border-top: 1px solid #eee;">
-                                    <thead style="background: #fff;">
-                                        <tr>
-                                            <th
-                                                style="padding: 8px 15px; color: #718096; background: #fff; font-size: 12px;">
-                                                時間</th>
-                                            <th
-                                                style="padding: 8px 15px; color: #718096; background: #fff; font-size: 12px;">
-                                                使用者</th>
-                                            <th
-                                                style="padding: 8px 15px; color: #718096; background: #fff; font-size: 12px;">
-                                                動作</th>
-                                            <th
-                                                style="padding: 8px 15px; color: #718096; background: #fff; font-size: 12px;">
-                                                目標</th>
-                                            <th
-                                                style="padding: 8px 15px; color: #718096; background: #fff; font-size: 12px;">
-                                                狀態</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {% for log in data.logs[:50] %}
-                                        <tr>
-                                            <td style="padding: 6px 15px; border-bottom: 1px solid #f7fafc;">{{ log.time
-                                                }}</td>
-                                            <td style="padding: 6px 15px; border-bottom: 1px solid #f7fafc;">{{ log.user
-                                                }}</td>
-                                            <td style="padding: 6px 15px; border-bottom: 1px solid #f7fafc;">{{
-                                                log.action }}</td>
-                                            <td style="padding: 6px 15px; border-bottom: 1px solid #f7fafc;">{{
-                                                log.target }}</td>
-                                            <td style="padding: 6px 15px; border-bottom: 1px solid #f7fafc;">
-                                                {% if log.status == 'Success' %}
-                                                <span style="color: green;">✔</span>
-                                                {% else %}
-                                                <span style="color: red;">✘</span>
-                                                {% endif %}
-                                            </td>
-                                        </tr>
-                                        {% endfor %}
-                                    </tbody>
+                            <div id="details-{{ loop.index }}" style="display: none; padding: 0.5rem;">
+                                <table style="font-size: 0.75rem;">
+                                    {% for log in data.logs[:10] %}
+                                    <tr>
+                                        <td>{{ log.time }}</td>
+                                        <td>{{ log.action }}</td>
+                                        <td>{{ log.status }}</td>
+                                    </tr>
+                                    {% endfor %}
                                 </table>
-                                {% if data.logs|length > 50 %}
-                                <div
-                                    style="text-align: center; padding: 5px; font-size: 12px; color: #999; border-top: 1px solid #eee;">
-                                    ... 僅顯示最近 50 筆 ...</div>
-                                {% endif %}
                             </div>
                         </div>
                         {% endfor %}
                     </div>
                 </div>
             </div>
+            {% endif %}
 
         </div>
     </div>
-    {% endif %}
 
-    <div id="resetPasswordModal"
-        style="display:none; position:fixed; right:0; top:0; width:100%; height:100%; z-index:2000; align-items:center; justify-content:center; pointer-events: none;">
-        <!-- Overlay -->
-        <div style="position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); pointer-events: auto;"
+    <!-- Modals -->
+    <div id="resetPasswordModal" class="flex items-center justify-center"
+        style="display:none; position:fixed; inset:0; z-index: var(--z-modal); pointer-events: none;">
+        <div style="position:absolute; inset:0; background:rgba(0,0,0,0.5); pointer-events: auto;"
             onclick="closeResetModal()"></div>
-        <!-- Modal Content -->
-        <div
-            style="background:white; padding:20px; border-radius:8px; width:300px; box-shadow:0 4px 6px rgba(0,0,0,0.1); z-index:2001; pointer-events: auto; position: relative;">
-            <h3 style="margin-top:0;">重設密碼</h3>
-            <p>正在重設 <span id="resetTargetUser" style="font-weight:bold;"></span> 的密碼</p>
+        <div class="card" style="width: 300px; pointer-events: auto; position: relative; z-index: 2002; margin: 0;">
+            <h3>重設密碼</h3>
+            <p class="text-sm mb-4">目標: <span id="resetTargetUser" class="font-bold"></span></p>
             <form action="/admin/user/reset" method="POST">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <input type="hidden" name="user_id" id="resetUserId">
-                <div style="margin-bottom:15px;">
-                    <label>新密碼</label>
-                    <input type="text" name="new_password" required placeholder="輸入新密碼 (10-15 字元)"
-                        style="width:100%; padding:8px; margin-top:5px; border:1px solid #ddd; border-radius:4px;">
+                <div class="form-group">
+                    <input type="text" name="new_password" required placeholder="新密碼" class="input">
                 </div>
-                <div style="display:flex; justify-content:flex-end; gap:10px;">
-                    <button type="button" class="btn btn-secondary" onclick="closeResetModal()">取消</button>
-                    <button type="submit" class="btn btn-primary">確認重設</button>
+                <div class="flex justify-end gap-2">
+                    <button type="button" class="btn btn-secondary btn-sm" onclick="closeResetModal()">取消</button>
+                    <button type="submit" class="btn btn-primary btn-sm">確認</button>
                 </div>
             </form>
         </div>
     </div>
 
-    <div id="editUserModal"
-        style="display:none; position:fixed; right:0; top:0; width:100%; height:100%; z-index:2000; align-items:center; justify-content:center; pointer-events: none;">
-        <div style="position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); pointer-events: auto;"
+    <div id="editUserModal" class="flex items-center justify-center"
+        style="display:none; position:fixed; inset:0; z-index: var(--z-modal); pointer-events: none;">
+        <div style="position:absolute; inset:0; background:rgba(0,0,0,0.5); pointer-events: auto;"
             onclick="closeEditUserModal()"></div>
-        <div
-            style="background:white; padding:20px; border-radius:8px; width:350px; box-shadow:0 4px 6px rgba(0,0,0,0.1); z-index:2001; pointer-events: auto; position: relative;">
-            <h3 style="margin-top:0;">編輯使用者資料</h3>
+        <div class="card" style="width: 350px; pointer-events: auto; position: relative; z-index: 2002; margin: 0;">
+            <h3>編輯用戶</h3>
             <form action="/admin/user/update" method="POST">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <input type="hidden" name="user_id" id="editUserId">
 
-                <div style="margin-bottom:15px;">
-                    <label style="font-weight:600; font-size:13px;">顯示名稱</label>
-                    <input type="text" name="username" id="editUsername" required maxlength="50"
-                        style="width:100%; padding:8px; margin-top:5px; border:1px solid #ddd; border-radius:4px;">
+                <div class="form-group">
+                    <label>名稱</label>
+                    <input type="text" name="username" id="editUsername" required class="input">
+                </div>
+                <div class="form-group">
+                    <label>Email</label>
+                    <input type="email" name="email" id="editEmail" class="input">
                 </div>
 
-                <div style="margin-bottom:15px;">
-                    <label style="font-weight:600; font-size:13px;">Email</label>
-                    <input type="email" name="email" id="editEmail" placeholder="選填"
-                        style="width:100%; padding:8px; margin-top:5px; border:1px solid #ddd; border-radius:4px;">
-                </div>
-
-                <div style="display:flex; justify-content:flex-end; gap:10px;">
-                    <button type="button" class="btn btn-secondary" onclick="closeEditUserModal()">取消</button>
-                    <button type="submit" class="btn btn-primary">儲存變更</button>
+                <div class="flex justify-end gap-2">
+                    <button type="button" class="btn btn-secondary btn-sm" onclick="closeEditUserModal()">取消</button>
+                    <button type="submit" class="btn btn-primary btn-sm">儲存</button>
                 </div>
             </form>
         </div>
     </div>
 
     <script>
+        // Sidebar Toggle
+        const sidebar = document.getElementById('sidebar');
+        const overlay = document.getElementById('mobileOverlay');
+        function toggleSidebar() {
+            sidebar.classList.toggle('active');
+            overlay.classList.toggle('active');
+        }
+
+        // Logic Preservation
         function toggleAll(source) {
             checkboxes = document.getElementsByName('selected_ids');
             for (var i = 0, n = checkboxes.length; i < n; i++) {
                 checkboxes[i].checked = source.checked;
             }
         }
+
         function toggleSettings() {
             var el = document.getElementById('settingsSection');
             el.style.display = (el.style.display === 'block') ? 'none' : 'block';
-        }
-
-        function openResetModal(userId, username) {
-            document.getElementById('resetUserId').value = userId;
-            document.getElementById('resetTargetUser').innerText = username;
-            document.getElementById('resetPasswordModal').style.display = 'flex';
-        }
-
-        function closeResetModal() {
-            document.getElementById('resetPasswordModal').style.display = 'none';
-        }
-
-        function openEditUserModal(userId, username, email) {
-            document.getElementById('editUserId').value = userId;
-            document.getElementById('editUsername').value = username;
-            document.getElementById('editEmail').value = email;
-            document.getElementById('editUserModal').style.display = 'flex';
-        }
-
-        function closeEditUserModal() {
-            document.getElementById('editUserModal').style.display = 'none';
         }
 
         function toggleSection(id) {
@@ -1076,7 +604,27 @@
             el.style.display = (el.style.display === 'none') ? 'block' : 'none';
         }
 
-        // Smart Thread ID Extraction for Manual Add
+        // Modals
+        function openResetModal(userId, username) {
+            document.getElementById('resetUserId').value = userId;
+            document.getElementById('resetTargetUser').innerText = username;
+            document.getElementById('resetPasswordModal').style.display = 'flex';
+        }
+        function closeResetModal() {
+            document.getElementById('resetPasswordModal').style.display = 'none';
+        }
+
+        function openEditUserModal(userId, username, email) {
+            document.getElementById('editUserId').value = userId;
+            document.getElementById('editUsername').value = username;
+            document.getElementById('editEmail').value = email;
+            document.getElementById('editUserModal').style.display = 'flex';
+        }
+        function closeEditUserModal() {
+            document.getElementById('editUserModal').style.display = 'none';
+        }
+
+        // Smart ID
         const manualInput = document.getElementById('manual_thread_input');
         if (manualInput) {
             manualInput.addEventListener('input', function () {
