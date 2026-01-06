@@ -467,6 +467,30 @@ label {
     }
 }
 
+@keyframes floatUpFade {
+    0% {
+        opacity: 1;
+        transform: translateY(0);
+    }
+
+    100% {
+        opacity: 0;
+        transform: translateY(-50px);
+    }
+}
+
+.floating-message {
+    position: fixed;
+    color: white;
+    /* Will override based on theme if needed, but white is safe on dark/glass/color */
+    font-weight: 600;
+    pointer-events: none;
+    animation: floatUpFade 1.5s ease-out forwards;
+    z-index: 2000;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    font-size: 0.9rem;
+}
+
 /* Theme 4: Plain Gray (Light) */
 .auth-layout.bg-gray {
     background-color: #f3f4f6;

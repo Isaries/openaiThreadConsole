@@ -93,12 +93,32 @@
 
     <!-- GitHub Avatar Link -->
     <!-- GitHub Avatar (Decorative) -->
-    <div onclick="alert('Remember to sleep...')"
+    <div onclick="showSleepMessage(event)"
         style="position: fixed; bottom: 20px; right: 20px; width: 48px; height: 48px; border-radius: 50%; overflow: hidden; box-shadow: var(--shadow-lg); border: 2px solid white; transition: transform 0.2s; z-index: 100; cursor: pointer;">
         <img src="https://github.com/Isaries.png" alt="Leo" style="width: 100%; height: 100%; object-fit: cover;">
     </div>
 
     <script>
+        function showSleepMessage(event) {
+            const msg = document.createElement('div');
+            msg.innerText = 'Remember to sleep...';
+            msg.className = 'floating-message';
+
+            // Calculate position: slightly above and left of the click/avatar
+            // Logic: Avatar is bottom-right. Message should float up from there.
+            const rect = event.currentTarget.getBoundingClientRect();
+            // Position fixed logic
+            msg.style.left = (rect.left - 100) + 'px'; // Shift left to not go off screen? No, text flows right.
+            // Better: align right edge with avatar right edge
+            msg.style.right = (window.innerWidth - rect.right) + 'px';
+            msg.style.bottom = (window.innerHeight - rect.top) + 10 + 'px';
+
+            document.body.appendChild(msg);
+
+            // Clean up after animation
+            setTimeout(() => msg.remove(), 1500);
+        }
+
         const form = document.getElementById('searchForm');
         const loading = document.getElementById('loading');
         const btn = document.querySelector('button[type="submit"]');
