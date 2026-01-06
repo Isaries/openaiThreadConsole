@@ -49,8 +49,11 @@
                     class="btn btn-block sidebar-item {{ 'active' if active_group.group_id == g.group_id else '' }}">
                     📁 {{ g.name }}
                     {% if current_role == 'admin' and g.owners %}
-                    <span style="font-size: 0.7rem; margin-left: auto; opacity: 0.6;">
-                        {{ g.owners|length }} 👤
+                    <span
+                        style="font-size: 0.7rem; margin-left: auto; opacity: 0.8; display: flex; flex-direction: column; align-items: flex-end;">
+                        {% for owner_id in g.owners %}
+                        <div>👤 {{ user_map.get(owner_id, 'Unknown') }}</div>
+                        {% endfor %}
                     </span>
                     {% endif %}
                 </a>
