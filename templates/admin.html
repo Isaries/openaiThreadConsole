@@ -46,15 +46,16 @@
             <div class="flex flex-col gap-2">
                 {% for g in groups %}
                 <a href="/admin?group_id={{ g.group_id }}"
-                    class="btn btn-block sidebar-item {{ 'active' if active_group.group_id == g.group_id else '' }}">
-                    📁 {{ g.name }}
+                    class="btn btn-block sidebar-item {{ 'active' if active_group.group_id == g.group_id else '' }}"
+                    style="display: flex; flex-direction: column; align-items: flex-start; gap: 0.25rem; height: auto; padding: 0.75rem;">
+                    <div style="font-weight: 500;">📁 {{ g.name }}</div>
                     {% if current_role == 'admin' and g.owners %}
-                    <span
-                        style="font-size: 0.7rem; margin-left: auto; opacity: 0.8; display: flex; flex-direction: column; align-items: flex-end;">
+                    <div
+                        style="font-size: 0.75rem; opacity: 0.8; padding-left: 1.25rem; display: flex; flex-direction: column; gap: 2px;">
                         {% for owner_id in g.owners %}
                         <div>👤 {{ user_map.get(owner_id, 'Unknown') }}</div>
                         {% endfor %}
-                    </span>
+                    </div>
                     {% endif %}
                 </a>
                 {% endfor %}
