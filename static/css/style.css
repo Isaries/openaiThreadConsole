@@ -467,6 +467,13 @@ label {
     }
 }
 
+/* Theme 4: Plain White */
+.auth-layout.bg-white {
+    background-color: #ffffff;
+    background-image: none;
+    z-index: 0;
+}
+
 .auth-card {
     background: rgba(255, 255, 255, 0.95);
     backdrop-filter: blur(10px);
