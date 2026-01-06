@@ -8,7 +8,7 @@ python-dotenv==1.0.1
 Flask-Limiter==3.7.0
 waitress==3.0.0
 bleach==6.1.0
-weasyprint==62.1
+weasyprint==59.0
 pydyf<0.11.0
 bleach[css]==6.1.0
 requests==2.32.2
