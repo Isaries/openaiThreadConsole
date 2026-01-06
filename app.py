@@ -48,7 +48,12 @@ def safe_url_fetcher(url, timeout=30):
 def generate_pdf_bytes(html_content):
     return HTML(string=html_content, url_fetcher=safe_url_fetcher).write_pdf()
 
+from werkzeug.middleware.proxy_fix import ProxyFix
+
 app = Flask(__name__)
+# Apply ProxyFix to trust X-Forwarded-Proto headers from Nginx
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
+
 app.secret_key = config.SECRET_KEY
 app.permanent_session_lifetime = timedelta(hours=1)
 app.config['MAX_CONTENT_LENGTH'] = config.MAX_CONTENT_LENGTH
@@ -69,7 +74,8 @@ csp = {
 }
 
 # Force HTTPS and apply Security Headers
-talisman = Talisman(app, content_security_policy=csp, force_https=True)
+# Note: force_https=False to prevent redirect loops behind proxy; Proxy handles redirection.
+talisman = Talisman(app, content_security_policy=csp, force_https=False)
 
 # --- Register Template Filters ---
 app.jinja_env.filters['nl2br'] = utils.nl2br
