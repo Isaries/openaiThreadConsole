@@ -2,6 +2,7 @@ from flask import Flask, render_template, request, jsonify, session, redirect, u
 from flask_wtf.csrf import CSRFProtect
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
+from flask_talisman import Talisman
 from werkzeug.security import check_password_hash, generate_password_hash
 from datetime import datetime, timedelta
 import time
@@ -51,6 +52,24 @@ app = Flask(__name__)
 app.secret_key = config.SECRET_KEY
 app.permanent_session_lifetime = timedelta(hours=1)
 app.config['MAX_CONTENT_LENGTH'] = config.MAX_CONTENT_LENGTH
+
+# --- Security Config (Session & Headers) ---
+app.config['SESSION_COOKIE_SECURE'] = True
+app.config['SESSION_COOKIE_HTTPONLY'] = True
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+
+# Define Content Security Policy
+csp = {
+    'default-src': ["'self'"],
+    'script-src': ["'self'", "'unsafe-inline'", "https://cdnjs.cloudflare.com"],
+    'style-src': ["'self'", "'unsafe-inline'", "https://cdnjs.cloudflare.com", "https://fonts.googleapis.com"],
+    'font-src': ["'self'", "https://cdnjs.cloudflare.com", "https://fonts.gstatic.com"],
+    'img-src': ["'self'", "data:", "https://github.com"],
+    'connect-src': ["'self'"]
+}
+
+# Force HTTPS and apply Security Headers
+talisman = Talisman(app, content_security_policy=csp, force_https=True)
 
 # --- Register Template Filters ---
 app.jinja_env.filters['nl2br'] = utils.nl2br

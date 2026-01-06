@@ -1,56 +1,59 @@
 # OpenAI Thread Console
 
-This is a comprehensive management system for OpenAI Assistant Threads, built with Flask. It is designed for educational institutions and teams to manage multiple thread "Projects" securely. The system provides role-based access control (Admin/Teacher), advanced search capabilities, server-side PDF generation, and a robust monitoring system.
-
----
+This application is a secure, role-based management system for OpenAI Assistant Threads, built with Flask. It enables educational institutions and enterprise teams to manage multi-tenant projects, enforce access controls, and monitor usage with auditing capabilities.
 
 ## Key Features
 
-### 1. Project & Thread Management
-*   **Multi-Owner Projects**: Projects can be assigned to multiple teachers. Administrators maintain full control over assignments, while teachers can only access projects explicitly assigned to them.
-*   **Smart Thread Management**: 
-    *   **Optimistic Locking**: Prevents data conflicts when multiple administrators modify project settings simultaneously.
-    *   **Orphan Handling**: Automatically reassigns project ownership to Administrators if a teacher account is deleted.
-    *   **Smart ID Extraction**: Automatically extracts Thread IDs from full URLs pasted into the Admin interface.
-*   **Encrypted API Keys**: Project-specific OpenAI API keys are stored using AES-256 encryption (Fernet), ensuring security at rest.
+### Project & Thread Management
+*   **Role-Based Access Control (RBAC)**: Supports strict separation of duties. Administrators have full system control, while Teachers/Users are restricted to explicitly assigned projects.
+*   **Multi-Owner Projects**: Projects can be securely shared among multiple owners, managed centrally by administrators.
+*   **Concurrency Control**: Implements optimistic locking to prevent data corruption during simultaneous updates.
+*   **Orphan Management**: Automatically reassigns ownership of projects to administrators if a user account is deleted to prevent data loss.
 
-### 2. Search & Discovery
-*   **Advanced Search**: Users can search for threads across specific projects using keywords, date ranges, or direct Thread IDs.
-*   **Visibility Control**: Projects can be toggled as "Visible" or "Hidden". Hidden projects are inaccessible to the public and require authentication for all actions.
-*   **Keyword Highlighting**: Search terms are automatically highlighted within the conversation preview for quick reference.
+### Search & Discovery
+*   **Advanced Filtering**: precise filtering by Project, Keyword, Date Range, or direct Thread ID.
+*   **Smart ID Extraction**: Automatically parses Thread IDs from pasted URLs in administrative inputs.
+*   **Contextual Highlighting**: Search terms are highlighted within message previews for rapid context identification.
+*   **Persistent User Preferences**: Automatically remembers user interface choices such as the selected project and visual theme (e.g., Gray, Grid).
 
-### 3. PDF Export & Reporting
-*   **Server-Side Generation**: Utilizes WeasyPrint to generate high-fidelity PDFs directly on the server, ensuring consistent rendering across all devices (Desktop, Tablet, Mobile).
-*   **Split-PDF Logic**: Long conversations (over 50 messages) are automatically split into multiple PDF files and bundled into a ZIP archive for easier downloading and printing.
-*   **Visitor Access**: Publicly visible projects allow visitors to download conversation PDFs without requiring a login. Private projects remain strictly protected behind authentication.
-*   **Full Language Support**: Includes fonts for CJK (Chinese, Japanese, Korean) characters to ensure correct rendering.
+### PDF Export & Reporting
+*   **Server-Side Rendering**: Uses WeasyPrint to generate consistent, high-fidelity PDFs regardless of the client device.
+*   **Intelligent Splitting**: Automatically segments long conversation threads into multiple PDF files and bundles them into a ZIP archive for efficient handling.
+*   **CJK Support**: Built-in support for Chinese, Japanese, and Korean character sets.
 
-### 4. User & Session Security
-*   **Role-Based Access Control (RBAC)**:
-    *   **Administrators**: Complete system access, including user management, IP bans, and audit logs.
-    *   **Teachers**: Access limited to assigned projects.
-*   **Enhanced Security**:
-    *   **Session Management**: Strict 1-hour session timeout.
-    *   **IP Security**: Automatic lockout after multiple failed login attempts and an administrative IP ban system.
-    *   **Email Validation**: Enforces unique email addresses and character limits during user creation.
-*   **Responsive Design**: The entire interface is optimized for mobile and tablet devices, providing a seamless experience on any screen size.
+---
 
-### 5. System Monitoring
-*   **Real-Time Audit Log**: Tracks all critical actions (Login, Search, Data Modification) with timestamps and user details.
-*   **IP Monitoring**: visualizes activity grouped by IP address, allowing administrators to identify and block suspicious traffic.
-*   **Real-IP Support**: Configured to respect `X-Forwarded-For` headers, ensuring accurate IP logging when deployed behind a reverse proxy (e.g., Nginx).
+## Security Architecture
+
+This application prioritizes security by design, implementing defense-in-depth strategies to protect user data and system integrity.
+
+### 1. Network & Transport Security
+*   **Strict Transport Security (HSTS)**: Enforces HTTPS connections to preventing protocol downgrade attacks (via Flask-Talisman).
+*   **Security Headers**: Implements standard HTTP headers including `X-Content-Type-Options: nosniff`, `X-Frame-Options: SAMEORIGIN`, and strict `Content-Security-Policy` (CSP) to mitigate XSS and Clickjacking.
+*   **Real-IP Resolution**: Configured to trust `X-Forwarded-For` headers from secure upstream proxies (e.g., Nginx), ensuring accurate logging and rate limiting.
+
+### 2. Authentication & Session Management
+*   **Secure Sessions**: Session cookies are configured with `HttpOnly`, `Secure`, and `SameSite=Lax` attributes to prevent Cross-Site Scripting (XSS) theft and Cross-Site Request Forgery (CSRF).
+*   **Strict Timeouts**: Sessions automatically expire after 1 hour of inactivity.
+*   **Brute-Force Protection**: Automatic account lockout (15 minutes) after 5 failed login attempts from a single IP address.
+*   **IP Banning**: Administrators can permanently ban malicious IP addresses from the system.
+
+### 3. Data Protection
+*   **Encryption at Rest**: Sensitive data, such as OpenAI API Keys, is encrypted using AES-256 (Fernet) before storage. Keys are never exposed in logs or the frontend.
+*   **Password Hashing**: User passwords are salted and hashed using robust algorithms (Scrypt/PBKDF2 via Werkzeug).
+*   **Input Sanitization**: All user inputs are sanitized to prevent Stored XSS, while template rendering uses context-aware escaping.
 
 ---
 
 ## Architecture
 
-The application follows a modular structure for scalability and maintainability:
+The system follows a modular architecture for maintainability:
 
-*   **app.py**: The central controller handling HTTP routes, request processing, and view rendering.
-*   **services.py**: Contains core business logic, including OpenAI API integration and message processing.
-*   **database.py**: Manages data persistence using JSON flat-files with thread-safe locking mechanisms.
-*   **security.py**: Handles encryption, password hashing, session validation, and IP blocking enforcement.
-*   **utils.py**: Provides helper functions for HTML sanitization, date formatting, and markdown processing.
+*   **app.py**: Central application controller handling routing, configuration, and security middleware integration.
+*   **services.py**: Core business logic layer managing OpenAI API interactions and threading operations.
+*   **database.py**: Data persistence layer using thread-safe file operations for JSON-based storage.
+*   **security.py**: Cryptographic operations, authentication logic, and intrusion detection mechanisms.
+*   **utils.py**: Utility functions for data processing, HTML sanitization, and formatting.
 
 ---
 
@@ -58,26 +61,26 @@ The application follows a modular structure for scalability and maintainability:
 
 ### Prerequisites
 *   Docker and Docker Compose
-*   (Recommended) Nginx Proxy Manager for SSL termination and Real-IP forwarding.
+*   (Recommended) Nginx or similar reverse proxy for SSL termination.
 
-### Docker Deployment
+### Deployment Steps
 
 1.  **Clone Repository**
     ```bash
-    git clone https://github.com/Isaries/openaiThreadConsole
+    git clone https://github.com/Isaries/openaiThreadConsole.git
     cd openaiThreadConsole
     ```
 
-2.  **Configure Environment**
+2.  **Configuration**
     Create a `.env` file in the root directory:
     ```ini
-    SECRET_KEY=your-secure-random-key
-    OPENAI_API_KEY=sk-proj-your-default-key
-    ADMIN_PASSWORD=your-admin-password
+    SECRET_KEY=your-secure-random-key-change-this
+    OPENAI_API_KEY=sk-proj-your-system-default-key
+    ADMIN_PASSWORD=your-strong-admin-password
     ```
 
-3.  **Initialize Data Files**
-    Create the necessary JSON files for data persistence:
+3.  **Data Initialization**
+    Initialize the required JSON data stores:
     ```bash
     touch groups.json ip_bans.json audit.log users.json
     echo "[]" > groups.json
@@ -101,24 +104,19 @@ The application follows a modular structure for scalability and maintainability:
       thread-console
     ```
 
-### Networking Note
-To ensure the Admin Panel correctly displays user IP addresses, deploying behind a reverse proxy (like Nginx) is highly recommended. Ensure the proxy passes the `X-Forwarded-For` header.
+---
+
+### 4. Operational Security
+*   **Rate Limiting**: Implements `Flask-Limiter` to restrict request frequency (e.g., 10 req/sec), mitigating Denial of Service (DoS) risks.
+*   **Comprehensive Auditing**: Every critical system action (Login, Search, Configuration Change) is immutable logged to `audit.log`, providing a complete paper trail for forensic analysis.
+*   **Error Suppression**: Production configuration conceals stack traces from end-users to prevent information leakage.
 
 ---
 
-## Data Storage
+## Privacy & Data Sovereignty
 
-The system uses local JSON files for lightweight, portable data storage:
+*   **Zero External Dependencies**: The system operates entirely independently of external databases or cloud storage services, ensuring full data sovereignty.
+*   **Data Minimization**: Only essential user data is stored locally in JSON format, facilitating easy compliance with data privacy regulations (e.g., GDPR, CCPA) regarding right-to-access and right-to-erase.
+*   **Transparent Logging**: All system logs are plain-text and human-readable, ensuring complete transparency of system operations.
 
-*   **users.json**: Stores user credentials and profile data.
-*   **groups.json**: Stores project configurations, thread associations, and encrypted API keys.
-*   **ip_bans.json**: Registry of banned IP addresses and expiration times.
-*   **audit.log**: Chronological log of system events.
-
-> **Important**: Ensure these files are mounted to persistent volumes in Docker to prevent data loss during container restarts.
-
----
-
-## Copyright
-
-Copyright (c) 2026 Isaries All Rights Reserved.
+Copyright (c) 2026 Isaries. All Rights Reserved.
