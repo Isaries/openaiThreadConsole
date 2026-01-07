@@ -133,7 +133,7 @@ def index():
 @app.before_request
 def check_ip_ban():
     # Helper to check if IP is banned
-    ip = get_remote_address()
+    ip = utils.get_client_ip()
     is_banned, reason, remaining = security.check_ban(ip)
     
     if is_banned:
@@ -148,7 +148,7 @@ def check_ip_ban():
 @app.route('/login', methods=['GET', 'POST'])
 @limiter.limit("10 per minute", methods=['POST']) 
 def login():
-    ip = get_remote_address()
+    ip = utils.get_client_ip()
     
     # Check Lockout
     is_locked, remaining = security.check_lockout(ip)
@@ -944,7 +944,7 @@ def ban_ip_route():
     reason = request.form.get('reason', 'Admin Action')
     
     # Self-Ban Prevention
-    current_ip = get_remote_address()
+    current_ip = utils.get_client_ip()
     if ip == current_ip:
         flash('⚠️ 安全警告：您不能封鎖自己的 IP！以免將自己拒於門外。', 'error')
         return redirect(url_for('admin'))

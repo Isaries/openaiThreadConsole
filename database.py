@@ -31,19 +31,8 @@ def log_audit(user, action, target, status="Success", details=""):
     # Auto-detect IP and Path if in request context
     if has_request_context():
         try:
-            # 1. Try X-Real-Ip (Preferred for Nginx)
-            ip = request.headers.get('X-Real-Ip')
-            
-            # 2. Try X-Forwarded-For
-            if not ip:
-                ip = request.headers.get('X-Forwarded-For')
-                if ip:
-                    ip = ip.split(',')[0].strip()
-            
-            # 3. Fallback to remote_addr
-            if not ip:
-                ip = request.remote_addr
-
+            import utils
+            ip = utils.get_client_ip()
             if ip:
                 if "IP:" not in details: # Avoid double logging if passed in details
                     ip_info = f" IP: {ip}"

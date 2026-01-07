@@ -41,6 +41,29 @@ def mask_credential(value):
     if len(val) <= 2: return "*" * len(val)
     return f"{val[0]}{'*' * 8}{val[-1]}"
 
+def get_client_ip():
+    """
+    Reliably extracts client IP from headers, prioritizing X-Real-Ip.
+    This ensures consistent IP handling behind proxies (like Nginx).
+    """
+    from flask import request, has_request_context
+    if not has_request_context(): return '0.0.0.0'
+    
+    # Priority 1: X-Real-Ip (Nginx Default)
+    ip = request.headers.get('X-Real-Ip')
+    
+    # Priority 2: X-Forwarded-For
+    if not ip:
+        ip = request.headers.get('X-Forwarded-For')
+        if ip:
+            ip = ip.split(',')[0].strip()
+            
+    # Priority 3: Direct connection
+    if not ip:
+        ip = request.remote_addr
+        
+    return ip or '0.0.0.0'
+
 # --- Date/Time Helpers ---
 def unix_to_utc8(unix_timestamp):
     if not unix_timestamp:
