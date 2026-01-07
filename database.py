@@ -3,9 +3,17 @@ import os
 import threading
 import logging
 from logging.handlers import RotatingFileHandler
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from flask import request, has_request_context
 import config
+
+# --- Timezone Setup ---
+def utc8_converter(*args):
+    # Enforce UTC+8 (Taiwan time) for logging
+    utc8 = timezone(timedelta(hours=8))
+    return datetime.now(utc8).timetuple()
+
+logging.Formatter.converter = utc8_converter
 
 # --- Concurrency Control ---
 data_lock = threading.Lock()
