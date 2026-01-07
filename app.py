@@ -265,6 +265,11 @@ def admin():
         audit_logs = database.load_audit_logs()
         for log in audit_logs:
             ip = log['ip']
+            
+            # Filter unknown/internal proxy IP noise if requested
+            if ip == '192.168.77.16':
+                continue
+
             if ip not in ip_activity:
                 ip_activity[ip] = {'logs': [], 'user': '訪客', 'last_seen': 0}
             
