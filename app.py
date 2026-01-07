@@ -282,7 +282,8 @@ def admin():
             ip_activity[ip]['logs'].append(log)
             
             # Update summary user if a named user is found
-            if display_user != '訪客':
+            # Only update if we haven't found a user yet (prioritize newest log)
+            if display_user != '訪客' and ip_activity[ip]['user'] == '訪客':
                  ip_activity[ip]['user'] = display_user
                  
             # Note: logs are reversed (newest first), so first one is latest
