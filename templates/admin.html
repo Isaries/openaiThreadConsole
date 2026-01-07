@@ -499,6 +499,9 @@
                                     <span class="badge {{ 'badge-blue' if data.user != '訪客' else 'badge-gray' }}">{{
                                         data.user }}</span>
                                     <span class="text-xs text-secondary">({{ data.logs|length }} logs)</span>
+                                    <!-- Notification Badge -->
+                                    <span id="badge-{{ loop.index }}" class="badge badge-danger"
+                                        style="display:none; padding: 2px 6px; font-size: 10px;">0</span>
                                 </div>
                                 <div class="flex gap-2">
                                     <button class="btn btn-secondary btn-sm"
@@ -527,7 +530,7 @@
                                         </tr>
                                     </thead>
                                     {% for log in data.logs[:50] %}
-                                    <tr>
+                                    <tr data-timestamp="{{ log.created_at }}">
                                         <td>{{ log.time }}</td>
                                         <td>
                                             <span
@@ -666,7 +669,74 @@
                 }
             });
         }
+
+        // --- IP Monitor Persistence & Notifications ---
+        document.addEventListener('DOMContentLoaded', function () {
+            // 1. Restore Expanded State
+            const expandedIPs = JSON.parse(localStorage.getItem('expanded_ips') || '[]');
+            expandedIPs.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.style.display = 'block';
+            });
+
+            // 2. Calculate Unread Logs
+            const ipBlocks = document.querySelectorAll('[id^="details-"]');
+            ipBlocks.forEach(block => {
+                const index = block.id.replace('details-', '');
+                const badge = document.getElementById('badge-' + index);
+                const ip = block.parentElement.querySelector('strong').innerText;
+                const lastRead = localStorage.getItem('last_read_' + ip) || 0;
+
+                let newCount = 0;
+                const rows = block.querySelectorAll('tr[data-timestamp]');
+
+                // Find latest timestamp for this IP to update later
+                let latestTimestamp = 0;
+                if (rows.length > 0) {
+                    latestTimestamp = parseInt(rows[0].dataset.timestamp);
+                    // Store latest in dataset for click handler
+                    block.dataset.latest = latestTimestamp;
+                }
+
+                rows.forEach(row => {
+                    const ts = parseInt(row.dataset.timestamp);
+                    if (ts > lastRead) newCount++;
+                });
+
+                if (newCount > 0) {
+                    badge.innerText = newCount;
+                    badge.style.display = 'inline-block';
+                }
+            });
+        });
+
+        function toggleIpDetails(id) {
+            const el = document.getElementById(id);
+            const isHidden = el.style.display === 'none';
+            el.style.display = isHidden ? 'block' : 'none';
+
+            // Persistence
+            let expandedIPs = JSON.parse(localStorage.getItem('expanded_ips') || '[]');
+            if (isHidden) {
+                if (!expandedIPs.includes(id)) expandedIPs.push(id);
+
+                // Clear Notification Logic
+                const index = id.replace('details-', '');
+                const badge = document.getElementById('badge-' + index);
+                const ip = el.parentElement.querySelector('strong').innerText;
+                const latest = el.dataset.latest || 0;
+
+                if (latest > 0) {
+                    localStorage.setItem('last_read_' + ip, latest);
+                    badge.style.display = 'none';
+                }
+            } else {
+                expandedIPs = expandedIPs.filter(x => x !== id);
+            }
+            localStorage.setItem('expanded_ips', JSON.stringify(expandedIPs));
+        }
     </script>
 </body>
 
 </html>
+```
