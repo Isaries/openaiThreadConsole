@@ -2,6 +2,7 @@ import json
 import os
 import threading
 import logging
+import shutil
 from logging.handlers import RotatingFileHandler
 from datetime import datetime, timedelta, timezone
 from flask import request, has_request_context
@@ -28,7 +29,15 @@ def save_json_atomic(filepath, data):
             json.dump(data, f, indent=2, ensure_ascii=False)
             f.flush()
             os.fsync(f.fileno())
-        os.replace(temp_path, filepath)
+        
+        # Try atomic replacement
+        try:
+            os.replace(temp_path, filepath)
+        except OSError as e:
+            # Fallback for Docker/Volume issues (Errno 16/18: Cross-device link / Device busy)
+            # shutil.move handles copy+delete if rename fails
+            shutil.move(temp_path, filepath)
+            
         return True
     except Exception as e:
         logging.getLogger().error(f"Atomic save failed for {filepath}: {e}")
