@@ -100,6 +100,17 @@ log_handler.setFormatter(RequestFormatter(
 app.logger.addHandler(log_handler)
 app.logger.setLevel(logging.INFO)
 
+# --- Debug Route (Temporary) ---
+@app.route('/debug/headers')
+def debug_headers():
+    return jsonify({
+        'headers': dict(request.headers),
+        'remote_addr': request.remote_addr,
+        'x_forwarded_for': request.headers.get('X-Forwarded-For'),
+        'environ_remote_addr': request.environ.get('REMOTE_ADDR')
+    })
+app.logger.setLevel(logging.INFO)
+
 # --- Security Setup ---
 csrf = CSRFProtect(app)
 limiter = Limiter(
