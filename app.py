@@ -286,9 +286,6 @@ def admin():
                  ip_activity[ip]['user'] = display_user
                  
             # Note: logs are reversed (newest first), so first one is latest
-                # Parse time? Or just iterate. 
-                # Since we just want grouping, order is preserved.
-                pass
 
         # --- Inject Geo Info (New) ---
         for ip, data in ip_activity.items():
