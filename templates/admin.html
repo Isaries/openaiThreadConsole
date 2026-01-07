@@ -406,9 +406,8 @@
                                     {% set u_email = u.email or '' %}
                                     {% set escaped_username = u.username | replace('"', '\\"') %}
                                     <tr>
-                                        <td data-label="名稱">{{ u.username | mask_credential }}</td>
-                                        <td data-label="Email">{{ (u.email | mask_credential) if u.email else '-' }}
-                                        </td>
+                                        <td data-label="名稱">{{ u.username }}</td>
+                                        <td data-label="Email">{{ u.email or '-' }}</td>
                                         <td data-label="操作" class="flex gap-2">
                                             <button type="button" class="btn btn-secondary btn-sm"
                                                 onclick='openEditUserModal("{{ u.id }}", "{{ escaped_username }}", "{{ u_email }}")'>
