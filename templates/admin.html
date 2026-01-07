@@ -630,7 +630,13 @@
 
         function toggleSection(id) {
             var el = document.getElementById(id);
-            el.style.display = (el.style.display === 'none') ? 'block' : 'none';
+            const isHidden = (el.style.display === 'none');
+            el.style.display = isHidden ? 'block' : 'none';
+
+            // Persist specific sections
+            if (id === 'ipMonitorSection') {
+                localStorage.setItem('ip_monitor_expanded', isHidden);
+            }
         }
 
         function toggleIpDetails(id) {
@@ -672,6 +678,12 @@
 
         // --- IP Monitor Persistence & Notifications ---
         document.addEventListener('DOMContentLoaded', function () {
+            // 0. Restore Main Section State
+            if (localStorage.getItem('ip_monitor_expanded') === 'true') {
+                const section = document.getElementById('ipMonitorSection');
+                if (section) section.style.display = 'block';
+            }
+
             // 1. Restore Expanded State
             const expandedIPs = JSON.parse(localStorage.getItem('expanded_ips') || '[]');
             expandedIPs.forEach(id => {
