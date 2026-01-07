@@ -89,7 +89,15 @@ log_handler = RotatingFileHandler('access.log', maxBytes=1000000, backupCount=5)
 class RequestFormatter(logging.Formatter):
     def format(self, record):
         if has_request_context():
-            record.remote_addr = request.remote_addr
+            # Priority: X-Real-Ip > X-Forwarded-For > remote_addr
+            ip = request.headers.get('X-Real-Ip')
+            if not ip:
+                ip = request.headers.get('X-Forwarded-For')
+                if ip:
+                    ip = ip.split(',')[0].strip()
+            if not ip:
+                ip = request.remote_addr
+            record.remote_addr = ip
         else:
             record.remote_addr = '-'
         return super().format(record)
@@ -98,17 +106,6 @@ log_handler.setFormatter(RequestFormatter(
     '[%(asctime)s] %(levelname)s [%(remote_addr)s] %(message)s'
 ))
 app.logger.addHandler(log_handler)
-app.logger.setLevel(logging.INFO)
-
-# --- Debug Route (Temporary) ---
-@app.route('/debug/headers')
-def debug_headers():
-    return jsonify({
-        'headers': dict(request.headers),
-        'remote_addr': request.remote_addr,
-        'x_forwarded_for': request.headers.get('X-Forwarded-For'),
-        'environ_remote_addr': request.environ.get('REMOTE_ADDR')
-    })
 app.logger.setLevel(logging.INFO)
 
 # --- Security Setup ---
