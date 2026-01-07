@@ -13,7 +13,29 @@ def utc8_converter(*args):
     utc8 = timezone(timedelta(hours=8))
     return datetime.now(utc8).timetuple()
 
+
 logging.Formatter.converter = utc8_converter
+
+# --- Helper: Atomic Write ---
+def save_json_atomic(filepath, data):
+    """
+    Writes data to a temporary file, syncs to disk, then renames to target.
+    Ensures data integrity against crashes.
+    """
+    temp_path = filepath + ".tmp"
+    try:
+        with open(temp_path, 'w', encoding='utf-8') as f:
+            json.dump(data, f, indent=2, ensure_ascii=False)
+            f.flush()
+            os.fsync(f.fileno())
+        os.replace(temp_path, filepath)
+        return True
+    except Exception as e:
+        logging.getLogger().error(f"Atomic save failed for {filepath}: {e}")
+        if os.path.exists(temp_path):
+            try: os.remove(temp_path)
+            except: pass
+        return False
 
 # --- Concurrency Control ---
 data_lock = threading.Lock()
@@ -57,11 +79,7 @@ def load_users():
 
 def save_users(users):
     with data_lock:
-        try:
-            with open(config.USERS_FILE, 'w', encoding='utf-8') as f:
-                json.dump(users, f, indent=2, ensure_ascii=False)
-            return True
-        except: return False
+        return save_json_atomic(config.USERS_FILE, users)
 
 def get_user_by_username(username):
     users = load_users()
@@ -115,13 +133,7 @@ def load_groups():
 
 def save_groups(groups):
     with data_lock:
-        try:
-            with open(config.GROUPS_FILE, 'w', encoding='utf-8') as f:
-                json.dump(groups, f, indent=2, ensure_ascii=False)
-            return True
-        except Exception as e:
-            logging.getLogger().error(f"Failed to save groups to {config.GROUPS_FILE}: {e}")
-            return False
+        return save_json_atomic(config.GROUPS_FILE, groups)
 
 def get_group_by_id(group_id):
     groups = load_groups()
@@ -144,10 +156,7 @@ def save_log(log_entry):
         logs = load_logs()
         logs.insert(0, log_entry) # Add to top
         logs = logs[:3] # Keep only last 3
-        try:
-            with open(config.LOG_FILE, 'w', encoding='utf-8') as f:
-                json.dump(logs, f, indent=2, ensure_ascii=False)
-        except: pass
+        save_json_atomic(config.LOG_FILE, logs)
 
 # --- Settings ---
 def load_settings():
@@ -159,11 +168,7 @@ def load_settings():
     except: return {}
 
 def save_settings(data):
-    try:
-        with open(config.SETTINGS_FILE, 'w', encoding='utf-8') as f:
-            json.dump(data, f, indent=2)
-        return True
-    except: return False
+    return save_json_atomic(config.SETTINGS_FILE, data)
 
 # --- IP Bans ---
 def load_ip_bans():
@@ -176,11 +181,7 @@ def load_ip_bans():
 
 def save_ip_bans(bans):
     with data_lock:
-        try:
-            with open(config.IP_BANS_FILE, 'w', encoding='utf-8') as f:
-                json.dump(bans, f, indent=2, ensure_ascii=False)
-            return True
-        except: return False
+        return save_json_atomic(config.IP_BANS_FILE, bans)
 
 # --- Audit Analysis ---
 def load_audit_logs():
