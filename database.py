@@ -19,7 +19,8 @@ audit_logger.addHandler(audit_handler)
 
 def log_audit(user, action, target, status="Success", details=""):
     ip_info = ""
-    # Auto-detect IP if in request context
+    req_info = ""
+    # Auto-detect IP and Path if in request context
     if has_request_context():
         try:
             # Check if proxied (X-Forwarded-For) or direct
@@ -29,9 +30,12 @@ def log_audit(user, action, target, status="Success", details=""):
                 ip = ip.split(',')[0].strip()
                 if "IP:" not in details: # Avoid double logging if passed in details
                     ip_info = f" IP: {ip}"
+            
+            # Capture Method and Path
+            req_info = f" [{request.method} {request.path}]"
         except: pass
 
-    msg = f"[User: {user}] [Action: {action}] [Target: {target}] [Status: {status}] {details}{ip_info}"
+    msg = f"[User: {user}] [Action: {action}] [Target: {target}] [Status: {status}]{req_info} {details}{ip_info}"
     audit_logger.info(msg)
     # Also log to root logger for console visibility (simulating app.logger)
     logging.getLogger().info(f"AUDIT: {msg}")
@@ -207,6 +211,7 @@ def load_audit_logs():
                         'action': match.group(3),
                         'target': match.group(4),
                         'status': match.group(5),
+                        'details': details.split(" IP: ")[0] if " IP: " in details else details,
                         'ip': ip,
                         'raw': line
                     })

@@ -82,6 +82,7 @@ app.jinja_env.filters['nl2br'] = utils.nl2br
 app.jinja_env.filters['render_images'] = utils.render_markdown_images
 app.jinja_env.filters['sanitize_html'] = utils.sanitize_html
 app.jinja_env.filters['format_timestamp'] = utils.unix_to_utc8
+app.jinja_env.filters['mask_credential'] = utils.mask_credential
 
 # --- Logging Setup (Access Log) ---
 log_handler = RotatingFileHandler('access.log', maxBytes=1000000, backupCount=5)

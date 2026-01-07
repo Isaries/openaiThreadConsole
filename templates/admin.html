@@ -406,8 +406,9 @@
                                     {% set u_email = u.email or '' %}
                                     {% set escaped_username = u.username | replace('"', '\\"') %}
                                     <tr>
-                                        <td data-label="名稱">{{ u.username }}</td>
-                                        <td data-label="Email">{{ u.email or '-' }}</td>
+                                        <td data-label="名稱">{{ u.username | mask_credential }}</td>
+                                        <td data-label="Email">{{ (u.email | mask_credential) if u.email else '-' }}
+                                        </td>
                                         <td data-label="操作" class="flex gap-2">
                                             <button type="button" class="btn btn-secondary btn-sm"
                                                 onclick='openEditUserModal("{{ u.id }}", "{{ escaped_username }}", "{{ u_email }}")'>
@@ -417,6 +418,9 @@
                                                 onclick="openResetModal('{{ u.id }}', '{{ u.username }}')">
                                                 重設密碼
                                             </button>
+                                            <div class="text-xs text-secondary" style="align-self: center;">
+                                                Hint: {{ u.password_hint or 'None' }}
+                                            </div>
                                             <form action="/admin/user/delete" method="POST" style="display:inline;">
                                                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                                 <input type="hidden" name="user_id" value="{{ u.id }}">
@@ -508,10 +512,20 @@
                             </div>
                             <div id="details-{{ loop.index }}" style="display: none; padding: 0.5rem;">
                                 <table style="font-size: 0.75rem;">
-                                    {% for log in data.logs[:10] %}
+                                    <thead>
+                                        <tr>
+                                            <th>時間</th>
+                                            <th>動作</th>
+                                            <th>狀態</th>
+                                        </tr>
+                                    </thead>
+                                    {% for log in data.logs[:50] %}
                                     <tr>
                                         <td>{{ log.time }}</td>
-                                        <td>{{ log.action }}</td>
+                                        <td>
+                                            <div class="font-bold">{{ log.action }}</div>
+                                            <div class="text-xs opacity-70">{{ log.target }} {{ log.details }}</div>
+                                        </td>
                                         <td>{{ log.status }}</td>
                                     </tr>
                                     {% endfor %}

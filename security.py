@@ -60,8 +60,8 @@ def validate_password_strength(password):
 
 def generate_password_hint(password):
     if not password: return ""
-    if len(password) <= 4: return "*" * len(password)
-    return f"{password[:2]}***{password[-2:]}"
+    if len(password) <= 2: return "*" * len(password)
+    return f"{password[0]}{'*' * 8}{password[-1]}"
 
 # --- Security Policies (Lockout) ---
 LOGIN_ATTEMPTS = {} # { ip: { count: int, lockout_until: float } }

@@ -316,6 +316,10 @@ label {
     justify-content: space-between;
 }
 
+.justify-center {
+    justify-content: center;
+}
+
 .gap-2 {
     gap: 0.5rem;
 }

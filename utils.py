@@ -35,6 +35,12 @@ def sanitize_html(value):
     cleaned = bleach.clean(value, tags=allowed_tags, attributes=allowed_attrs, strip=True, css_sanitizer=css_sanitizer)
     return Markup(cleaned)
 
+def mask_credential(value):
+    if not value: return ""
+    val = str(value)
+    if len(val) <= 2: return "*" * len(val)
+    return f"{val[0]}{'*' * 8}{val[-1]}"
+
 # --- Date/Time Helpers ---
 def unix_to_utc8(unix_timestamp):
     if not unix_timestamp:
