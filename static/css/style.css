@@ -283,6 +283,11 @@ label {
     color: #475569;
 }
 
+.badge-blue {
+    background: #e0f2fe;
+    color: #0369a1;
+}
+
 .badge-green {
     background: #ecfdf5;
     color: #059669;

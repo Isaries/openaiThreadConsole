@@ -491,7 +491,8 @@
                                 style="background: var(--surface-bg); padding: 0.5rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
                                 <div class="flex items-center gap-2">
                                     <strong>{{ ip }}</strong>
-                                    <span class="badge badge-gray">{{ data.user }}</span>
+                                    <span class="badge {{ 'badge-blue' if data.user != '訪客' else 'badge-gray' }}">{{
+                                        data.user }}</span>
                                     <span class="text-xs text-secondary">({{ data.logs|length }} logs)</span>
                                 </div>
                                 <div class="flex gap-2">
@@ -514,6 +515,7 @@
                                     <thead>
                                         <tr>
                                             <th>時間</th>
+                                            <th>使用者</th>
                                             <th>動作</th>
                                             <th>狀態</th>
                                         </tr>
@@ -521,6 +523,12 @@
                                     {% for log in data.logs[:50] %}
                                     <tr>
                                         <td>{{ log.time }}</td>
+                                        <td>
+                                            <span
+                                                class="badge {{ 'badge-blue' if log.display_user != '訪客' else 'badge-gray' }}">
+                                                {{ log.display_user }}
+                                            </span>
+                                        </td>
                                         <td>
                                             <div class="font-bold">{{ log.action }}</div>
                                             <div class="text-xs opacity-70">{{ log.target }} {{ log.details }}</div>

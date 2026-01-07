@@ -258,13 +258,19 @@ def admin():
         for log in audit_logs:
             ip = log['ip']
             if ip not in ip_activity:
-                ip_activity[ip] = {'logs': [], 'user': 'Guest', 'last_seen': 0}
+                ip_activity[ip] = {'logs': [], 'user': '訪客', 'last_seen': 0}
+            
+            # Identity refinement for display
+            display_user = log.get('user', 'Unknown')
+            if display_user in ['Unknown', 'Guest', 'Guest IP']:
+                display_user = '訪客'
+            log['display_user'] = display_user
             
             ip_activity[ip]['logs'].append(log)
             
-            # Update last user seen on this IP
-            if log['user'] and log['user'] != 'Unknown':
-                 ip_activity[ip]['user'] = log['user']
+            # Update summary user if a named user is found
+            if display_user != '訪客':
+                 ip_activity[ip]['user'] = display_user
                  
             # Note: logs are reversed (newest first), so first one is latest
             if ip_activity[ip]['last_seen'] == 0:
