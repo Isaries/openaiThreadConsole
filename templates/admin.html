@@ -496,6 +496,13 @@
                                 style="background: var(--surface-bg); padding: 0.5rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
                                 <div class="flex items-center gap-2">
                                     <strong>{{ ip }}</strong>
+                                    <!-- Geo Info -->
+                                    {% if data.geo %}
+                                    <span class="text-xs text-secondary"
+                                        style="font-family: sans-serif; background: #f0f0f0; padding: 2px 5px; border-radius: 4px;">📍
+                                        {{ data.geo }}</span>
+                                    {% endif %}
+
                                     <span class="badge {{ 'badge-blue' if data.user != '訪客' else 'badge-gray' }}">{{
                                         data.user }}</span>
                                     <span class="text-xs text-secondary">({{ data.logs|length }} logs)</span>

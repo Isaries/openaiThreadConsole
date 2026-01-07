@@ -286,10 +286,15 @@ def admin():
                  ip_activity[ip]['user'] = display_user
                  
             # Note: logs are reversed (newest first), so first one is latest
-            if ip_activity[ip]['last_seen'] == 0:
                 # Parse time? Or just iterate. 
                 # Since we just want grouping, order is preserved.
                 pass
+
+        # --- Inject Geo Info (New) ---
+        for ip, data in ip_activity.items():
+            # This calls our Cached API helper
+            geo_info = utils.get_ip_info(ip)
+            data['geo'] = geo_info.get('desc', '')
 
     user_map = {u['id']: u['username'] for u in users_list}
 

@@ -1,6 +1,11 @@
 import bleach
 from datetime import datetime, timezone, timedelta
+from datetime import datetime, timezone, timedelta
 from markupsafe import escape, Markup
+import requests
+
+# In-Memory Cache for IP Info
+IP_CACHE = {}
 
 # --- Template Filters ---
 def nl2br(value):
@@ -63,6 +68,49 @@ def get_client_ip():
         ip = request.remote_addr
         
     return ip or '0.0.0.0'
+
+def get_ip_info(ip):
+    """
+    Fetches ASN and Location info from ip-api.com.
+    Uses simple in-memory caching.
+    """
+    # 0. Check Cache
+    if ip in IP_CACHE:
+        return IP_CACHE[ip]
+        
+    # 1. Skip Local/Private IPs (Basic Check)
+    if ip == '127.0.0.1' or ip.startswith('192.168.') or ip.startswith('10.'):
+        return {'desc': 'Local / Private'}
+        
+    try:
+        # 2. Request API
+        # ip-api.com/json/{ip}?fields=status,message,country,city,isp,as
+        resp = requests.get(f"http://ip-api.com/json/{ip}?fields=status,country,city,isp,as,org", timeout=2)
+        if resp.status_code == 200:
+            data = resp.json()
+            if data.get('status') == 'success':
+                # Format: "🇹🇼 Taipei, Chunghwa Telecom"
+                # Add flag emoji logic if desired, or just text
+                
+                # Simple Flag Mapper (Partial)
+                country = data.get('country', '')
+                city = data.get('city', '')
+                isp = data.get('isp', '')
+                
+                info = {
+                    'country': country,
+                    'city': city,
+                    'isp': isp,
+                    'desc': f"{country} {city}, {isp}"
+                }
+                
+                # Cache it (Permanent for runtime)
+                IP_CACHE[ip] = info
+                return info
+    except Exception as e:
+        print(f"IP Lookup Failed for {ip}: {e}")
+        
+    return {'desc': 'Unknown'}
 
 # --- Date/Time Helpers ---
 def unix_to_utc8(unix_timestamp):
