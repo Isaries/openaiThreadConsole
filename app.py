@@ -1034,6 +1034,20 @@ def proxy_file(file_id):
         return f"Proxy Error: {str(e)}", 500
 
 
+def get_real_mime_type(data, default='image/png'):
+    """Detect MIME type from magic numbers"""
+    if data.startswith(b'\x89PNG\r\n\x1a\n'):
+        return 'image/png'
+    elif data.startswith(b'\xff\xd8'):
+        return 'image/jpeg'
+    elif data.startswith(b'GIF8'):
+        return 'image/gif'
+    elif data.startswith(b'RIFF') and b'WEBP' in data[:20]:
+        return 'image/webp'
+    return default
+
+
+
 
 def fetch_image_base64(src, headers=None):
     """
@@ -1078,10 +1092,17 @@ def fetch_image_base64(src, headers=None):
             if 'webp' in content_type.lower():
                 logging.getLogger().warning(f"Warning: Server returned WebP for {src} despite Accept headers. WeasyPrint may fail.")
             
+            # OpenAI often returns application/octet-stream, which breaks Data URIs.
+            # We MUST sniff the content to be sure.
+            real_mime = get_real_mime_type(resp.content, content_type)
+            if real_mime != content_type:
+                 app.logger.info(f"Corrected MIME {content_type} -> {real_mime} for {src}")
+                 content_type = real_mime
+
             b64_data = base64.b64encode(resp.content).decode('utf-8')
             
             # Ensure we use the actual returned content type
-            app.logger.info(f"Image Fetch Success: {url[:50]}... Type: {content_type}")
+            app.logger.info(f"Image Fetch Success: {url[:50]}... Type: {content_type} Len: {len(b64_data)}")
             return src, f"data:{content_type};base64,{b64_data}"
         else:
              logging.getLogger().warning(f"Fetch Error {resp.status_code} for {url}")
