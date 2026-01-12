@@ -70,7 +70,8 @@ csp = {
     'style-src': ["'self'", "'unsafe-inline'", "https://cdnjs.cloudflare.com", "https://fonts.googleapis.com"],
     'font-src': ["'self'", "https://cdnjs.cloudflare.com", "https://fonts.gstatic.com"],
     'img-src': ["*"],
-    'connect-src': ["'self'"]
+    'img-src': ["*"],
+    'connect-src': ["'self'", "https://cdnjs.cloudflare.com"]
 }
 
 # Force HTTPS and apply Security Headers
@@ -1080,6 +1081,7 @@ def fetch_image_base64(src, headers=None):
             b64_data = base64.b64encode(resp.content).decode('utf-8')
             
             # Ensure we use the actual returned content type
+            app.logger.info(f"Image Fetch Success: {url[:50]}... Type: {content_type}")
             return src, f"data:{content_type};base64,{b64_data}"
         else:
              logging.getLogger().warning(f"Fetch Error {resp.status_code} for {url}")
@@ -1149,10 +1151,19 @@ def preprocess_html_for_pdf(html_content, group_id):
 
     # Apply updates
     replaced_count = 0
+    first_replacement_log = False
+    
     for img in target_images:
         src = img.get('src')
         if src in results:
-            img['src'] = results[src]
+            new_src = results[src]
+            img['src'] = new_src
+            
+            if not first_replacement_log:
+                # DEBUG: Dump the first ~200 chars of the new src to verify syntax
+                app.logger.info(f"DEBUG: First replaced img tag src start: {new_src[:100]}...")
+                first_replacement_log = True
+                
             changed = True
             replaced_count += 1
             
