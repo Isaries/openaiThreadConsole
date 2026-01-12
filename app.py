@@ -1065,6 +1065,14 @@ def preprocess_html_for_pdf(html_content, group_id):
     
     app.logger.info(f"Preprocessing PDF HTML for group_id: {group_id}")
     
+    # DEBUG: Dump snippets where "User Image" occurs
+    if "User Image" in html_content:
+        idx = html_content.find("User Image")
+        snippet = html_content[max(0, idx-100):min(len(html_content), idx+100)]
+        app.logger.info(f"HTML Snippet around 'User Image': ...{snippet}...")
+    else:
+        app.logger.info("String 'User Image' NOT found in HTML content.")
+
     soup = BeautifulSoup(html_content, 'html.parser')
     images = soup.find_all('img')
     
