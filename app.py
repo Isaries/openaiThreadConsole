@@ -1082,7 +1082,7 @@ def fetch_image_base64(src, headers=None):
 
         # Perform Fetch
         import logging
-        resp = requests.get(url, headers=request_headers, timeout=10)
+        resp = requests.get(url, headers=request_headers, timeout=30)
         
         if resp.status_code == 200:
             import base64
@@ -1175,6 +1175,10 @@ def preprocess_html_for_pdf(html_content, group_id):
     first_replacement_log = False
     
     for img in target_images:
+        # Remove loading="lazy" as it confuses WeasyPrint
+        if img.has_attr('loading'):
+            del img['loading']
+            
         src = img.get('src')
         if src in results:
             new_src = results[src]
