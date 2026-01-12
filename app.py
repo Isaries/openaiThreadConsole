@@ -653,7 +653,7 @@ def search():
         with ThreadPoolExecutor(max_workers=5) as executor:
             futures = []
             for t in threads_list:
-                futures.append(executor.submit(services.process_thread, t, target_name, date_from, date_to, api_key))
+                futures.append(executor.submit(services.process_thread, t, target_name, date_from, date_to, api_key, group_id))
             
             for future in futures:
                 res = future.result()
@@ -878,7 +878,8 @@ def download_pdf(thread_id):
                  api_key_enc = active_group.get('api_key')
 
     # 2. Process Thread
-    thread_data = services.process_thread({'thread_id': thread_id}, None, None, None, api_key_enc)
+    # Pass group_id so services can generate correct image URLs
+    thread_data = services.process_thread({'thread_id': thread_id}, None, None, None, api_key_enc, found_group['group_id'])
     
     if not thread_data or not thread_data.get('data'):
         return "Thread not found or empty", 404
@@ -892,6 +893,8 @@ def download_pdf(thread_id):
     # Render full or chunked
     if total_messages <= CHUNK_SIZE:
         html = render_template('print_view.html', threads=[thread_data['data']])
+        # Embedding Images
+        html = preprocess_html_for_pdf(html, found_group['group_id'])
         pdf_bytes = generate_pdf_bytes(html)
         return io.BytesIO(pdf_bytes), 200, {
             'Content-Type': 'application/pdf',
@@ -913,6 +916,7 @@ def download_pdf(thread_id):
                 
                 # Append part info to title if possible, or just render
                 html = render_template('print_view.html', threads=[chunk_data])
+                html = preprocess_html_for_pdf(html, found_group['group_id'])
                 pdf_bytes = generate_pdf_bytes(html)
                 
                 zf.writestr(f"thread_{thread_id}_part_{i+1}.pdf", pdf_bytes)
@@ -977,6 +981,118 @@ def unban_ip_route():
         flash(f'IP {ip} 已解除封鎖', 'success')
         
     return redirect(url_for('admin'))
+
+@app.route('/file/<file_id>')
+def proxy_file(file_id):
+    group_id = request.args.get('group_id')
+    if not group_id: return "Missing group_id", 400
+    
+    # 1. Auth Check (Same as Download)
+    groups = database.load_groups()
+    group = next((g for g in groups if g['group_id'] == group_id), None)
+    if not group: return "Group not found", 404
+    
+    if not group.get('is_visible', True):
+        user_id = session.get('user_id')
+        role = session.get('role')
+        if not user_id: return "Unauthorized", 401
+        if role != 'admin' and user_id not in group.get('owners', []):
+            return "Permission Denied", 403
+
+    # 2. Fetch File
+    api_key_enc = group.get('api_key')
+    headers = services.get_headers(api_key_enc) # This handles decryption internally? 
+    # Wait, services.get_headers expects decrypted key if custom_key is passed?
+    # services.py: api_key = custom_key ... if not api_key: load global ...
+    # But later it calls security.get_decrypted_key(api_key).
+    # So passing encrypted key is fine IF services.get_headers handles it.
+    # Let's check services.py:33 -> yes it calls security.get_decrypted_key.
+    
+    try:
+        url = f"https://api.openai.com/v1/files/{file_id}/content"
+        resp = requests.get(url, headers=headers, stream=True, timeout=30)
+        
+        if resp.status_code != 200:
+            return f"OpenAI Error: {resp.status_code}", 502
+            
+        excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
+        headers = [(name, value) for (name, value) in resp.raw.headers.items()
+                   if name.lower() not in excluded_headers]
+                   
+        from flask import Response
+        return Response(resp.content, resp.status_code, headers)
+    except Exception as e:
+        return f"Proxy Error: {str(e)}", 500
+
+
+def fetch_image_base64(src, headers):
+    """Helper for parallel fetching"""
+    try:
+        # Extract file_id
+        path_part = src.split('?')[0] 
+        file_id = path_part.split('/')[-1]
+        
+        if file_id.startswith('file-'):
+            url = f"https://api.openai.com/v1/files/{file_id}/content"
+            resp = requests.get(url, headers=headers, timeout=10)
+            
+            if resp.status_code == 200:
+                import base64
+                b64_data = base64.b64encode(resp.content).decode('utf-8')
+                content_type = resp.headers.get('Content-Type', 'image/png')
+                return src, f"data:{content_type};base64,{b64_data}"
+    except Exception as e:
+        logging.warning(f"Failed to fetch image {src}: {e}")
+    return src, None
+
+def preprocess_html_for_pdf(html_content, group_id):
+    """
+    Parses HTML, finds <img> pointing to /file/..., fetches them using group_id context in PARALLEL,
+    and replaces src with base64 data URI.
+    """
+    from bs4 import BeautifulSoup
+    import concurrent.futures
+    
+    soup = BeautifulSoup(html_content, 'html.parser')
+    images = soup.find_all('img')
+    
+    target_images = [img for img in images if img.get('src') and '/file/' in img.get('src')]
+    if not target_images:
+        return html_content
+
+    groups = database.load_groups()
+    group = next((g for g in groups if g['group_id'] == group_id), None)
+    if not group: return html_content 
+    
+    api_key_enc = group.get('api_key')
+    headers = services.get_headers(api_key_enc)
+    
+    changed = False
+    
+    # max_workers=10 for reasonable parallelism on IO bound tasks
+    with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
+        # Create map of future -> original img tag (though we rely on src matching)
+        # Actually better to just map src to a future
+        future_to_src = {
+            executor.submit(fetch_image_base64, img.get('src'), headers): img.get('src') 
+            for img in target_images
+        }
+        
+        # Results map: src -> new_src
+        results = {}
+        for future in concurrent.futures.as_completed(future_to_src):
+            src, new_blob = future.result()
+            if new_blob:
+                results[src] = new_blob
+
+    # Apply updates
+    for img in target_images:
+        src = img.get('src')
+        if src in results:
+            img['src'] = results[src]
+            changed = True
+                
+    return str(soup) if changed else html_content
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)

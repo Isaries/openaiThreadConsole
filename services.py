@@ -81,7 +81,7 @@ def fetch_thread_messages(thread_id, api_key=None):
         logging.getLogger().error(f"Fetch error {thread_id}: {e}")
         return None
 
-def process_thread(thread_data, target_name, start_date, end_date, api_key=None):
+def process_thread(thread_data, target_name, start_date, end_date, api_key=None, group_id=None):
     t_id = thread_data.get('thread_id')
     
     # Default return structure
@@ -126,7 +126,13 @@ def process_thread(thread_data, target_name, start_date, end_date, api_key=None)
                     if part.get('type') == 'text':
                          content_value += part.get('text', {}).get('value', '')
                     elif part.get('type') == 'image_file':
-                         content_value += "[圖片]"
+                         file_id = part.get('image_file', {}).get('file_id')
+                         if file_id:
+                             # Use proxy URL with group_id for auth
+                             gid_param = f"?group_id={group_id}" if group_id else ""
+                             content_value += f"![User Image](/file/{file_id}{gid_param})"
+                         else:
+                             content_value += "[圖片錯誤]"
 
             if target_name:
                 if target_name.lower() in content_value.lower():
