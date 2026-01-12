@@ -1034,6 +1034,10 @@ def fetch_image_base64(src, headers):
         
         if file_id.startswith('file-'):
             url = f"https://api.openai.com/v1/files/{file_id}/content"
+            # app.logger won't work inside thread easily if not passed, but we can print or use logging
+            # Revert to root logger for thread
+            import logging
+            
             resp = requests.get(url, headers=headers, timeout=10)
             
             if resp.status_code == 200:
@@ -1041,10 +1045,13 @@ def fetch_image_base64(src, headers):
                 b64_data = base64.b64encode(resp.content).decode('utf-8')
                 content_type = resp.headers.get('Content-Type', 'image/png')
                 return src, f"data:{content_type};base64,{b64_data}"
+            else:
+                 logging.getLogger().warning(f"OpenAI Fetch Error {resp.status_code} for {file_id}")
     except Exception as e:
-        logging.warning(f"Failed to fetch image {src}: {str(e)}")
-        import traceback
-        logging.warning(traceback.format_exc())
+    except Exception as e:
+        app.logger.warning(f"Failed to fetch image {src}: {str(e)}")
+        # import traceback
+        # app.logger.warning(traceback.format_exc())
     
     return src, None
 
@@ -1055,19 +1062,19 @@ def preprocess_html_for_pdf(html_content, group_id):
     """
     from bs4 import BeautifulSoup
     import concurrent.futures
-    import logging
+    # Use app.logger
     
-    logging.info(f"Preprocessing PDF HTML for group_id: {group_id}")
+    app.logger.info(f"Preprocessing PDF HTML for group_id: {group_id}")
     
     soup = BeautifulSoup(html_content, 'html.parser')
     images = soup.find_all('img')
     
     # Debug: Check what images are found
     all_srcs = [img.get('src') for img in images]
-    logging.info(f"Found {len(images)} images in HTML. Srcs: {all_srcs[:5]}...")
+    app.logger.info(f"Found {len(images)} images in HTML. Srcs: {all_srcs[:5]}...")
 
     target_images = [img for img in images if img.get('src') and '/file/' in img.get('src')]
-    logging.info(f"Found {len(target_images)} target images for embedding.")
+    app.logger.info(f"Found {len(target_images)} target images for embedding.")
 
     if not target_images:
         return html_content
