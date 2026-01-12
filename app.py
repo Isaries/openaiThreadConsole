@@ -42,7 +42,7 @@ def safe_url_fetcher(url, timeout=30):
         return {'file_obj': io.BytesIO(resp.content), 'mime_type': resp.headers.get('Content-Type'), 'encoding': resp.encoding, 'redirected_url': resp.url}
     except Exception as e:
         logging.warning(f"WeasyPrint URL Fetch Failed for {url}: {e}")
-        return None
+        raise e # WeasyPrint requires an exception or a dict, None causes AttributeError
 
 # --- PDF Generation Helper ---
 def generate_pdf_bytes(html_content):
