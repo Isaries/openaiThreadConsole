@@ -1033,32 +1033,51 @@ def proxy_file(file_id):
         return f"Proxy Error: {str(e)}", 500
 
 
-def fetch_image_base64(src, headers):
-    """Helper for parallel fetching"""
+
+def fetch_image_base64(src, headers=None):
+    """
+    Helper for parallel fetching.
+    - If src is /file/..., uses provided headers (OpenAI Auth).
+    - If src is http..., uses generic browser headers.
+    """
     try:
-        # Extract file_id
-        path_part = src.split('?')[0] 
-        file_id = path_part.split('/')[-1]
+        url = src
+        request_headers = {}
         
-        if file_id.startswith('file-'):
-            url = f"https://api.openai.com/v1/files/{file_id}/content"
-            # app.logger won't work inside thread easily if not passed, but we can print or use logging
-            # Revert to root logger for thread
-            import logging
+        # Scenario 1: OpenAI File Proxy
+        if '/file/' in src:
+            try:
+                path_part = src.split('?')[0] 
+                file_id = path_part.split('/')[-1]
+                if file_id.startswith('file-'):
+                    url = f"https://api.openai.com/v1/files/{file_id}/content"
+                    request_headers = headers # Auth headers passed from caller
+            except:
+                pass # Fallback to original src if parsing fails
+        
+        # Scenario 2: External URL (Assistant Images)
+        elif src.lower().startswith('http'):
+            # Mimic Browser
+            request_headers = {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+            }
             
-            resp = requests.get(url, headers=headers, timeout=10)
-            
-            if resp.status_code == 200:
-                import base64
-                b64_data = base64.b64encode(resp.content).decode('utf-8')
-                content_type = resp.headers.get('Content-Type', 'image/png')
-                return src, f"data:{content_type};base64,{b64_data}"
-            else:
-                 logging.getLogger().warning(f"OpenAI Fetch Error {resp.status_code} for {file_id}")
+        if not url: return src, None
+
+        # Perform Fetch
+        import logging
+        resp = requests.get(url, headers=request_headers, timeout=10)
+        
+        if resp.status_code == 200:
+            import base64
+            b64_data = base64.b64encode(resp.content).decode('utf-8')
+            content_type = resp.headers.get('Content-Type', 'image/png')
+            return src, f"data:{content_type};base64,{b64_data}"
+        else:
+             logging.getLogger().warning(f"Fetch Error {resp.status_code} for {url}")
+             
     except Exception as e:
         app.logger.warning(f"Failed to fetch image {src}: {str(e)}")
-        # import traceback
-        # app.logger.warning(traceback.format_exc())
     
     return src, None
 
@@ -1088,27 +1107,28 @@ def preprocess_html_for_pdf(html_content, group_id):
     all_srcs = [img.get('src') for img in images]
     app.logger.info(f"Found {len(images)} images in HTML. Srcs: {all_srcs[:5]}...")
 
-    target_images = [img for img in images if img.get('src') and '/file/' in img.get('src')]
-    app.logger.info(f"Found {len(target_images)} target images for embedding.")
+    # Target ALL images for parallel pre-fetching to avoid sequential WeasyPrint fetch timeout
+    target_images = [img for img in images if img.get('src')]
+    app.logger.info(f"Found {len(target_images)} total images for optimization (Assistant + User).")
 
     if not target_images:
         return html_content
 
     groups = database.load_groups()
     group = next((g for g in groups if g['group_id'] == group_id), None)
-    if not group: return html_content 
     
-    api_key_enc = group.get('api_key')
-    headers = services.get_headers(api_key_enc)
+    # Get OpenAI headers (only needed for /file/ images, but we pass them along)
+    openai_headers = {}
+    if group:
+        api_key_enc = group.get('api_key')
+        openai_headers = services.get_headers(api_key_enc)
     
     changed = False
     
-    # max_workers=10 for reasonable parallelism on IO bound tasks
-    with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
-        # Create map of future -> original img tag (though we rely on src matching)
-        # Actually better to just map src to a future
+    # max_workers=20 to handle mixed external/internal requests
+    with concurrent.futures.ThreadPoolExecutor(max_workers=20) as executor:
         future_to_src = {
-            executor.submit(fetch_image_base64, img.get('src'), headers): img.get('src') 
+            executor.submit(fetch_image_base64, img.get('src'), openai_headers): img.get('src') 
             for img in target_images
         }
         
