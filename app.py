@@ -19,6 +19,13 @@ from weasyprint import HTML
 import zipfile
 import io
 import math
+import os
+import shutil
+
+# Temp folder for PDF images
+TEMP_PDF_IMG_DIR = os.path.join(os.getcwd(), 'temp_pdf_images')
+if not os.path.exists(TEMP_PDF_IMG_DIR):
+    os.makedirs(TEMP_PDF_IMG_DIR)
 
 # Internal Modules
 import config
@@ -1046,14 +1053,34 @@ def get_real_mime_type(data, default='image/png'):
         return 'image/webp'
     return default
 
+def save_image_locally(url, content, mime_type):
+    """Save raw image bytes to temp file and return absolute file:/// path"""
+    try:
+        # Determine extension
+        ext = 'png'
+        if 'jpeg' in mime_type or 'jpg' in mime_type: ext = 'jpg'
+        elif 'gif' in mime_type: ext = 'gif'
+        elif 'webp' in mime_type: ext = 'webp'
+        
+        # Unique filename from hash or UUID
+        import hashlib
+        file_hash = hashlib.md5(url.encode('utf-8')).hexdigest()
+        filename = f"{file_hash}.{ext}"
+        filepath = os.path.join(TEMP_PDF_IMG_DIR, filename)
+        
+        # Write file
+        with open(filepath, 'wb') as f:
+            f.write(content)
+            
+        return f"file:///{filepath.replace(os.path.sep, '/')}"
+    except Exception as e:
+        app.logger.warning(f"Failed to save temp image: {e}")
+        return None
 
-
-
-def fetch_image_base64(src, headers=None):
+def fetch_image_local_path(src, headers=None):
     """
     Helper for parallel fetching.
-    - If src is /file/..., uses provided headers (OpenAI Auth).
-    - If src is http..., uses generic browser headers.
+    Downloads image and returns local file:/// URI.
     """
     try:
         url = src
@@ -1085,25 +1112,26 @@ def fetch_image_base64(src, headers=None):
         resp = requests.get(url, headers=request_headers, timeout=30)
         
         if resp.status_code == 200:
-            import base64
             content_type = resp.headers.get('Content-Type', 'image/png')
-            
-            # Log unexpected content types
-            if 'webp' in content_type.lower():
-                logging.getLogger().warning(f"Warning: Server returned WebP for {src} despite Accept headers. WeasyPrint may fail.")
             
             # OpenAI often returns application/octet-stream, which breaks Data URIs.
             # We MUST sniff the content to be sure.
             real_mime = get_real_mime_type(resp.content, content_type)
             if real_mime != content_type:
-                 app.logger.info(f"Corrected MIME {content_type} -> {real_mime} for {src}")
+                 # app.logger.info(f"Corrected MIME {content_type} -> {real_mime} for {src}")
                  content_type = real_mime
 
-            b64_data = base64.b64encode(resp.content).decode('utf-8')
+            # Log unexpected content types
+            if 'webp' in content_type.lower():
+                logging.getLogger().warning(f"Warning: Server returned WebP for {src} despite Accept headers. WeasyPrint may fail.")
+
+            # Save Locally
+            local_uri = save_image_locally(url, resp.content, content_type)
+            if local_uri:
+                 # app.logger.info(f"Saved PDF Image: {local_uri}")
+                 return src, local_uri
             
-            # Ensure we use the actual returned content type
-            app.logger.info(f"Image Fetch Success: {url[:50]}... Type: {content_type} Len: {len(b64_data)}")
-            return src, f"data:{content_type};base64,{b64_data}"
+            return src, None
         else:
              logging.getLogger().warning(f"Fetch Error {resp.status_code} for {url}")
              
@@ -1159,7 +1187,7 @@ def preprocess_html_for_pdf(html_content, group_id):
     # max_workers=20 to handle mixed external/internal requests
     with concurrent.futures.ThreadPoolExecutor(max_workers=20) as executor:
         future_to_src = {
-            executor.submit(fetch_image_base64, img.get('src'), openai_headers): img.get('src') 
+            executor.submit(fetch_image_local_path, img.get('src'), openai_headers): img.get('src') 
             for img in target_images
         }
         
