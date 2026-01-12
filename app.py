@@ -1048,7 +1048,6 @@ def fetch_image_base64(src, headers):
             else:
                  logging.getLogger().warning(f"OpenAI Fetch Error {resp.status_code} for {file_id}")
     except Exception as e:
-    except Exception as e:
         app.logger.warning(f"Failed to fetch image {src}: {str(e)}")
         # import traceback
         # app.logger.warning(traceback.format_exc())
