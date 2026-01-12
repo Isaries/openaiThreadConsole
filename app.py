@@ -1057,9 +1057,10 @@ def fetch_image_base64(src, headers=None):
         
         # Scenario 2: External URL (Assistant Images)
         elif src.lower().startswith('http'):
-            # Mimic Browser
+            # Mimic Browser but ENFORCE standard formats to avoid WebP which WeasyPrint might not support on Windows
             request_headers = {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+                'Accept': 'image/png, image/jpeg, image/gif, image/svg+xml;q=0.9, */*;q=0.8'
             }
             
         if not url: return src, None
@@ -1070,8 +1071,15 @@ def fetch_image_base64(src, headers=None):
         
         if resp.status_code == 200:
             import base64
-            b64_data = base64.b64encode(resp.content).decode('utf-8')
             content_type = resp.headers.get('Content-Type', 'image/png')
+            
+            # Log unexpected content types
+            if 'webp' in content_type.lower():
+                logging.getLogger().warning(f"Warning: Server returned WebP for {src} despite Accept headers. WeasyPrint may fail.")
+            
+            b64_data = base64.b64encode(resp.content).decode('utf-8')
+            
+            # Ensure we use the actual returned content type
             return src, f"data:{content_type};base64,{b64_data}"
         else:
              logging.getLogger().warning(f"Fetch Error {resp.status_code} for {url}")
