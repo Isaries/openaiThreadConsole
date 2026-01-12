@@ -35,7 +35,35 @@ import database
 import services
 
 # --- WeasyPrint Helper ---
+# --- WeasyPrint Helper ---
 def safe_url_fetcher(url, timeout=30):
+    if url.startswith('file://'):
+        try:
+            from urllib.parse import unquote
+            # Remove file:// scheme
+            if os.name == 'nt':
+                 # Windows: file:///C:/path -> C:/path
+                 path = unquote(url.replace('file:///', ''))
+            else:
+                 # Linux/Unix: file:///path -> /path
+                 path = unquote(url.replace('file://', ''))
+            
+            with open(path, 'rb') as f:
+                content = f.read()
+                
+            import mimetypes
+            mime_type, _ = mimetypes.guess_type(path)
+            
+            return {
+                'file_obj': io.BytesIO(content),
+                'mime_type': mime_type or 'application/octet-stream',
+                'encoding': None,
+                'redirected_url': url
+            }
+        except Exception as e:
+            logging.warning(f"WeasyPrint File Fetch Failed for {url}: {e}")
+            raise e
+
     try:
         retry_strategy = Retry(total=3, backoff_factor=1, status_forcelist=[429, 500, 502, 503, 504])
         adapter = HTTPAdapter(max_retries=retry_strategy)
@@ -1072,7 +1100,8 @@ def save_image_locally(url, content, mime_type):
         with open(filepath, 'wb') as f:
             f.write(content)
             
-        return f"file:///{filepath.replace(os.path.sep, '/')}"
+        from pathlib import Path
+        return Path(filepath).as_uri()
     except Exception as e:
         app.logger.warning(f"Failed to save temp image: {e}")
         return None
