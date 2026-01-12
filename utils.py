@@ -38,6 +38,13 @@ def sanitize_html(value):
     from bleach.css_sanitizer import CSSSanitizer
     css_sanitizer = CSSSanitizer(allowed_css_properties=['text-align', 'color', 'background-color'])
     cleaned = bleach.clean(value, tags=allowed_tags, attributes=allowed_attrs, strip=True, css_sanitizer=css_sanitizer)
+    
+    # DEBUG: Log if we are cleaning a user image
+    if "User Image" in str(value) and "User Image" not in str(cleaned):
+        print(f"BLEACH STRIPPED IMAGE! Input: {value[:100]}... Output: {cleaned[:100]}...")
+    elif "User Image" in str(value):
+        print(f"Bleach preserved image. Input len: {len(str(value))} Output len: {len(str(cleaned))}")
+        
     return Markup(cleaned)
 
 def mask_credential(value):
