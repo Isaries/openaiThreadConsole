@@ -881,6 +881,14 @@ def download_pdf(thread_id):
     # Pass group_id so services can generate correct image URLs
     thread_data = services.process_thread({'thread_id': thread_id}, None, None, None, api_key_enc, found_group['group_id'])
     
+    # DEBUG: Check what services returned
+    if thread_data and 'data' in thread_data and 'messages' in thread_data['data']:
+        msgs = thread_data['data']['messages']
+        app.logger.info(f"PDF Debug: Loaded {len(msgs)} messages from services.")
+        for m in msgs:
+            if "User Image" in m.get('content', '') or "[圖片]" in m.get('content', ''):
+                app.logger.info(f"PDF Debug: Found relevant msg content: {m['content']}")
+    
     if not thread_data or not thread_data.get('data'):
         return "Thread not found or empty", 404
         
