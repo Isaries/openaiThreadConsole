@@ -130,9 +130,7 @@ def process_thread(thread_data, target_name, start_date, end_date, api_key=None,
                          if file_id:
                              # Use proxy URL with group_id for auth
                              gid_param = f"?group_id={group_id}" if group_id else ""
-                             img_markdown = f"![User Image](/file/{file_id}{gid_param})"
-                             content_value += img_markdown
-                             logging.getLogger().info(f"Generated Markdown for file {file_id}: {img_markdown}")
+                             content_value += f"![User Image](/file/{file_id}{gid_param})"
                          else:
                              content_value += "[圖片錯誤]"
 

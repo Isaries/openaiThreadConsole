@@ -917,14 +917,6 @@ def download_pdf(thread_id):
     # Pass group_id so services can generate correct image URLs
     thread_data = services.process_thread({'thread_id': thread_id}, None, None, None, api_key_enc, found_group['group_id'])
     
-    # DEBUG: Check what services returned
-    if thread_data and 'data' in thread_data and 'messages' in thread_data['data']:
-        msgs = thread_data['data']['messages']
-        app.logger.info(f"PDF Debug: Loaded {len(msgs)} messages from services.")
-        for m in msgs:
-            if "User Image" in m.get('content', '') or "[圖片]" in m.get('content', ''):
-                app.logger.info(f"PDF Debug: Found relevant msg content: {m['content']}")
-    
     if not thread_data or not thread_data.get('data'):
         return "Thread not found or empty", 404
         
@@ -1147,7 +1139,6 @@ def fetch_image_local_path(src, headers=None):
             # We MUST sniff the content to be sure.
             real_mime = get_real_mime_type(resp.content, content_type)
             if real_mime != content_type:
-                 # app.logger.info(f"Corrected MIME {content_type} -> {real_mime} for {src}")
                  content_type = real_mime
 
             # Log unexpected content types
@@ -1180,14 +1171,6 @@ def preprocess_html_for_pdf(html_content, group_id):
     
     app.logger.info(f"Preprocessing PDF HTML for group_id: {group_id}")
     
-    # DEBUG: Dump snippets where "User Image" occurs
-    if "User Image" in html_content:
-        idx = html_content.find("User Image")
-        snippet = html_content[max(0, idx-100):min(len(html_content), idx+100)]
-        app.logger.info(f"HTML Snippet around 'User Image': ...{snippet}...")
-    else:
-        app.logger.info("String 'User Image' NOT found in HTML content.")
-
     soup = BeautifulSoup(html_content, 'html.parser')
     images = soup.find_all('img')
     
@@ -1236,21 +1219,12 @@ def preprocess_html_for_pdf(html_content, group_id):
         if img.has_attr('loading'):
             del img['loading']
             
-        src = img.get('src')
         if src in results:
             new_src = results[src]
             img['src'] = new_src
             
-            if not first_replacement_log:
-                # DEBUG: Dump the first ~200 chars of the new src to verify syntax
-                app.logger.info(f"DEBUG: First replaced img tag src start: {new_src[:100]}...")
-                first_replacement_log = True
-                
             changed = True
-            replaced_count += 1
             
-    app.logger.info(f"PDF Preprocess: Successfully replaced {replaced_count} out of {len(target_images)} target images with Base64 data.")
-                
     return str(soup) if changed else html_content
 
 if __name__ == '__main__':
