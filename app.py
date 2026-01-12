@@ -1120,11 +1120,15 @@ def preprocess_html_for_pdf(html_content, group_id):
                 results[src] = new_blob
 
     # Apply updates
+    replaced_count = 0
     for img in target_images:
         src = img.get('src')
         if src in results:
             img['src'] = results[src]
             changed = True
+            replaced_count += 1
+            
+    app.logger.info(f"PDF Preprocess: Successfully replaced {replaced_count} out of {len(target_images)} target images with Base64 data.")
                 
     return str(soup) if changed else html_content
 
