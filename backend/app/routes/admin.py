@@ -172,6 +172,9 @@ def index():
         elif decrypted:
             masked_key = "******" # Short keys
 
+    # Fetch all tags for autocomplete
+    all_tags = [t.name for t in Tag.query.with_entities(Tag.name).distinct()]
+
     return render_template('admin.html', 
                          groups=groups_data, 
                          grouped_projects=grouped_projects, # Ensure this is passed
@@ -183,6 +186,7 @@ def index():
                          ip_activity=ip_activity,
                          banned_ips=bans_pagination, 
                          bans_pagination=bans_pagination,
+                         all_tags=all_tags, # Pass to template
                          user_map=user_map,
                          masked_key=masked_key,
                          threads=active_group['threads'] if active_group else [])

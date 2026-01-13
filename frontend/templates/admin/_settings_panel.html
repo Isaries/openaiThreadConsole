@@ -96,10 +96,16 @@
 
                     <div class="flex gap-2" style="max-width: 300px;">
                         <input type="text" id="newTagInput_{{ active_group.group_id }}" placeholder="新增 Tag..."
-                            class="input" style="flex:1;"
+                            class="input" style="flex:1;" list="availableTags"
                             onkeydown="if(event.key === 'Enter') { event.preventDefault(); addTag('{{ active_group.group_id }}'); return false; }">
                         <button type="button" class="btn btn-secondary btn-sm"
                             onclick="addTag('{{ active_group.group_id }}')">新增</button>
+
+                        <datalist id="availableTags">
+                            {% for tag in all_tags %}
+                            <option value="{{ tag }}">
+                                {% endfor %}
+                        </datalist>
                     </div>
                 </div>
             </div>
