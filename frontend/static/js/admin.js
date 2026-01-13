@@ -318,5 +318,4 @@ function updateTagUI(groupId, tags) {
         </span>
         `;
     }).join('');
-}).join('');
 }
