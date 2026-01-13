@@ -310,9 +310,13 @@ function updateTagUI(groupId, tags) {
         return `
         <span class="badge badge-gray" style="display: inline-flex; align-items: center; gap: 4px;">
             ${tag}
-            <button type="button" onclick="removeTag('${groupId}', '${safeTag}')" 
+            <button type="button" 
+                data-group-id="${groupId}"
+                data-tag-name="${safeTag}"
+                onclick="removeTag(this.dataset.groupId, this.dataset.tagName)"
                 style="background: none; border: none; cursor: pointer; color: #666; font-size: 1rem; line-height: 1; padding: 0 2px;">×</button>
         </span>
         `;
     }).join('');
+}).join('');
 }
