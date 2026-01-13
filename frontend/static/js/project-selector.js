@@ -1,8 +1,7 @@
 document.addEventListener('DOMContentLoaded', () => {
     // Dependencies: ALL_PROJECTS (Global), enableFocusToClear (Global/Utils)
 
-    const projectInput = document.getElementById('projectSearchInput');
-    const projectDatalist = document.getElementById('projectOptions');
+    const projectSelect = document.getElementById('projectSelect');
     const hiddenGroupId = document.getElementById('group_id');
     const tagFilter = document.getElementById('tagFilter');
 
@@ -12,26 +11,88 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
     }
 
-    function renderProjectOptions(projects) {
-        // console.log('Rendering options:', projects.length);
-        projectDatalist.innerHTML = '';
-        projects.forEach(p => {
+    /**
+     * Renders Project Options into the Select Element
+     * Grouping strategy:
+     * 1. If Tag Filter is active: Show only matching projects (Flat list or simplified grouping)
+     * 2. If No Tag Filter: Show all projects grouped by their FIRST tag (or 'Uncategorized')
+     */
+    function renderProjectOptions(projects, isFiltered = false) {
+        // Clear current options (keep default disabled one)
+        projectSelect.innerHTML = '<option value="" disabled selected>請選擇 Project...</option>';
+
+        if (projects.length === 0) {
             const opt = document.createElement('option');
-            opt.value = p.name;
-            projectDatalist.appendChild(opt);
-        });
+            opt.textContent = "(無符合專案)";
+            opt.disabled = true;
+            projectSelect.appendChild(opt);
+            return;
+        }
+
+        // Logic: Should we group?
+        // If filtered by a specific tag, flat list is often better.
+        // If showing all, grouping helps navigation.
+
+        if (isFiltered) {
+            // Flat list for specific filter
+            projects.forEach(p => {
+                const opt = document.createElement('option');
+                opt.value = p.id;
+                opt.textContent = `📁 ${p.name}`;
+                projectSelect.appendChild(opt);
+            });
+        } else {
+            // Group by Tag logic for "All Projects"
+            const groups = {};
+            const noTag = [];
+
+            projects.forEach(p => {
+                if (p.tags && p.tags.length > 0) {
+                    // Use the first tag as primary group
+                    const primaryTag = p.tags[0];
+                    if (!groups[primaryTag]) groups[primaryTag] = [];
+                    groups[primaryTag].push(p);
+                } else {
+                    noTag.push(p);
+                }
+            });
+
+            // Render Groups (Sorted keys)
+            Object.keys(groups).sort().forEach(tagName => {
+                const groupEl = document.createElement('optgroup');
+                groupEl.label = tagName;
+                groups[tagName].forEach(p => {
+                    const opt = document.createElement('option');
+                    opt.value = p.id;
+                    opt.textContent = p.name;
+                    groupEl.appendChild(opt);
+                });
+                projectSelect.appendChild(groupEl);
+            });
+
+            // Render Uncategorized
+            if (noTag.length > 0) {
+                const groupEl = document.createElement('optgroup');
+                groupEl.label = "未分類";
+                noTag.forEach(p => {
+                    const opt = document.createElement('option');
+                    opt.value = p.id;
+                    opt.textContent = p.name;
+                    groupEl.appendChild(opt);
+                });
+                projectSelect.appendChild(groupEl);
+            }
+        }
     }
 
-    function selectProject(project) {
-        if (project) {
-            projectInput.value = project.name;
-            hiddenGroupId.value = project.id;
-            // Save Persistence
-            localStorage.setItem('threadConsole_selectedGroupId', project.id);
+    function selectProject(id) {
+        if (id) {
+            projectSelect.value = id;
+            hiddenGroupId.value = id;
+            localStorage.setItem('threadConsole_selectedGroupId', id);
         } else {
-            projectInput.value = '';
-            hiddenGroupId.value = '';
-            // Do NOT clear persistence if just clearing UI temporarily
+            projectSelect.value = "";
+            hiddenGroupId.value = "";
         }
     }
 
@@ -40,75 +101,62 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Restore Selection logic
     const savedId = localStorage.getItem('threadConsole_selectedGroupId');
-    let initialProject = null;
-
     if (savedId) {
-        const found = ALL_PROJECTS.find(p => p.id === savedId);
-        if (found) initialProject = found;
+        // Verify it exists in current set
+        const exists = ALL_PROJECTS.find(p => p.id === savedId);
+        if (exists) selectProject(savedId);
     }
 
-    // Apply Selection
-    selectProject(initialProject);
-
-    // Project Input Handler
-    projectInput.addEventListener('input', () => {
-        const val = projectInput.value;
-        const match = ALL_PROJECTS.find(p => p.name === val);
-        if (match) {
-            hiddenGroupId.value = match.id;
-            localStorage.setItem('threadConsole_selectedGroupId', match.id);
-        } else {
-            hiddenGroupId.value = ''; // Invalid/Custom selection
+    // Project Select Handler (Change event is robust for Selects)
+    projectSelect.addEventListener('change', () => {
+        const val = projectSelect.value;
+        if (val) {
+            hiddenGroupId.value = val;
+            localStorage.setItem('threadConsole_selectedGroupId', val);
         }
-    });
-
-    // Ensure ID is set on change (for click selection)
-    projectInput.addEventListener('change', () => {
-        const val = projectInput.value;
-        const match = ALL_PROJECTS.find(p => p.name === val);
-        if (match) hiddenGroupId.value = match.id;
     });
 
     // Tag Filter Logic
-    tagFilter.addEventListener('input', () => {
-        const tagVal = tagFilter.value.trim().toLowerCase();
+    tagFilter.addEventListener('change', () => {
+        const tagVal = tagFilter.value; // Select value is direct
         let filtered = ALL_PROJECTS;
+        let isFilteredMode = false;
 
-        if (tagVal && tagVal !== 'ignore') {
+        if (tagVal && tagVal !== 'Ignore') {
+            isFilteredMode = true;
             filtered = ALL_PROJECTS.filter(p => {
-                const projectTags = p.tags || []; // Safety check
-                return projectTags.some(t => t.toLowerCase().includes(tagVal));
+                const projectTags = p.tags || [];
+                return projectTags.some(t => t === tagVal); // Exact match for Select option
             });
         }
 
-        // Re-render Datalist
-        renderProjectOptions(filtered);
+        // Handle "Ignore" UI clear
+        if (tagVal === 'Ignore') {
+            tagFilter.value = ""; // Reset to default "Select Tag..."
+            isFilteredMode = false;
+        }
+
+        // Re-render Select
+        renderProjectOptions(filtered, isFilteredMode);
 
         // Auto-select logic
         if (filtered.length === 1) {
-            selectProject(filtered[0]);
+            selectProject(filtered[0].id);
         } else if (filtered.length > 0) {
-            const currentName = projectInput.value;
-            const currentInList = filtered.find(p => p.name === currentName);
-            const isReset = (!tagVal || tagVal === 'ignore');
+            // Try to keep current selection if it's still valid
+            const currentId = hiddenGroupId.value;
+            const stillExists = filtered.find(p => p.id === currentId);
 
-            if (!currentInList || isReset) {
-                selectProject(null);
+            if (!stillExists) {
+                selectProject(""); // Clear if current selection is filtered out
+            } else {
+                // Ensure UI sync
+                projectSelect.value = currentId;
             }
         } else {
-            selectProject(null);
-        }
-
-        // Handle "Ignore" UI clear
-        if (tagVal === 'ignore') {
-            tagFilter.value = '';
-            tagFilter.dataset.saved = '';
+            selectProject("");
         }
     });
 
-    // Apply Utils: Focus To Clear
-    if (typeof enableFocusToClear === 'function') {
-        enableFocusToClear(tagFilter);
-        enableFocusToClear(projectInput);
-    }
+    // We don't need 'enableFocusToClear' for Select elements as they don't have text to clear
 });

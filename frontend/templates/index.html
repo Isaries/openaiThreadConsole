@@ -41,22 +41,21 @@
 
             <div class="form-group">
                 <label>Tag 篩選 (選填)</label>
-                <input type="text" id="tagFilter" list="tagOptions" class="input" placeholder="選擇或輸入 Tag..."
-                    style="margin-bottom: 0.5rem;" autocomplete="off">
-                <datalist id="tagOptions">
-                    <option value="Ignore">Ignore</option>
+                <select id="tagFilter" class="input" style="margin-bottom: 0.5rem; cursor: pointer;">
+                    <option value="" disabled selected>選擇 Tag...</option>
+                    <option value="Ignore">顯示全部 (Ignore)</option>
                     {% for tag in all_tags %}
-                    <option value="{{ tag }}"></option>
+                    <option value="{{ tag }}">{{ tag }}</option>
                     {% endfor %}
-                </datalist>
+                </select>
 
                 <label>Project (必填)</label>
-                <!-- Searchable Project Input -->
-                <input type="text" id="projectSearchInput" list="projectOptions" class="input"
-                    placeholder="搜尋或選擇 Project..." required autocomplete="off">
-                <datalist id="projectOptions">
+                <!-- Searchable Project Select -->
+                <select id="projectSelect" class="input" required style="cursor: pointer;">
+                    <option value="" disabled selected>請先選擇 Project...</option>
                     <!-- Populated by JS -->
-                </datalist>
+                </select>
+                <!-- Retain hidden input for backward compatibility if needed, though Select handles value directly -->
                 <input type="hidden" id="group_id" name="group_id" required>
 
                 <!-- Data Source for JS -->
