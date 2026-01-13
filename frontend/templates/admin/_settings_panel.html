@@ -87,8 +87,8 @@
                         {% for tag in active_group.tags %}
                         <span class="badge badge-gray" style="display: inline-flex; align-items: center; gap: 4px;">
                             {{ tag }}
-                            <button type="button"
-                                onclick="removeTag('{{ active_group.group_id }}', '{{ tag | replace("'", "\\'") }}')"
+                            <button type="button" data-group-id="{{ active_group.group_id }}" data-tag-name="{{ tag }}"
+                                onclick="removeTag(this.dataset.groupId, this.dataset.tagName)"
                                 style="background: none; border: none; cursor: pointer; color: #666; font-size: 1rem; line-height: 1; padding: 0 2px;">×</button>
                         </span>
                         {% endfor %}
