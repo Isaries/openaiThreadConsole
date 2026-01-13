@@ -1,0 +1,7 @@
+# Auto-detect text files and perform LF normalization
+* text=auto
+
+# Treat database files as binary (no line ending conversion)
+*.db binary
+*.sqlite binary
+*.sqlite3 binary
