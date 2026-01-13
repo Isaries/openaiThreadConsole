@@ -34,6 +34,10 @@ def create_app():
     csrf.init_app(app)
     limiter.init_app(app)
     
+    # Auto-create tables
+    with app.app_context():
+        db.create_all()
+    
     # Security Headers
     csp = {
         'default-src': ["'self'"],
