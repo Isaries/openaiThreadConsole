@@ -1,0 +1,81 @@
+<!-- Logs -->
+<div class="card">
+    <h3>📜 近期搜尋紀錄</h3>
+    <div class="table-responsive" style="margin-top: 1rem; max-height: 300px; overflow-y: auto;">
+        <table style="font-size: 0.8rem;">
+            <thead>
+                <tr>
+                    <th>時間</th>
+                    <th>Project</th>
+                    <th>關鍵字</th>
+                    <th>結果</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for log in logs %}
+                <tr>
+                    <td data-label="時間">{{ log.time }}</td>
+                    <td data-label="Project">{{ log.group or '-' }}</td>
+                    <td data-label="關鍵字">
+                        {{ log.target }}
+                        {% if log.date_range %}
+                        <div class="text-xs text-secondary" style="margin-top:2px;">
+                            📅 {{ log.date_range }}
+                        </div>
+                        {% endif %}
+                    </td>
+                    <td data-label="結果">
+                        <span class="badge {{ 'badge-green' if log.matches > 0 else 'badge-gray' }}">
+                            {{ log.matches }} / {{ log.total }}
+                        </span>
+                    </td>
+                </tr>
+                <tr>
+                    <td colspan="4" style="padding: 0; border: none;">
+                        <details style="margin: 0.5rem 1rem;">
+                            <summary class="text-xs text-info" style="cursor: pointer; margin-bottom: 0.5rem;">
+                                👉 詳細 API Log
+                            </summary>
+                            <div
+                                style="background: var(--surface-bg); padding: 0.5rem; border-radius: var(--radius-sm); font-size: 0.75rem;">
+                                {% if log.api_results %}
+                                {% for res in log.api_results %}
+                                <div
+                                    style="border-bottom: 1px dashed var(--surface-border); padding-bottom: 0.5rem; margin-bottom: 0.5rem;">
+                                    <div class="flex justify-between">
+                                        <span>{{ res.thread_id }}</span>
+                                        <span class="{{ 'text-success' if res.keep else 'text-danger' }}">
+                                            {{ res.status }}
+                                        </span>
+                                    </div>
+                                    {% if res.raw_messages %}
+                                    <details>
+                                        <summary class="text-xs" style="cursor: pointer; opacity: 0.7;">JSON
+                                            ({{ res.raw_messages|length }})</summary>
+
+                                        <div class="log-wrapper" style="position: relative; margin-top:0.25rem;">
+                                            <div class="flex gap-1"
+                                                style="position: absolute; left: 5px; top: 5px; opacity: 0.8; z-index: 10;">
+                                                <button type="button" class="btn btn-secondary btn-sm"
+                                                    style="padding: 2px 6px; font-size: 10px;"
+                                                    onclick="copyLog(this)">複製</button>
+                                            </div>
+                                            <pre class="log-content"
+                                                style="background:#1e293b; color:#cbd5e1; padding:2rem 0.5rem 0.5rem 0.5rem; border-radius:4px; max-height: 400px; overflow-y: auto; white-space: pre-wrap; word-break: break-all;">{{ res.raw_messages | pretty_json }}</pre>
+                                        </div>
+                                    </details>
+                                    {% endif %}
+                                </div>
+                                {% endfor %}
+                                {% else %}
+                                <span class="text-secondary">No details</span>
+                                {% endif %}
+                            </div>
+                        </details>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>

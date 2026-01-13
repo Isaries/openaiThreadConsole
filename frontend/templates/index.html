@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Thread 搜尋系統</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+
+<body class="auth-layout">
+
+    <!-- Glassmorphism Orbs (Hidden unless theme active) -->
+    <div class="orb-1"></div>
+    <div class="orb-2"></div>
+
+    <!-- Theme Switcher (Floating Bottom Left) -->
+    <div style="position: fixed; bottom: 20px; left: 20px; z-index: 100; display: flex; align-items: center; gap: 8px;">
+        <select id="themeSelect" class="select"
+            style="padding: 0.25rem 0.5rem; font-size: 0.85rem; background: rgba(255, 255, 255, 0.9); border: 1px solid rgba(255,255,255,0.3); border-radius: 4px; color: #333; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.1); backdrop-filter: blur(5px);">
+            <option value="bg-default">Default</option>
+            <option value="bg-aurora">Aurora</option>
+            <option value="bg-grid">Grid</option>
+            <option value="bg-glass">Glass</option>
+            <option value="bg-gray">Gray</option>
+        </select>
+    </div>
+
+    <div class="card auth-card">
+        <div style="text-align: center; margin-bottom: 2rem;">
+            <h1
+                style="font-size: 1.75rem; background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;">
+                🔍 Thread 搜尋</h1>
+            <p class="text-secondary text-sm" style="margin-top: 0.5rem;">搜尋包含特定關鍵字的對話紀錄</p>
+        </div>
+
+        <form method="POST" action="/search" id="searchForm">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+
+            <div class="form-group">
+                <label>Tag 篩選 (選填)</label>
+                <input type="text" id="tagFilter" list="tagOptions" class="input" placeholder="選擇或輸入 Tag..."
+                    style="margin-bottom: 0.5rem;" autocomplete="off">
+                <datalist id="tagOptions">
+                    <option value="Ignore">Ignore</option>
+                    {% for tag in all_tags %}
+                    <option value="{{ tag }}"></option>
+                    {% endfor %}
+                </datalist>
+
+                <label>Project (必填)</label>
+                <!-- Searchable Project Input -->
+                <input type="text" id="projectSearchInput" list="projectOptions" class="input"
+                    placeholder="搜尋或選擇 Project..." required autocomplete="off">
+                <datalist id="projectOptions">
+                    <!-- Populated by JS -->
+                </datalist>
+                <input type="hidden" id="group_id" name="group_id" required>
+
+                <!-- Data Source for JS -->
+                <!-- Data Source for JS -->
+                <script id="projects-data" type="application/json">
+                    [
+                        {% for group in groups %}
+                        {
+                            "id": {{ group.group_id | tojson | safe }},
+                            "name": {{ group.name | tojson | safe }},
+                            "tags": {{ group.tags | tojson | safe }}
+                        }{{ "," if not loop.last }}
+                        {% endfor %}
+                    ]
+                </script>
+                <script>
+                    const ALL_PROJECTS = JSON.parse(document.getElementById('projects-data').textContent);
+                </script>
+            </div>
+
+            <div class="form-group">
+                <label for="target_name">搜尋關鍵字 <span class="badge-gray"
+                        style="font-size: 0.7rem; padding: 2px 6px; margin-left: 5px;">內容 / ID / 備註</span></label>
+                <input type="text" id="target_name" name="target_name" class="input"
+                    placeholder="姓名、主題、關鍵字、thread id、備註..." maxlength="50" autofocus>
+            </div>
+
+            <div class="form-group">
+                <label>日期範圍 (選填)</label>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                    <input type="date" id="start_date" name="start_date" class="input" placeholder="開始日期">
+                    <input type="date" id="end_date" name="end_date" class="input" placeholder="結束日期">
+                </div>
+
+                <div id="dateInfo" class="alert"
+                    style="margin-top: 10px; display: block; padding: 0.75rem; background: var(--surface-bg); text-align: center; color: var(--text-secondary); border:none;">
+                    💡 請填寫「關鍵字」或「日期」
+                </div>
+            </div>
+
+            <div id="errorMessage" class="alert alert-error" style="display: none;">
+                ⚠️ 請至少填寫「關鍵字」或「日期」其中一項!
+            </div>
+
+            <div class="form-group"
+                style="display: flex; align-items: center; gap: 8px; margin-bottom: 1rem; padding: 0.5rem; background: rgba(0,0,0,0.03); border-radius: 6px;">
+                <input type="checkbox" id="modeRefresh" name="mode" value="fresh" style="width:auto; cursor: pointer;">
+                <label for="modeRefresh"
+                    style="margin:0; font-size: 0.9rem; cursor: pointer; color: var(--text-primary); user-select: none;">
+                    強制完整刷新 <span style="font-size: 0.8em; opacity: 0.7;">(與 API 同步，速度較慢)</span>
+                </label>
+            </div>
+
+            <button type="submit" class="btn btn-primary btn-block" style="padding: 0.75rem; font-size: 1rem;">
+                開始搜尋
+            </button>
+        </form>
+
+        <div id="loading" style="display: none; text-align: center; margin-top: 1.5rem;">
+            <div
+                style="border: 3px solid #f3f3f3; border-top: 3px solid var(--primary); border-radius: 50%; width: 30px; height: 30px; animation: spin 1s linear infinite; margin: 0 auto;">
+            </div>
+            <p class="text-secondary text-sm" style="margin-top: 0.5rem;">搜尋中...</p>
+        </div>
+
+        <div
+            style="text-align: center; margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid var(--surface-border);">
+            <a href="/admin" class="btn btn-secondary btn-sm"
+                style="display: inline-flex; color: var(--text-secondary); border: none; background: transparent;">
+                ⚙️ 管理員登入
+            </a>
+        </div>
+    </div>
+
+    <!-- GitHub Avatar Link -->
+    <!-- GitHub Avatar (Decorative) -->
+    <!-- GitHub Avatar Wrapper -->
+    <div id="avatar-wrapper" style="position: fixed; bottom: 20px; right: 20px; z-index: 100;">
+        <div onclick="showSleepMessage()"
+            style="width: 48px; height: 48px; border-radius: 50%; overflow: hidden; box-shadow: var(--shadow-lg); border: 2px solid white; transition: transform 0.2s; cursor: pointer;">
+            <img src="https://github.com/Isaries.png" alt="Leo" style="width: 100%; height: 100%; object-fit: cover;">
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/utils.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/theme.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/project-selector.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/search.js') }}"></script>
+</body>
+
+</html>

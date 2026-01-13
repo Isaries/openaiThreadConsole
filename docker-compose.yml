@@ -1,0 +1,32 @@
+services:
+  web:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    ports:
+      - "8015:8000"
+    volumes:
+      - ./backend:/app
+      - ./frontend/static:/app/static
+      - ./frontend/templates:/app/templates
+    environment:
+      - PORT=8000
+    env_file:
+      - .env
+    restart: always
+
+  worker:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    command: python -m huey.bin.huey_consumer huey_worker.huey -w 2 -v
+    volumes:
+      - ./backend:/app
+      - ./frontend/static:/app/static
+      - ./frontend/templates:/app/templates
+    environment:
+      # Ensure timezone matches if needed, or other envs
+      - TZ=Asia/Taipei
+    env_file:
+      - .env
+    restart: always

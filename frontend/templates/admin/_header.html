@@ -1,0 +1,20 @@
+<!-- Top Navbar -->
+<div
+    style="background: white; border-bottom: 1px solid var(--surface-border); padding: 0 var(--spacing-md); height: 60px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: var(--z-nav);">
+    <div class="flex items-center">
+        <!-- Mobile Menu Button -->
+        <button class="mobile-menu-toggle btn btn-secondary btn-sm" onclick="toggleSidebar()"
+            style="margin-right: 1rem;">
+            ☰
+        </button>
+        <a href="/admin" class="font-bold text-main" style="font-size: 1.125rem;">⚙️ Thread 管理後台</a>
+    </div>
+
+    <div class="flex items-center gap-4">
+        <div class="text-sm text-secondary desktop-only">
+            👤 {{ session.get('username') }}
+        </div>
+        <a href="/" class="btn btn-secondary btn-sm">🔍 前往搜尋</a>
+        <a href="/logout" class="btn btn-danger btn-sm">登出</a>
+    </div>
+</div>

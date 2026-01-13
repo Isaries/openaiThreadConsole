@@ -1,0 +1,48 @@
+<!-- Modals -->
+<div id="resetPasswordModal" class="flex items-center justify-center"
+    style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; z-index: var(--z-modal); pointer-events: none;">
+    <div style="position:absolute; inset:0; background:rgba(0,0,0,0.5); pointer-events: auto;"
+        onclick="closeResetModal()"></div>
+    <div class="card" style="width: 300px; pointer-events: auto; position: relative; z-index: 2002; margin: 0;">
+        <h3>重設密碼</h3>
+        <p class="text-sm mb-4">目標: <span id="resetTargetUser" class="font-bold"></span></p>
+        <form action="/admin/user/reset" method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="user_id" id="resetUserId">
+            <div class="form-group">
+                <input type="text" name="new_password" required placeholder="新密碼" class="input">
+            </div>
+            <div class="flex justify-end gap-2">
+                <button type="button" class="btn btn-secondary btn-sm" onclick="closeResetModal()">取消</button>
+                <button type="submit" class="btn btn-primary btn-sm">確認</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div id="editUserModal" class="flex items-center justify-center"
+    style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; z-index: var(--z-modal); pointer-events: none;">
+    <div style="position:absolute; inset:0; background:rgba(0,0,0,0.5); pointer-events: auto;"
+        onclick="closeEditUserModal()"></div>
+    <div class="card" style="width: 350px; pointer-events: auto; position: relative; z-index: 2002; margin: 0;">
+        <h3>編輯用戶</h3>
+        <form action="/admin/user/update" method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="user_id" id="editUserId">
+
+            <div class="form-group">
+                <label>名稱</label>
+                <input type="text" name="username" id="editUsername" required class="input">
+            </div>
+            <div class="form-group">
+                <label>Email</label>
+                <input type="email" name="email" id="editEmail" class="input">
+            </div>
+
+            <div class="flex justify-end gap-2">
+                <button type="button" class="btn btn-secondary btn-sm" onclick="closeEditUserModal()">取消</button>
+                <button type="submit" class="btn btn-primary btn-sm">儲存</button>
+            </div>
+        </form>
+    </div>
+</div>

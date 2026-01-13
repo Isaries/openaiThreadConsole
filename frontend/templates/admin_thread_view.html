@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>管理員查看 - {{ result.data.thread_id }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        body {
+            background-color: #f5f7fa;
+            padding: 2rem;
+        }
+
+        .view-container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .header-actions {
+            margin-bottom: 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .btn-back {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: #64748b;
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.2s;
+        }
+
+        .btn-back:hover {
+            color: #334155;
+        }
+
+        /* Reusing thread card styles but enforcing expansion */
+        .thread-card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            overflow: hidden;
+            display: block !important;
+        }
+
+        .thread-header {
+            background: #f8fafc;
+            padding: 1.5rem;
+            border-bottom: 1px solid #e2e8f0;
+            cursor: default !important;
+            /* Disable toggle */
+        }
+
+        .thread-body {
+            display: block !important;
+            /* Force show */
+            padding: 0;
+            max-height: none !important;
+            /* No scroll limit here, let body scroll */
+        }
+
+        .messages {
+            padding: 1.5rem;
+        }
+
+        .message {
+            margin-bottom: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .message-header {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-size: 0.85rem;
+            color: #64748b;
+        }
+
+        .role-icon {
+            font-size: 1.25rem;
+        }
+
+        .role-name {
+            font-weight: 600;
+        }
+
+        .message-content {
+            background: #fff;
+            padding: 1rem;
+            border-radius: 8px;
+            line-height: 1.6;
+            color: #334155;
+            overflow-x: auto;
+        }
+
+        .message.user .message-content {
+            background: #f1f5f9;
+        }
+
+        .message.assistant .message-content {
+            background: white;
+            border: 1px solid #e2e8f0;
+        }
+
+        /* Markdown Styles */
+        .message-content img {
+            max-width: 100%;
+            border-radius: 6px;
+            margin: 0.5rem 0;
+        }
+
+        .message-content pre {
+            background: #1e293b;
+            color: #e2e8f0;
+            padding: 1rem;
+            border-radius: 6px;
+            overflow-x: auto;
+        }
+
+        .message-content code {
+            font-family: 'Consolas', monospace;
+        }
+
+        /* Download Modal CSS */
+        #downloadModal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(5px);
+            z-index: 9999;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            text-align: center;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+            animation: popIn 0.3s ease;
+        }
+
+        @keyframes popIn {
+            from {
+                transform: scale(0.9);
+                opacity: 0;
+            }
+
+            to {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        .btn-cancel {
+            background: #ff4757;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            margin-top: 15px;
+            transition: background 0.2s;
+        }
+
+        .btn-cancel:hover {
+            background: #ff6b81;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="view-container">
+        <div class="header-actions">
+            <a href="{{ url_for('admin.index', group_id=active_group.group_id) }}" class="btn-back">
+                ← 返回管理列表
+            </a>
+            <h2 style="margin: 0; font-size: 1.25rem; color: #334155;">{{ project.name }} / {{ result.data.thread_id }}
+            </h2>
+        </div>
+
+        {% set thread = result.data %}
+
+        {% if thread %}
+        <div class="thread-card">
+            <div class="thread-header">
+                <div style="display: flex; justify-content: space-between; align-items: start;">
+                    <div>
+                        <h3 style="margin: 0 0 0.5rem 0; font-size: 1.1rem; color: #1e293b;">Thread Details</h3>
+                        <div style="font-size: 0.9rem; color: #64748b;">
+                            包含 {{ thread.messages|length }} 則訊息 • 最後更新: {{ thread.time }}
+                        </div>
+                    </div>
+                    <div style="text-align: right;">
+                        <div
+                            style="font-weight: 600; color: #3b82f6; display: flex; align-items: center; justify-content: flex-end; gap: 8px;">
+                            <span>{{ thread.thread_id }}</span>
+                            <a href="/download/pdf/{{ thread.thread_id }}" class="btn-pdf" target="_blank"
+                                style="text-decoration: none; background: #667eea; color: white; padding: 2px 8px; border-radius: 4px; font-size: 0.8rem; display: inline-flex; align-items: center; gap: 4px; transition: opacity 0.2s;">
+                                📄 PDF
+                            </a>
+                        </div>
+                        <div style="font-size: 0.9rem; color: #64748b; margin-top: 4px;">備註: {{ result.remark or
+                            request.args.get('remark', '-') }}</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="thread-body">
+                <div class="messages">
+                    {% for msg in thread.messages %}
+                    <div class="message {{ msg.role_class }}">
+                        <div class="message-header">
+                            <span class="role-icon">{{ msg.role_icon }}</span>
+                            <span class="role-name">{{ msg.role_name }}</span>
+                            <span style="font-weight: normal; opacity: 0.7;">• {{ msg.time }}</span>
+                        </div>
+                        <div class="message-content">
+                            {{ msg.content | trim | render_images | sanitize_html }}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <div class="alert alert-error">
+            無法讀取對話內容 (No Data Returned)
+        </div>
+        {% endif %}
+
+    </div>
+
+    <!-- Download Modal -->
+    <div id="downloadModal">
+        <div class="modal-content">
+            <div class="loader"></div>
+            <h3>正在製作並下載 PDF...</h3>
+            <p style="color: #666; margin-bottom: 20px; font-size: 14px;">對話內容較長時可能需要一點時間</p>
+            <button class="btn-cancel" onclick="cancelDownload()">取消下載</button>
+        </div>
+    </div>
+
+    <script>
+        let currentController = null;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const modal = document.getElementById('downloadModal');
+
+            // Attach listener to all PDF buttons
+            const attachPdfListeners = () => {
+                document.querySelectorAll('.btn-pdf:not(.handled)').forEach(btn => {
+                    btn.classList.add('handled');
+                    btn.addEventListener('click', async (e) => {
+                        e.preventDefault(); // Stop navigation
+
+                        const url = btn.href;
+
+                        // Show Modal
+                        modal.style.display = 'flex';
+
+                        // Init AbortController
+                        currentController = new AbortController();
+                        const signal = currentController.signal;
+
+                        try {
+                            const response = await fetch(url, { signal });
+
+                            if (!response.ok) {
+                                const errText = await response.text();
+                                throw new Error(errText || 'Download failed');
+                            }
+
+                            // Create Blob
+                            const blob = await response.blob();
+                            const downloadUrl = window.URL.createObjectURL(blob);
+
+                            // Trigger Download
+                            const a = document.createElement('a');
+                            a.href = downloadUrl;
+
+                            // Try to get filename
+                            const disposition = response.headers.get('Content-Disposition');
+                            let filename = 'download.pdf';
+                            if (disposition && disposition.indexOf('attachment') !== -1) {
+                                const filenameRegex = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/;
+                                const matches = filenameRegex.exec(disposition);
+                                if (matches != null && matches[1]) {
+                                    filename = matches[1].replace(/['"]/g, '');
+                                }
+                            }
+                            if (!filename.endsWith('.pdf') && !filename.endsWith('.zip')) {
+                                filename = url.split('/').pop() + '.pdf';
+                            }
+
+                            a.download = filename;
+                            document.body.appendChild(a);
+                            a.click();
+                            a.remove();
+                            window.URL.revokeObjectURL(downloadUrl);
+
+                        } catch (err) {
+                            if (err.name === 'AbortError') {
+                                console.log('Download cancelled by user');
+                            } else {
+                                console.error(err);
+                                alert('下載失敗: ' + (err.message || '未知錯誤'));
+                            }
+                        } finally {
+                            modal.style.display = 'none';
+                            currentController = null;
+                        }
+                    });
+                });
+            };
+
+            attachPdfListeners();
+        });
+
+        function cancelDownload() {
+            if (currentController) {
+                currentController.abort();
+            }
+            document.getElementById('downloadModal').style.display = 'none';
+        }
+    </script>
+
+</body>
+
+</html>

@@ -1,0 +1,62 @@
+<!-- Tools: Upload & Add -->
+<div
+    style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem; margin-bottom: 1.5rem;">
+    <!-- Upload -->
+    <div class="card" style="margin-bottom: 0;">
+        <h3>📥 批次匯入 / 刪除 (Excel)</h3>
+        <form action="/admin/threads/upload" method="POST" enctype="multipart/form-data" style="margin-top: 1rem;">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="group_id" value="{{ active_group.group_id }}">
+
+
+            <input type="file" name="file" accept=".xlsx" required class="input" style="padding: 0.5rem;">
+
+            <div class="text-secondary"
+                style="font-size: 0.85rem; margin: 0.75rem 0; background: rgba(0,0,0,0.03); padding: 0.75rem; border-radius: 4px;">
+                <p style="margin-bottom: 0.5rem;"><strong>📄 Excel 格式說明:</strong></p>
+                <div style="font-size: 0.8rem; margin-bottom: 0.5rem; color: #444;">
+                    欄位名稱需位於 <strong>第一列 (Header)</strong>，且<strong>不區分大小寫</strong>。
+                </div>
+                <ul style="padding-left: 1.25rem; list-style-type: disc; line-height: 1.5;">
+                    <li>必填欄位: <code>thread_id</code></li>
+                    <li>選填欄位: <code>remark</code> (備註)</li>
+                </ul>
+                <p style="margin-top: 0.5rem; color: #666; font-size: 0.8rem;">
+                    💡 若 Thread ID 已存在，匯入時將自動<strong>更新備註</strong>。
+                </p>
+            </div>
+
+            <div class="flex gap-2">
+                <button type="submit" name="action" value="delete" class="btn btn-danger btn-sm flex-1"
+                    onclick="return confirm('確定依 Excel 清單刪除？')">🗑️ 刪除</button>
+                <button type="submit" name="action" value="add" class="btn btn-primary btn-sm flex-1">📥
+                    匯入</button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Single Add -->
+    <div class="card" style="margin-bottom: 0;">
+        <h3>➕ 單筆新增</h3>
+        <form action="/admin/threads/add_one" method="POST" style="margin-top: 1rem;">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="group_id" value="{{ active_group.group_id }}">
+
+            <div class="flex gap-2">
+                <input type="text" id="manual_thread_input" name="thread_id" placeholder="Thread ID 或完整網址" required
+                    class="input">
+                <input type="text" name="remark" placeholder="備註 (選填)" class="input">
+                <button type="submit" class="btn btn-primary">新增</button>
+            </div>
+
+            <div class="text-secondary"
+                style="font-size: 0.85rem; margin: 0.75rem 0; background: rgba(0,0,0,0.03); padding: 0.75rem; border-radius: 4px;">
+                <p style="margin-bottom: 0.5rem;"><strong>👉 輸入說明:</strong></p>
+                <ul style="padding-left: 1.25rem; list-style-type: disc; line-height: 1.5;">
+                    <li>輸入內容: <code>thread_abc123</code> 或 <strong>完整網址</strong> (將自動擷取 ID)</li>
+                    <li>備註欄位: 可選填，方便識別</li>
+                </ul>
+            </div>
+        </form>
+    </div>
+</div>

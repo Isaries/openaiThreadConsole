@@ -1,0 +1,80 @@
+<!-- Admin Only: User & IP Mgmt -->
+{% if current_role == 'admin' %}
+<div class="card" style="border-top: 4px solid var(--warning);">
+    <div class="flex justify-between items-center mb-4">
+        <h3>👨‍🏫 教師帳戶管理</h3>
+    </div>
+
+    <div class="flex flex-col md:flex-row gap-4">
+        <!-- Create User -->
+        <div style="flex: 1; background: #fffaf0; padding: 1rem; border-radius: var(--radius-md);">
+            <h4>新增教師</h4>
+            <form action="/admin/user/create" method="POST" style="margin-top: 1rem;">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="form-group">
+                    <label>顯示名稱</label>
+                    <input type="text" name="username" required class="input">
+                </div>
+                <div class="form-group">
+                    <label>Email</label>
+                    <input type="email" name="email" class="input">
+                </div>
+                <div class="form-group">
+                    <label>密碼</label>
+                    <input type="text" name="password" required class="input">
+                </div>
+                <button type="submit" class="btn btn-primary btn-block">建立帳戶</button>
+            </form>
+        </div>
+
+        <!-- User List -->
+        <div style="flex: 2;">
+            <h4 style="margin-bottom: 1rem;">現有教師</h4>
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>名稱</th>
+                            <th>Email</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for u in users %}
+                        {% set u_email = u.email or '' %}
+                        {% set escaped_username = u.username | replace('"', '\\"') %}
+                        <tr>
+                            <td data-label="名稱">{{ u.username }}</td>
+                            <td data-label="Email">{{ u.email or '-' }}</td>
+                            <td data-label="操作" class="flex gap-2">
+                                <button type="button" class="btn btn-secondary btn-sm"
+                                    onclick='openEditUserModal("{{ u.id }}", "{{ escaped_username }}", "{{ u_email }}")'>
+                                    編輯
+                                </button>
+                                {% if u.username != 'Administrator' %}
+                                <button type="button" class="btn btn-secondary btn-sm"
+                                    onclick="openResetModal('{{ u.id }}', '{{ u.username }}')">
+                                    重設密碼
+                                </button>
+                                {% endif %}
+                                <div class="text-xs text-secondary" style="align-self: center;">
+                                    Hint: {{ u.password_hint or 'None' }}
+                                </div>
+                                {% if u.username != 'Administrator' %}
+                                <form action="/admin/user/delete" method="POST" style="display:inline;">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <input type="hidden" name="user_id" value="{{ u.id }}">
+                                    <button type="submit" class="btn btn-danger btn-sm"
+                                        onclick="return confirm('刪除此帳戶？')">刪除</button>
+                                </form>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}

@@ -1,0 +1,139 @@
+<!-- IP Monitor -->
+{% if current_role == 'admin' %}
+<div class="card" style="border-top: 4px solid var(--danger);">
+    <h3 style="cursor: pointer; display: flex; justify-content: space-between;"
+        onclick="toggleSection('ipMonitorSection')">
+        <span>🛡️ IP 監控</span>
+        <span>▼</span>
+    </h3>
+    <div id="ipMonitorSection" style="display: none; margin-top: 1rem;">
+        <!-- Banned IPs -->
+        <div class="alert alert-error" style="background: #fff5f5; border-color: #feb2b2;">
+            <h4>🚫 已封鎖清單</h4>
+            {% if bans_pagination and bans_pagination.items %}
+            <div class="table-responsive"
+                style="max-height: 400px; overflow-y: auto; background: white; margin-top: 0.5rem;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>IP</th>
+                            <th>原因</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for ban in bans_pagination.items %}
+                        <tr>
+                            <td>{{ ban.ip }}</td>
+                            <td>{{ ban.reason }}</td>
+                            <td>
+                                <form action="/admin/ip/unban" method="POST" onsubmit="return confirm('解除？')">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <input type="hidden" name="ip" value="{{ ban.ip }}">
+                                    <button class="btn btn-secondary btn-sm">解除</button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+
+                <!-- Pagination Controls -->
+                <div class="flex justify-between items-center"
+                    style="padding: 0.5rem; background: var(--surface-bg); border-top: 1px solid var(--surface-border);">
+                    <div class="text-xs text-secondary">
+                        Page {{ bans_pagination.page }} of {{ bans_pagination.pages }}
+                    </div>
+                    <div class="flex gap-1">
+                        {% if bans_pagination.has_prev %}
+                        <a href="{{ url_for('admin.index', page=bans_pagination.prev_num, group_id=active_group.group_id if active_group else None) }}#ipMonitorSection"
+                            class="btn btn-secondary btn-sm">« Prev</a>
+                        {% endif %}
+                        {% if bans_pagination.has_next %}
+                        <a href="{{ url_for('admin.index', page=bans_pagination.next_num, group_id=active_group.group_id if active_group else None) }}#ipMonitorSection"
+                            class="btn btn-secondary btn-sm">Next »</a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <p class="text-sm">無封鎖 IP</p>
+            {% endif %}
+        </div>
+
+        <!-- Active IPs -->
+        <div class="flex items-center justify-between" style="margin: 1rem 0;">
+            <h4 style="margin:0;">🌐 近期活動 IP</h4>
+            <button class="btn btn-secondary btn-sm" onclick="window.location.reload()">
+                🔄 重新整理
+            </button>
+        </div>
+        <div class="flex flex-col gap-2">
+            {% for ip, data in ip_activity.items() %}
+            <div style="border: 1px solid var(--surface-border); border-radius: var(--radius-md); overflow: hidden;">
+                <div
+                    style="background: var(--surface-bg); padding: 0.5rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
+                    <div class="flex items-center gap-2">
+                        <strong>{{ ip }}</strong>
+                        <!-- Geo Info -->
+                        {% if data.geo %}
+                        <span class="text-xs text-secondary"
+                            style="font-family: sans-serif; background: #f0f0f0; padding: 2px 5px; border-radius: 4px;">📍
+                            {{ data.geo }}</span>
+                        {% endif %}
+
+                        <span class="badge {{ 'badge-blue' if data.user != '訪客' else 'badge-gray' }}">{{
+                            data.user }}</span>
+                        <span class="text-xs text-secondary">({{ data.logs|length }} logs)</span>
+                        <!-- Notification Badge -->
+                        <span id="badge-{{ loop.index }}" class="badge badge-danger"
+                            style="display:none; padding: 2px 6px; font-size: 10px;">0</span>
+                    </div>
+                    <div class="flex gap-2">
+                        <button class="btn btn-secondary btn-sm"
+                            onclick="toggleIpDetails('details-{{ loop.index }}')">詳細</button>
+                        <form action="/admin/ip/ban" method="POST" class="flex gap-1">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <input type="hidden" name="ip" value="{{ ip }}">
+                            <select name="duration" class="select" style="padding: 2px; font-size: 12px; width: auto;">
+                                <option value="3600">1H</option>
+                                <option value="259200">3天</option>
+                                <option value="-1">永久</option>
+                            </select>
+                            <button class="btn btn-danger btn-sm">封鎖</button>
+                        </form>
+                    </div>
+                </div>
+                <div id="details-{{ loop.index }}" style="display: none; padding: 0.5rem;">
+                    <table style="font-size: 0.75rem;">
+                        <thead>
+                            <tr>
+                                <th>時間</th>
+                                <th>使用者</th>
+                                <th>動作</th>
+                                <th>狀態</th>
+                            </tr>
+                        </thead>
+                        {% for log in data.logs[:50] %}
+                        <tr data-timestamp="{{ log.created_at }}">
+                            <td>{{ log.time }}</td>
+                            <td>
+                                <span class="badge {{ 'badge-blue' if log.display_user != '訪客' else 'badge-gray' }}">
+                                    {{ log.display_user }}
+                                </span>
+                            </td>
+                            <td>
+                                <div class="font-bold">{{ log.action }}</div>
+                                <div class="text-xs opacity-70">{{ log.target }} {{ log.details }}</div>
+                            </td>
+                            <td>{{ log.status }}</td>
+                        </tr>
+                        {% endfor %}
+                    </table>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endif %}

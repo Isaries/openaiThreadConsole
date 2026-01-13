@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>登入 - Thread Console</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+
+<body class="auth-layout">
+
+    <div class="card auth-card">
+        <div style="text-align: center; margin-bottom: 2rem;">
+            <h1 style="font-size: 1.75rem; color: var(--text-main);">📂 資料管理登入</h1>
+            <p class="text-secondary text-sm">請輸入憑證以繼續</p>
+        </div>
+
+        <form method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+
+            <div class="form-group">
+                <label>帳號 (Username)</label>
+                <input type="text" name="username" class="input" placeholder="請輸入帳號" style="margin-bottom:1rem;">
+
+                <label>密碼</label>
+                <input type="password" name="password" class="input" placeholder="請輸入密碼" required maxlength="100">
+            </div>
+
+            {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+            {% for category, message in messages %}
+            <div class="alert alert-{{ category }}">
+                {{ message }}
+            </div>
+            {% endfor %}
+            {% endif %}
+            {% endwith %}
+
+            {% if error %}
+            <div class="alert alert-error">
+                ⚠️ {{ error }}
+            </div>
+            {% endif %}
+
+            <button type="submit" class="btn btn-primary btn-block" style="padding: 0.75rem; margin-top: 1rem;">
+                登入系統
+            </button>
+        </form>
+
+        <div
+            style="text-align: center; margin-top: 2rem; border-top: 1px solid var(--surface-border); padding-top: 1rem;">
+            <a href="/" class="btn btn-secondary btn-sm"
+                style="background: transparent; border: none; color: var(--text-secondary);">
+                ⬅️ 返回搜尋首頁
+            </a>
+        </div>
+    </div>
+
+    <!-- Glassmorphism Orbs -->
+    <div class="orb-1"></div>
+    <div class="orb-2"></div>
+
+    <!-- Theme Switcher -->
+    <div style="position: fixed; bottom: 20px; left: 20px; z-index: 100; display: flex; align-items: center; gap: 8px;">
+        <select id="themeSelect" class="select"
+            style="padding: 0.25rem 0.5rem; font-size: 0.85rem; background: rgba(255, 255, 255, 0.9); border: 1px solid rgba(255,255,255,0.3); border-radius: 4px; color: #333; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.1); backdrop-filter: blur(5px);">
+            <option value="bg-default">Default</option>
+            <option value="bg-aurora">Aurora</option>
+            <option value="bg-grid">Grid</option>
+            <option value="bg-glass">Glass</option>
+            <option value="bg-gray">Gray</option>
+        </select>
+    </div>
+
+    <script>
+        const themeSelect = document.getElementById('themeSelect');
+        const body = document.body;
+
+        function applyTheme(theme) {
+            body.classList.remove('bg-default', 'bg-aurora', 'bg-grid', 'bg-glass', 'bg-gray');
+            body.classList.add(theme);
+            themeSelect.value = theme;
+            localStorage.setItem('threadConsole_theme', theme);
+
+            const card = document.querySelector('.auth-card');
+            if (theme === 'bg-default' || theme === 'bg-grid') {
+                card.style.background = 'rgba(255, 255, 255, 0.95)';
+            } else {
+                card.style.background = 'rgba(255, 255, 255, 0.75)';
+            }
+        }
+
+        // Init Theme
+        const savedTheme = localStorage.getItem('threadConsole_theme') || 'bg-default';
+        applyTheme(savedTheme);
+
+        themeSelect.addEventListener('change', (e) => {
+            applyTheme(e.target.value);
+        });
+    </script>
+</body>
+
+</html>

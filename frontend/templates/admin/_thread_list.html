@@ -1,0 +1,69 @@
+<!-- Thread List -->
+<div class="card">
+    <form action="/admin/threads/delete_multi" method="POST" id="deleteMultiForm">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="group_id" value="{{ active_group.group_id }}">
+
+        <div class="flex items-center justify-between mb-4" style="margin-bottom: 1rem;">
+            <h3>📋 資料列表</h3>
+            <div class="flex gap-2">
+                <input type="text" id="threadSearchInput" placeholder="🔍 搜尋 ID 或備註..." class="input input-sm"
+                    style="width: 180px; margin-right: 0.5rem;" autocomplete="off">
+
+                <button type="submit" formaction="/admin/threads/export" formmethod="POST" formtarget="_blank"
+                    class="btn btn-secondary btn-sm" title="匯出 Excel">
+                    📥 匯出
+                </button>
+                <button type="submit" formaction="/admin/threads/refresh" formmethod="POST"
+                    class="btn btn-primary btn-sm" title="更新快取">
+                    🔄 更新
+                </button>
+                <button type="button" class="btn btn-secondary btn-sm mobile-only" data-action="select"
+                    onclick="toggleAllMobile(this)">
+                    全選
+                </button>
+                <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('確定刪除選取項目？')">
+                    刪除選取
+                </button>
+            </div>
+        </div>
+
+        <div class="table-responsive" style="max-height: 600px; overflow-y: auto;">
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width: 40px;"><input type="checkbox" onclick="toggleAll(this)"></th>
+                        <th>Thread ID</th>
+                        <th>備註</th>
+                        <th style="width: 80px;">操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for thread in threads %}
+                    <tr>
+                        <td><input type="checkbox" name="selected_ids" value="{{ thread.thread_id }}"></td>
+                        <td data-label="Thread ID" class="font-medium text-main">{{ thread.thread_id }}</td>
+                        <td data-label="備註" class="editable-remark" data-thread-id="{{ thread.thread_id }}"
+                            data-group-id="{{ active_group.group_id }}" style="cursor: pointer;" title="點擊編輯">
+                            {{ thread.remark or '✏️' }}
+                        </td>
+                        <td data-label="操作">
+                            <a href="/admin/threads/view/{{ thread.thread_id }}?group_id={{ active_group.group_id }}"
+                                class="btn btn-secondary btn-sm"
+                                style="padding: 0.25rem 0.5rem; margin-right: 0.25rem; text-decoration: none;"
+                                title="查看對話">
+                                👁️
+                            </a>
+                            <button type="submit" formaction="/admin/threads/delete_multi" name="thread_id"
+                                value="{{ thread.thread_id }}" class="btn btn-danger btn-sm"
+                                style="padding: 0.25rem 0.5rem;" onclick="return confirm('刪除？')">
+                                🗑️
+                            </button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </form>
+</div>
