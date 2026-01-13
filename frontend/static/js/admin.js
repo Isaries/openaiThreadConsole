@@ -283,13 +283,20 @@ function removeTag(groupId, tagName) {
         },
         body: JSON.stringify({ group_id: groupId, tag_name: tagName })
     })
-        .then(r => r.json())
+        .then(res => {
+            if (!res.ok) throw new Error('Network response was not ok');
+            return res.json();
+        })
         .then(data => {
             if (data.status === 'success') {
                 updateTagUI(groupId, data.tags);
             } else {
                 alert(data.message || '移除失敗');
             }
+        })
+        .catch(err => {
+            console.error(err);
+            alert('移除失敗: ' + err.message);
         });
 }
 
@@ -297,11 +304,15 @@ function updateTagUI(groupId, tags) {
     const container = document.getElementById(`tagList_${groupId}`);
     if (!container) return;
 
-    container.innerHTML = tags.map(tag => `
+    container.innerHTML = tags.map(tag => {
+        // Escape single quotes for use inside onclick string
+        const safeTag = tag.replace(/'/g, "\\'");
+        return `
         <span class="badge badge-gray" style="display: inline-flex; align-items: center; gap: 4px;">
             ${tag}
-            <button type="button" onclick="removeTag('${groupId}', '${tag}')" 
+            <button type="button" onclick="removeTag('${groupId}', '${safeTag}')" 
                 style="background: none; border: none; cursor: pointer; color: #666; font-size: 1rem; line-height: 1; padding: 0 2px;">×</button>
         </span>
-    `).join('');
+        `;
+    }).join('');
 }
