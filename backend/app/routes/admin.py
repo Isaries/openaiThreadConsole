@@ -184,10 +184,22 @@ def index():
     if active_group:
         # Paginating the threads for the active project
         t_page = request.args.get('t_page', 1, type=int)
-        threads_pagination = Thread.query.filter_by(project_id=active_group['group_id'])\
-                                         .paginate(page=t_page, per_page=50, error_out=False)
-        threads_list = threads_pagination.items # This contains Thread objects with .remark accessible
+        search_query = request.args.get('q', '').strip()
+        
+        query = Thread.query.filter_by(project_id=active_group['group_id'])
+        
+        if search_query:
+            # Server-Side Search: ID or Remark
+            query = query.filter(
+                (Thread.thread_id.contains(search_query)) | 
+                (Thread.remark.contains(search_query))
+            )
+
+        threads_pagination = query.paginate(page=t_page, per_page=50, error_out=False)
+        threads_list = threads_pagination.items
         total_threads_count = threads_pagination.total
+    else:
+        search_query = ''
 
     return render_template('admin.html', 
                          groups=groups_data, 
@@ -206,7 +218,8 @@ def index():
                          auto_refresh_settings=database.load_settings().get('auto_refresh', {}),
                          threads=threads_list, # Current Page Items
                          threads_pagination=threads_pagination, # Pagination Controls
-                         total_threads_count=total_threads_count)
+                         total_threads_count=total_threads_count,
+                         search_query=search_query)
 
 @admin_bp.route('/group/create', methods=['POST'])
 def create_group():
@@ -422,16 +435,29 @@ def delete_multi():
     count = 0
     
     if select_all_pages:
-        # Batch Delete Logic for ALL in project (Two-Step for SQLite/No-Cascade)
+        # Batch Delete Logic for ALL in project
+        search_q = request.form.get('search_q', '').strip()
         
+        # Base Query
+        base_query = db.session.query(Thread.id).filter_by(project_id=project.id)
+        
+        # Apply Search Filter if exists (SAFETY: Only delete what was searched)
+        if search_q:
+            base_query = base_query.filter(
+                (Thread.thread_id.contains(search_q)) | 
+                (Thread.remark.contains(search_q))
+            )
+            
         # 1. Delete all associated Messages first (Prevent Orphans)
-        # Using subquery to identify message targets
-        threads_subquery = db.session.query(Thread.id).filter_by(project_id=project.id)
-        # Note: .delete(synchronize_session=False) is faster and safe here as we redirect anyway
+        threads_subquery = base_query.subquery() # Use the filtered query
         Message.query.filter(Message.thread_id.in_(threads_subquery)).delete(synchronize_session=False)
         
         # 2. Delete the Threads
-        count = Thread.query.filter_by(project_id=project.id).delete(synchronize_session=False)
+        # Re-construct query for delete or use subquery? 
+        # Since we just deleted messages, we can now delete the threads using the same filter.
+        # Note: Thread.query...delete() doesn't support join/subquery well in all dialects
+        # But filter(Thread.id.in_(...)) works.
+        count = Thread.query.filter(Thread.id.in_(threads_subquery)).delete(synchronize_session=False)
     else:
         # Standard Checkbox Selection
         thread_ids = request.form.getlist('selected_ids') # Input name from template is selected_ids
@@ -635,11 +661,20 @@ def refresh_threads_cache():
          return redirect(url_for('admin.index', group_id=group_id))
          
     select_all_pages = request.form.get('select_all_pages') == 'true'
+    search_q = request.form.get('search_q', '').strip()
     thread_ids = []
     
     if select_all_pages:
-        # Fetch all IDs for project
-        all_objs = Thread.query.with_entities(Thread.thread_id).filter_by(project_id=project.id).all()
+        # Fetch all IDs for project (with search filter)
+        query = Thread.query.with_entities(Thread.thread_id).filter_by(project_id=project.id)
+        
+        if search_q:
+            query = query.filter(
+                (Thread.thread_id.contains(search_q)) | 
+                (Thread.remark.contains(search_q))
+            )
+            
+        all_objs = query.all()
         thread_ids = [t.thread_id for t in all_objs]
     else:
         thread_ids = request.form.getlist('selected_ids')
