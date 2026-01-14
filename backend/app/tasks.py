@@ -97,44 +97,92 @@ def search_task(project_id, target_name, start_date, end_date, api_key, group_id
 
 # --- Scheduled Tasks ---
 
-@huey.periodic_task(crontab(minute=0, hour=18)) # UTC 18:00 = UTC+8 02:00
+@huey.periodic_task(crontab(minute=0)) # Check every hour
 def scheduled_refresh_task():
-    logger.info("Starting Scheduled Cache Refresh (Every 3 days check)")
+    logger.info("Starting Scheduled Refresh Check (Hourly)")
     
+    # 1. Load Settings & Check Conditions
+    import database
+    from dateutil import parser
+    from datetime import datetime
+    from . import utils
+    
+    settings = database.load_settings()
+    config_data = settings.get('auto_refresh', {})
+    
+    # Defaults: Enabled=True, Frequency=3 days, Hour=2 (02:00 AM)
+    # The default behavior matches the original hardcoded logic: 3 days interval.
+    # But original start time was 18:00 UTC (02:00 UTC+8).
+    
+    is_enabled = config_data.get('enabled', True)
+    frequency_days = int(config_data.get('frequency_days', 3))
+    target_hour = int(config_data.get('hour', 2)) # 0-23 Local Time (UTC+8)
+    
+    if not is_enabled:
+        logger.info("Auto-refresh is DISABLED in settings. Skipping.")
+        return
+
+    # Get Current Time (UTC+8)
+    # database.utc8_converter() returns a struct_time, let's use utils or datetime directly
+    from datetime import timezone, timedelta
+    utc8 = timezone(timedelta(hours=8))
+    now = datetime.now(utc8)
+    
+    if now.hour != target_hour:
+        # Not the right hour
+        return
+        
+    logger.info(f"Time match ({now.hour}:00). Checking frequency...")
+    
+    # Frequency Check (Last Run)
+    last_run_str = config_data.get('last_run')
+    if last_run_str:
+        try:
+            last_run = parser.parse(last_run_str)
+            # Ensure last_run is offset-aware
+            if last_run.tzinfo is None:
+                last_run = last_run.replace(tzinfo=utc8)
+                
+            days_diff = (now - last_run).days
+            if days_diff < frequency_days:
+                logger.info(f"Skipping: Last run was {days_diff} days ago (Frequency: {frequency_days} days).")
+                return
+        except Exception as e:
+            logger.warning(f"Error parsing last_run time: {e}. Executing anyway.")
+            pass
+            
+    logger.info("Conditions met. Executing Refresh Logic...")
+
     from .models import Project
     from . import create_app
     app = create_app()
     
     with app.app_context():
         projects = Project.query.all()
-        now = int(time.time())
+        current_ts = int(time.time())
         day_seconds = 86400
-        interval = 3 * day_seconds # 3 Days
+        interval = frequency_days * day_seconds 
         
         count = 0
         
         for p in projects:
-            # Need API Key for project
-            # Logic mostly inside logic.py but we need key here
-            # Fetch Key via logic.get_headers or similar? 
-            # logic.get_headers handles decryption. 
-            # We can use project.api_key but it might be encrypted.
-            # logic.sync_thread_to_db expects DECRYPTED or Raw key?
-            # It expects whatever logic.get_headers accepts. 
-            # logic.get_headers handles decryption IF passed.
-            
-            # Let's pass p.api_key directly. logic.sync -> fetch -> get_headers(api_key).
-            # If api_key is None, get_headers checks Global Settings.
-            
             for t in p.threads:
                 last_sync = t.last_synced_at or 0
                 
-                if (now - last_sync) > interval:
+                # Double check against individual thread latency
+                # Even if task runs, we only update stale threads
+                if (current_ts - last_sync) > interval:
                     logger.info(f"Refeshing stale cache: {t.thread_id}")
                     s, m = logic.sync_thread_to_db(t.thread_id, p.api_key, p.id)
                     if s: count += 1
                     else: logger.warning(f"Failed to refresh {t.thread_id}: {m}")
                     time.sleep(0.5) # Rate Limit Protection
+                    
+    # Update Last Run Time
+    config_data['last_run'] = now.isoformat()
+    settings['auto_refresh'] = config_data
+    database.save_settings(settings)
+    logger.info("Scheduled Refresh Completed.")
                     
 
 @huey.task()

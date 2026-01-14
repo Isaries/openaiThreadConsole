@@ -14,6 +14,75 @@
             <input type="hidden" name="group_id" value="{{ active_group.group_id }}">
             <input type="hidden" name="version" value="{{ active_group.get('version', 1) }}">
 
+            {% if current_role == 'admin' %}
+            <!-- Global Auto-Refresh Settings (Admin Only) -->
+            <div style="margin-bottom: 2rem; padding-bottom: 2rem; border-bottom: 1px solid var(--surface-border);">
+                <h4 style="margin-bottom: 1rem;">🔄 系統自動刷新排程 (Global)</h4>
+                <div class="card" style="background: white; border: 1px solid var(--surface-border);">
+                    <div style="display: flex; gap: 1.5rem; flex-wrap: wrap; align-items: end;">
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label>啟用排程</label>
+                            <div class="flex items-center" style="height: 38px;">
+                                <input type="checkbox" id="refresh_enabled" style="width: 1.25rem; height: 1.25rem;"
+                                    {% if auto_refresh_settings.get('enabled', True) %}checked{% endif %}>
+                            </div>
+                        </div>
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label>執行頻率 (天)</label>
+                            <select id="refresh_frequency" class="select" style="width: 120px;">
+                                {% for i in range(1, 8) %}
+                                <option value="{{ i }}" {% if auto_refresh_settings.get('frequency_days', 3) == i %}selected{% endif %}>
+                                    每 {{ i }} 天
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label>執行時間 (每日)</label>
+                            <select id="refresh_hour" class="select" style="width: 120px;">
+                                {% for i in range(24) %}
+                                <option value="{{ i }}" {% if auto_refresh_settings.get('hour', 2) == i %}selected{% endif %}>
+                                    {{ "%02d"|format(i) }}:00
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <div style="margin-left: auto;">
+                            <p class="text-xs text-secondary mb-1">上次執行: {{ auto_refresh_settings.get('last_run', '無紀錄') }}</p>
+                            <button type="button" class="btn btn-primary btn-sm" onclick="saveRefreshSettings()">
+                                儲存設定
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <script>
+            function saveRefreshSettings() {
+                const enabled = document.getElementById('refresh_enabled').checked;
+                const frequency = document.getElementById('refresh_frequency').value;
+                const hour = document.getElementById('refresh_hour').value;
+                const csrf = "{{ csrf_token() }}";
+                
+                fetch('/admin/settings/refresh_schedule', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrf
+                    },
+                    body: JSON.stringify({ enabled, frequency, hour })
+                })
+                .then(r => r.json())
+                .then(data => {
+                    if(data.success) alert('設定已儲存！');
+                    else alert('儲存失敗');
+                })
+                .catch(e => alert('Error: ' + e));
+            }
+            </script>
+            {% endif %}
+
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem;">
                 <div>
                     <div class="form-group">

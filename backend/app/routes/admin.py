@@ -189,6 +189,7 @@ def index():
                          all_tags=all_tags, # Pass to template
                          user_map=user_map,
                          masked_key=masked_key,
+                         auto_refresh_settings=database.load_settings().get('auto_refresh', {}),
                          threads=active_group['threads'] if active_group else [])
 
 @admin_bp.route('/group/create', methods=['POST'])
@@ -917,6 +918,35 @@ def update_settings():
         
     database.save_settings(settings)
     log_audit('Update Global Settings', 'OpenAI Key')
+    from flask import jsonify
+    return jsonify({'success': True})
+
+@admin_bp.route('/settings/refresh_schedule', methods=['POST'])
+def update_refresh_schedule():
+    if not session.get('user_id') or session.get('role') != 'admin':
+        from flask import jsonify
+        return jsonify({'error': 'Unauthorized'}), 403
+        
+    data = request.json
+    enabled = data.get('enabled', False)
+    frequency = int(data.get('frequency', 1))
+    hour = int(data.get('hour', 2))
+    
+    settings = database.load_settings()
+    current_config = settings.get('auto_refresh', {})
+    
+    # Preserve last_run if exists
+    last_run = current_config.get('last_run')
+    
+    settings['auto_refresh'] = {
+        'enabled': enabled,
+        'frequency_days': frequency,
+        'hour': hour,
+        'last_run': last_run
+    }
+    
+    database.save_settings(settings)
+    
     from flask import jsonify
     return jsonify({'success': True})
 
