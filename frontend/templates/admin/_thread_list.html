@@ -225,10 +225,14 @@
         document.addEventListener('DOMContentLoaded', function () {
             const form = document.getElementById('searchForm');
             if (form) {
-                form.addEventListener('submit', function () {
+                form.addEventListener('submit', function (e) {
                     // Show Floating Toast
                     const toast = document.createElement('div');
-                    toast.innerText = '🔍 正在搜尋...';
+                    toast.id = 'searchLoadingToast';
+                    toast.innerHTML = `
+                        <span>🔍 正在搜尋...</span>
+                        <button type="button" id="cancelSearchBtn" style="background:none; border:none; color:white; cursor:pointer; font-size:1.1em; opacity:0.8; padding:0 4px; display:flex; align-items:center;">✕</button>
+                    `;
                     Object.assign(toast.style, {
                         position: 'fixed',
                         top: '20px',
@@ -236,7 +240,8 @@
                         transform: 'translateX(-50%)',
                         background: 'rgba(33, 150, 243, 0.95)',
                         color: 'white',
-                        padding: '0.75rem 1.5rem',
+                        padding: '0.75rem 1.25rem',
+                        paddingRight: '0.75rem',
                         borderRadius: '50px',
                         boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
                         zIndex: '9999',
@@ -244,7 +249,7 @@
                         fontSize: '0.95rem',
                         display: 'flex',
                         alignItems: 'center',
-                        gap: '8px'
+                        gap: '12px'
                     });
                     document.body.appendChild(toast);
 
@@ -254,9 +259,18 @@
                         btn.innerHTML = '⏳';
                         btn.style.cursor = 'wait';
                         btn.style.background = '#eee';
-                        // Prevent double submit? Browser handles form submission navigation usually, 
-                        // but visual feedback is key.
                     }
+
+                    // Handle Cancel
+                    document.getElementById('cancelSearchBtn').onclick = function () {
+                        window.stop(); // Stop navigation
+                        document.body.removeChild(toast);
+                        if (btn) {
+                            btn.innerHTML = '🔍';
+                            btn.style.cursor = 'pointer';
+                            btn.style.background = '#f8f9fa';
+                        }
+                    };
                 });
             }
         });
