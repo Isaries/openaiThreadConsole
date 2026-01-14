@@ -198,8 +198,12 @@ def index():
         threads_pagination = query.paginate(page=t_page, per_page=50, error_out=False)
         threads_list = threads_pagination.items
         total_threads_count = threads_pagination.total
+        
+        # True Project Total (Unfiltered)
+        project_total_count = Thread.query.filter_by(project_id=active_group['group_id']).count()
     else:
         search_query = ''
+        project_total_count = 0
 
     return render_template('admin.html', 
                          groups=groups_data, 
@@ -218,7 +222,8 @@ def index():
                          auto_refresh_settings=database.load_settings().get('auto_refresh', {}),
                          threads=threads_list, # Current Page Items
                          threads_pagination=threads_pagination, # Pagination Controls
-                         total_threads_count=total_threads_count,
+                         total_threads_count=total_threads_count, # Filtered Count
+                         project_total_count=project_total_count, # True Total
                          search_query=search_query)
 
 @admin_bp.route('/group/create', methods=['POST'])
