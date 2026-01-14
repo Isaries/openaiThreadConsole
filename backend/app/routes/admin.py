@@ -407,9 +407,19 @@ def delete_multi():
     if not session.get('user_id'): return redirect(url_for('auth.login'))
     
     group_id = request.form.get('group_id')
+    project = Project.query.get(group_id)
+    if not project: 
+        return redirect(url_for('admin.index'))
+    
+    # Permission Check
+    is_owner = any(o.id == session.get('user_id') for o in project.owners)
+    if session.get('role') != 'admin' and not is_owner:
+        flash('權限不足', 'error')
+        return redirect(url_for('admin.index', group_id=group_id))
     
     # Handle Select All Pages (Batch Delete)
     select_all_pages = request.form.get('select_all_pages') == 'true'
+    count = 0
     
     if select_all_pages:
         # Batch Delete Logic for ALL in project (Two-Step for SQLite/No-Cascade)
@@ -424,7 +434,7 @@ def delete_multi():
         count = Thread.query.filter_by(project_id=project.id).delete(synchronize_session=False)
     else:
         # Standard Checkbox Selection
-        thread_ids = request.form.getlist('thread_ids') # Initialize thread_ids here
+        thread_ids = request.form.getlist('selected_ids') # Input name from template is selected_ids
         if not thread_ids:
             # Fallback for single button press
             single_id = request.form.get('thread_id')
@@ -434,7 +444,6 @@ def delete_multi():
             flash('No threads selected', 'warning')
             return redirect(url_for('admin.index', group_id=group_id))
         
-        count = 0
         for tid in thread_ids:
             t = Thread.query.filter_by(thread_id=tid, project_id=project.id).first()
             if t:
@@ -615,23 +624,9 @@ def refresh_threads_cache():
     if not session.get('user_id'): return redirect(url_for('auth.login'))
     
     group_id = request.form.get('group_id')
-    select_all_pages = request.form.get('select_all_pages') == 'true'
-    
-    if select_all_pages:
-        # Fetch all IDs for project
-        all_objs = Thread.query.with_entities(Thread.thread_id).filter_by(project_id=project.id).all()
-        thread_ids = [t.thread_id for t in all_objs]
-    else:
-        if not thread_ids:
-            single = request.form.get('thread_id')
-            if single: thread_ids = [single]
-            
-        if not thread_ids:
-            flash('未選擇任何 Thread', 'warning')
-            return redirect(url_for('admin.index', group_id=group_id))
-        
-    project = Project.query.get(group_id)
-    if not project: return redirect(url_for('admin.index'))
+    project = Project.query.get(group_id) # Load project FIRST
+    if not project: 
+        return redirect(url_for('admin.index'))
     
     # Permission
     is_owner = any(o.id == session.get('user_id') for o in project.owners)
@@ -639,6 +634,19 @@ def refresh_threads_cache():
          flash('Permission Denied', 'error')
          return redirect(url_for('admin.index', group_id=group_id))
          
+    select_all_pages = request.form.get('select_all_pages') == 'true'
+    thread_ids = []
+    
+    if select_all_pages:
+        # Fetch all IDs for project
+        all_objs = Thread.query.with_entities(Thread.thread_id).filter_by(project_id=project.id).all()
+        thread_ids = [t.thread_id for t in all_objs]
+    else:
+        thread_ids = request.form.getlist('selected_ids')
+        if not thread_ids:
+            single = request.form.get('thread_id')
+            if single: thread_ids = [single]
+            
     if not thread_ids:
         flash('未選擇任何 Thread', 'warning')
         return redirect(url_for('admin.index', group_id=group_id))
