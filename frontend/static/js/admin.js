@@ -182,7 +182,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 const tid = this.dataset.threadId;
                 const gid = this.dataset.groupId;
                 // CSRF Token - Try to find it in the DOM
-                const csrfToken = document.querySelector('input[name="csrf_token"]')?.value;
+                const csrfToken = document.querySelector('#deleteMultiForm input[name="csrf_token"]')?.value || document.querySelector('input[name="csrf_token"]')?.value;
 
                 fetch('/admin/threads/update_remark', {
                     method: 'POST',
@@ -224,25 +224,7 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 });
 
-/* --- Live Filter --- */
-document.addEventListener('DOMContentLoaded', function () {
-    const searchInput = document.getElementById('threadSearchInput');
-    if (searchInput) {
-        searchInput.addEventListener('input', function () {
-            const filter = this.value.toLowerCase().trim();
-            const rows = document.querySelectorAll('tbody tr');
 
-            rows.forEach(row => {
-                const text = row.innerText.toLowerCase();
-                if (text.includes(filter)) {
-                    row.style.display = '';
-                } else {
-                    row.style.display = 'none';
-                }
-            });
-        });
-    }
-});
 /* --- Tag Management --- */
 function addTag(groupId) {
     const input = document.getElementById(`newTagInput_${groupId}`);
