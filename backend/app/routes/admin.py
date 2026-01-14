@@ -534,6 +534,92 @@ def export_excel():
         flash(f'Export Failed: {e}', 'error')
         return redirect(url_for('admin.index', group_id=group_id))
 
+@admin_bp.route('/threads/view/<thread_id>')
+def view_thread(thread_id):
+    if not session.get('user_id'): return redirect(url_for('auth.login'))
+    
+    group_id = request.args.get('group_id')
+    
+    project = None
+    if group_id:
+        project = Project.query.get(group_id)
+    else:
+        # Fallback: Find which project this thread belongs to? 
+        # Thread model DB lookup is fastest.
+        t = Thread.query.filter_by(thread_id=thread_id).first()
+        if t:
+            project = t.project
+            
+    if not project:
+        flash('Project not found for this thread', 'error')
+        return redirect(url_for('admin.index'))
+        
+    # Permission Check
+    is_owner = any(o.id == session.get('user_id') for o in project.owners)
+    if session.get('role') != 'admin' and not is_owner:
+         flash('Permission Denied', 'error')
+         return redirect(url_for('admin.index'))
+         
+    # Fetch Data
+    api_key = security.get_decrypted_key(project.api_key) if project.api_key else None
+    
+    # 1. Force Sync to DB (Admin Requirement: Always Fresh)
+    success, msg = logic.sync_thread_to_db(thread_id, api_key, project.id)
+    if not success:
+        flash(f'同步失敗: {msg}', 'error')
+        # We might still try to show cached data if exist?
+        # But user insists on "Complete Refresh". If refresh fails, we should probably warn.
+        # Let's fallback to cache if available, but warn.
+    
+    # 2. Load from DB
+    thread_obj = Thread.query.filter_by(thread_id=thread_id).first()
+    if not thread_obj:
+         flash('Thread 不存在或同步失敗', 'error')
+         return redirect(url_for('admin.index', group_id=project.id))
+         
+    # Process from DB
+    result = logic.process_thread_from_db(thread_obj, target_name="", start_date=None, end_date=None)
+    
+    return render_template('admin_thread_view.html', 
+        result=result, 
+        project=project,
+        active_group={'group_id': project.id, 'name': project.name}
+    )
+
+@admin_bp.route('/threads/refresh', methods=['POST'])
+def refresh_threads_cache():
+    if not session.get('user_id'): return redirect(url_for('auth.login'))
+    
+    group_id = request.form.get('group_id')
+    thread_ids = request.form.getlist('selected_ids')
+    
+    # If explicit "all" flag or just all checkboxes?
+    # Usually UI sends checkboxes.
+    
+    if not thread_ids:
+        # Check if single ID passed
+        single = request.form.get('thread_id')
+        if single: thread_ids = [single]
+        
+    project = Project.query.get(group_id)
+    if not project: return redirect(url_for('admin.index'))
+    
+    # Permission
+    is_owner = any(o.id == session.get('user_id') for o in project.owners)
+    if session.get('role') != 'admin' and not is_owner:
+         flash('Permission Denied', 'error')
+         return redirect(url_for('admin.index', group_id=group_id))
+         
+    if not thread_ids:
+        flash('未選擇任何 Thread', 'warning')
+        return redirect(url_for('admin.index', group_id=group_id))
+        
+    # Enqueue Task
+    refresh_specific_threads(group_id, thread_ids, group_name=project.name)
+    flash(f'已排程更新 {len(thread_ids)} 筆資料的快取', 'success')
+    return redirect(url_for('admin.index', group_id=group_id))
+
+
 
 @admin_bp.route('/threads/upload', methods=['POST'])
 def upload_file():
