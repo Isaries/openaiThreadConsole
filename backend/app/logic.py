@@ -427,19 +427,27 @@ def search_threads_sql(project_id, target_name, start_date, end_date):
     # Validation timestamps
     start_ts = 0
     end_ts = 0
+    
+    from dateutil import parser
+    
     if start_date:
         try:
-            dt = datetime.strptime(start_date, '%Y-%m-%d')
+            # Robust parsing (handles many formats)
+            dt = parser.parse(start_date)
             start_ts = int(dt.timestamp())
-        except: pass
+        except Exception as e:
+            logging.getLogger().warning(f"Date Parse Error (Start): {start_date} - {e}")
+            pass
         
     if end_date:
         try:
-            dt = datetime.strptime(end_date, '%Y-%m-%d')
+            dt = parser.parse(end_date)
             # End of day
             dt = dt.replace(hour=23, minute=59, second=59)
             end_ts = int(dt.timestamp())
-        except: pass
+        except Exception as e:
+            logging.getLogger().warning(f"Date Parse Error (End): {end_date} - {e}")
+            pass
 
     # Join Messages if needed (Target Name or Date)
     if target_name or start_date or end_date:

@@ -527,120 +527,13 @@ def export_excel():
          flash('Permission Denied', 'error')
          return redirect(url_for('admin.index'))
          
-    # Prepare Data
-    threads = Thread.query.filter_by(project_id=project.id).all()
-    data = []
-    for t in threads:
-        data.append({
-            'thread_id': t.thread_id,
-            'remark': t.remark
-        })
-        
-    df = pd.DataFrame(data)
-    
-    # Generate Excel
-    output = io.BytesIO()
-    with pd.ExcelWriter(output, engine='openpyxl') as writer:
-        df.to_excel(writer, index=False, sheet_name='Threads')
-        
-    output.seek(0)
-    
-    # Filename
-    filename = f"{project.name}_threads_{datetime.now().strftime('%Y%m%d')}.xlsx"
-    
-    return send_file(
-        output,
-        mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        as_attachment=True,
-        download_name=filename
-    )
-
-@admin_bp.route('/threads/view/<thread_id>')
-def view_thread(thread_id):
-    if not session.get('user_id'): return redirect(url_for('auth.login'))
-    
-    group_id = request.args.get('group_id')
-    
-    project = None
-    if group_id:
-        project = Project.query.get(group_id)
-    else:
-        # Fallback: Find which project this thread belongs to? 
-        # Thread model DB lookup is fastest.
-        t = Thread.query.filter_by(thread_id=thread_id).first()
-        if t:
-            project = t.project
-            
-    if not project:
-        flash('Project not found for this thread', 'error')
-        return redirect(url_for('admin.index'))
-        
-    # Permission Check
-    is_owner = any(o.id == session.get('user_id') for o in project.owners)
-    if session.get('role') != 'admin' and not is_owner:
-         flash('Permission Denied', 'error')
-         return redirect(url_for('admin.index'))
-         
-    # Fetch Data
-    api_key = security.get_decrypted_key(project.api_key) if project.api_key else None
-    
-    # 1. Force Sync to DB (Admin Requirement: Always Fresh)
-    success, msg = logic.sync_thread_to_db(thread_id, api_key, project.id)
-    if not success:
-        flash(f'同步失敗: {msg}', 'error')
-        # We might still try to show cached data if exist?
-        # But user insists on "Complete Refresh". If refresh fails, we should probably warn.
-        # Let's fallback to cache if available, but warn.
-    
-    # 2. Load from DB
-    thread_obj = Thread.query.filter_by(thread_id=thread_id).first()
-    if not thread_obj:
-         flash('Thread 不存在或同步失敗', 'error')
-         return redirect(url_for('admin.index', group_id=project.id))
-         
-    # Process from DB
-    result = logic.process_thread_from_db(thread_obj, target_name="", start_date=None, end_date=None)
-    
-    return render_template('admin_thread_view.html', 
-        result=result, 
-        project=project,
-        active_group={'group_id': project.id, 'name': project.name}
-    )
-
-
-
-@admin_bp.route('/threads/refresh', methods=['POST'])
-def refresh_threads_cache():
-    if not session.get('user_id'): return redirect(url_for('auth.login'))
-    
-    group_id = request.form.get('group_id')
-    thread_ids = request.form.getlist('selected_ids')
-    
-    # If explicit "all" flag or just all checkboxes?
-    # Usually UI sends checkboxes.
-    
-    if not thread_ids:
-        # Check if single ID passed
-        single = request.form.get('thread_id')
-        if single: thread_ids = [single]
-        
-    project = Project.query.get(group_id)
-    if not project: return redirect(url_for('admin.index'))
-    
-    # Permission
-    is_owner = any(o.id == session.get('user_id') for o in project.owners)
-    if session.get('role') != 'admin' and not is_owner:
-         flash('Permission Denied', 'error')
-         return redirect(url_for('admin.index', group_id=group_id))
-         
-    if not thread_ids:
-        flash('未選擇任何 Thread', 'warning')
+    from ..services import excel_service
+    try:
+        return excel_service.generate_excel_export(project.id, project.name)
+    except Exception as e:
+        flash(f'Export Failed: {e}', 'error')
         return redirect(url_for('admin.index', group_id=group_id))
-        
-    # Enqueue Task
-    refresh_specific_threads(group_id, thread_ids, group_name=project.name)
-    flash(f'已排程更新 {len(thread_ids)} 筆資料的快取', 'success')
-    return redirect(url_for('admin.index', group_id=group_id))
+
 
 @admin_bp.route('/threads/upload', methods=['POST'])
 def upload_file():
@@ -667,54 +560,17 @@ def upload_file():
     if session.get('role') != 'admin' and not is_owner:
          return redirect(url_for('admin.index'))
 
-    try:
-        df = pd.read_excel(file)
-        
-        # Find column case-insensitively
-        # User Requirement: Must be "thread_id" (case-insensitive), no spaces, must have underscore.
-        target_col = None
-        for col in df.columns:
-             clean_col = str(col).strip().lower()
-             if clean_col == 'thread_id':
-                 target_col = col
-                 break
-                 
-        if not target_col:
-            flash('Excel 必須包含 "thread_id" 欄位 (不分大小寫，需有底線)', 'error')
-            return redirect(url_for('admin.index', group_id=group_id))
-            
-        # User Request: Header must be 'thread_id' (case-insensitive).
-        # Find 'remark' column (case-insensitive)
-        remark_col = None
-        for col in df.columns:
-             if str(col).strip().lower() == 'remark':
-                 remark_col = col
-                 break
+    from ..services import excel_service
+    thread_data_map, error = excel_service.parse_excel_for_import(file)
 
-        # Standardize IDs and build Remark Map
-        # new_ids list kept for existing logic, but we need mapping
-        thread_data_map = {} # tid -> remark
+    if error:
+        flash(error, 'error')
+        return redirect(url_for('admin.index', group_id=group_id))
         
-        # Iterate DF to get IDs and Remarks
-        for _, row in df.iterrows():
-            raw_id = str(row[target_col])
-            if pd.isna(row[target_col]) or not raw_id.strip(): continue
-            
-            tid = raw_id.strip()
-            if not tid.startswith('thread_'): continue
-            
-            remark_val = None
-            if remark_col and not pd.isna(row[remark_col]):
-                remark_val = str(row[remark_col]).strip()
-                
-            # If duplicate in Excel, last one wins or ignore? 
-            # Let's just store it.
-            thread_data_map[tid] = remark_val
-            
-        new_ids = list(thread_data_map.keys())
-        
-        action = request.form.get('action', 'add')
-        
+    new_ids = list(thread_data_map.keys())
+    action = request.form.get('action', 'add')
+    
+    try:
         if action == 'delete':
             # Batch Delete Logic
             threads_to_delete = Thread.query.filter(
@@ -735,9 +591,7 @@ def upload_file():
                  flash('沒有刪除任何 Thread (Excel 中的 ID 在 Project 中找不到)', 'warning')
 
         else:
-
             # Batch Add / Update Logic
-            # 1. Load existing thread objects to update remarks
             all_threads = Thread.query.filter_by(project_id=project.id).all()
             existing_map = {t.thread_id: t for t in all_threads}
             
@@ -749,19 +603,14 @@ def upload_file():
                 r_val = thread_data_map.get(tid)
                 
                 if tid in existing_map:
-                    # Update existing thread remark
-                    # Only update if remark is present in Excel (allow clearing if empty string passed? maybe)
-                    # Current logic: r_val is string or None.
                     if r_val is not None:
                         t = existing_map[tid]
                         if t.remark != r_val:
                             t.remark = r_val
                             updated_count += 1
                 else:
-                    # Create new thread
                     new_thread = Thread(thread_id=tid, project_id=project.id, remark=r_val)
                     db.session.add(new_thread)
-                    # Update map to prevent duplicates if Excel has same ID twice
                     existing_map[tid] = new_thread 
                     added_count += 1
                 

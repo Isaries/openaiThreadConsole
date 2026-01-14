@@ -92,43 +92,7 @@ def cancel_search(task_id):
     huey.revoke_by_id(task_id)
     return {'status': 'cancelled'}, 200
 
-@main_bp.route('/search/status/<task_id>')
-def search_status(task_id):
-    from .. import tasks
-    from ..extensions import huey
-    
-    # result() would block. We want check existence.
-    # Huey (Sqlite) stores results in db.
-    
-    # Check if task is finished
-    # We can try to get the result with non-blocking=True logic?
-    # SqliteHuey.get(key)
-    
-    # Standard way: task = search_task.result(task_id, blocking=False) ?
-    # task instance isn't available here easily without importing the function object.
-    
-    task_result = tasks.search_task.result(task_id, preserve=True) 
-    # preserve=True keeps it so we can read it again in /result route?
-    # Actually, if we read it here, we might consume it?
-    # Huey default: get() removes it.
-    
-    # Better approach: 
-    # Just use 'get' but check for None (Pending).
-    # But if we get it, it's gone from queue storage.
-    # So we should only get it in the final /result route.
-    
-    # How to check status without consuming?
-    # SqliteHuey doesn't have a specific "status" API easily exposed without Peek.
-    # But we can assume if result is ready, it returns.
-    
-    # WORKAROUND for SqliteHuey simple polling:
-    # Just poll /result? 
-    # If /result returns 202, it means not ready.
-    # If 200, it renders.
-    # This simplifies things.
-    pass 
-    # Merged with result route below.
-    return {'status': 'deprecated, use /search/result directly'}, 404
+
 
 @main_bp.route('/search/result/<task_id>')
 def search_result(task_id):
