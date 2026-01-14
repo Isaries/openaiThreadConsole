@@ -1,7 +1,8 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session, send_file
 import io
 from ..extensions import db
-from ..models import User, Project, Thread, SearchHistory, AuditLog, IPBan, Tag
+from ..extensions import db
+from ..models import User, Project, Thread, Message, SearchHistory, AuditLog, IPBan, Tag
 from .. import utils
 from .. import logic
 import security
@@ -411,11 +412,19 @@ def delete_multi():
     select_all_pages = request.form.get('select_all_pages') == 'true'
     
     if select_all_pages:
-        # Delete ALL threads in project
-        # Using bulk delete for performance
-        count = Thread.query.filter_by(project_id=project.id).delete()
+        # Batch Delete Logic for ALL in project (Two-Step for SQLite/No-Cascade)
+        
+        # 1. Delete all associated Messages first (Prevent Orphans)
+        # Using subquery to identify message targets
+        threads_subquery = db.session.query(Thread.id).filter_by(project_id=project.id)
+        # Note: .delete(synchronize_session=False) is faster and safe here as we redirect anyway
+        Message.query.filter(Message.thread_id.in_(threads_subquery)).delete(synchronize_session=False)
+        
+        # 2. Delete the Threads
+        count = Thread.query.filter_by(project_id=project.id).delete(synchronize_session=False)
     else:
         # Standard Checkbox Selection
+        thread_ids = request.form.getlist('thread_ids') # Initialize thread_ids here
         if not thread_ids:
             # Fallback for single button press
             single_id = request.form.get('thread_id')
