@@ -21,15 +21,25 @@
                 {{ total_threads_count }} 筆)</span></h3>
         <div class="flex gap-2">
             <!-- Search Form (GET) -->
-            <input form="searchForm" type="text" name="q" placeholder="🔍 搜尋 ID 或備註..." class="input input-sm"
-                style="width: 180px; margin-right: 0.5rem;" autocomplete="off" value="{{ search_query }}">
+            <!-- Search Form Input Group -->
+            <div
+                style="display: flex; gap: 0; align-items: center; background: white; border: 1px solid var(--surface-border); border-radius: 6px; overflow: hidden; margin-right: 0.5rem; height: 32px;">
+                <input form="searchForm" type="text" name="q" placeholder="🔍 搜尋 ID 或備註..."
+                    style="border: none; padding: 0 0.5rem; width: 180px; font-size: 0.875rem; outline: none; height: 100%;"
+                    autocomplete="off" value="{{ search_query }}">
 
-            {% if search_query %}
-            <a href="{{ url_for('admin.index', group_id=active_group.group_id) }}" class="btn btn-secondary btn-sm"
-                title="清除搜尋" style="margin-right: 0.5rem; text-decoration: none; padding: 0.25rem 0.6rem;">
-                ❌
-            </a>
-            {% endif %}
+                {% if search_query %}
+                <a href="{{ url_for('admin.index', group_id=active_group.group_id) }}" title="清除搜尋"
+                    style="padding: 0 0.5rem; color: #999; text-decoration: none; font-size: 0.8rem; cursor: pointer; display: flex; align-items: center; height: 100%; border-left: 1px solid #eee;">
+                    ❌
+                </a>
+                {% endif %}
+
+                <button type="submit" form="searchForm" id="searchSubmitBtn" title="開始搜尋"
+                    style="border: none; background: #f8f9fa; border-left: 1px solid var(--surface-border); cursor: pointer; padding: 0 0.6rem; height: 100%; display: flex; align-items: center; justify-content: center; transition: background 0.2s;">
+                    🔍
+                </button>
+            </div>
 
             <button type="submit" formaction="/admin/threads/export" formmethod="POST" formtarget="_blank"
                 class="btn btn-secondary btn-sm" title="匯出完整 Excel (不受搜尋影響)">
@@ -210,5 +220,45 @@
             document.getElementById('allSelectedMsg').style.display = 'none';
             document.getElementById('clearSelectionLink').style.display = 'none';
         }
+
+        // Search Loading UX
+        document.addEventListener('DOMContentLoaded', function () {
+            const form = document.getElementById('searchForm');
+            if (form) {
+                form.addEventListener('submit', function () {
+                    // Show Floating Toast
+                    const toast = document.createElement('div');
+                    toast.innerText = '🔍 正在搜尋...';
+                    Object.assign(toast.style, {
+                        position: 'fixed',
+                        top: '20px',
+                        left: '50%',
+                        transform: 'translateX(-50%)',
+                        background: 'rgba(33, 150, 243, 0.95)',
+                        color: 'white',
+                        padding: '0.75rem 1.5rem',
+                        borderRadius: '50px',
+                        boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                        zIndex: '9999',
+                        fontWeight: '500',
+                        fontSize: '0.95rem',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px'
+                    });
+                    document.body.appendChild(toast);
+
+                    // Update Button State
+                    const btn = document.getElementById('searchSubmitBtn');
+                    if (btn) {
+                        btn.innerHTML = '⏳';
+                        btn.style.cursor = 'wait';
+                        btn.style.background = '#eee';
+                        // Prevent double submit? Browser handles form submission navigation usually, 
+                        // but visual feedback is key.
+                    }
+                });
+            }
+        });
     </script>
 </div>
