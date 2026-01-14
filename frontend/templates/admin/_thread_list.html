@@ -50,7 +50,8 @@
             <table>
                 <thead>
                     <tr>
-                        <th style="width: 40px;"><input type="checkbox" id="masterCheckbox" onclick="toggleAll(this)">
+                        <th style="width: 40px;"><input type="checkbox" id="masterCheckbox"
+                                onclick="toggleThreadListSelection(this)">
                         </th>
                         <th>Thread ID</th>
                         <th>備註</th>
@@ -121,7 +122,7 @@
     </form>
 
     <script>
-        function toggleAll(source) {
+        function toggleThreadListSelection(source) {
             const checkboxes = document.querySelectorAll('.thread-checkbox');
             for (let i = 0; i < checkboxes.length; i++) {
                 checkboxes[i].checked = source.checked;
