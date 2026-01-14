@@ -929,8 +929,22 @@ def update_refresh_schedule():
         
     data = request.json
     enabled = data.get('enabled', False)
-    frequency = int(data.get('frequency', 1))
-    hour = int(data.get('hour', 2))
+    try:
+        frequency = int(data.get('frequency', 1))
+        hour = int(data.get('hour', 2))
+    except (ValueError, TypeError):
+        from flask import jsonify
+        return jsonify({'error': 'Invalid parameters'}), 400
+        
+    # Validation: 1-360 days
+    if not (1 <= frequency <= 360):
+        from flask import jsonify
+        return jsonify({'error': 'Frequency must be between 1 and 360 days'}), 400
+        
+    # Validation: 0-23 hours
+    if not (0 <= hour <= 23):
+        from flask import jsonify
+        return jsonify({'error': 'Hour must be between 0 and 23'}), 400
     
     settings = database.load_settings()
     current_config = settings.get('auto_refresh', {})
