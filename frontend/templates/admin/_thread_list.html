@@ -41,19 +41,20 @@
                 </button>
             </div>
 
-            <button type="submit" formaction="/admin/threads/export" formmethod="POST" formtarget="_blank"
-                class="btn btn-secondary btn-sm" title="匯出完整 Excel (不受搜尋影響)">
+            <button type="submit" form="deleteMultiForm" formaction="/admin/threads/export" formmethod="POST"
+                formtarget="_blank" class="btn btn-secondary btn-sm" title="匯出完整 Excel (不受搜尋影響)">
                 📥 匯出 (完整)
             </button>
-            <button type="submit" formaction="/admin/threads/refresh" formmethod="POST" class="btn btn-primary btn-sm"
-                title="更新快取">
+            <button type="submit" form="deleteMultiForm" formaction="/admin/threads/refresh" formmethod="POST"
+                class="btn btn-primary btn-sm" title="更新快取">
                 🔄 更新
             </button>
             <button type="button" class="btn btn-secondary btn-sm mobile-only" data-action="select"
                 onclick="toggleAllMobile(this)">
                 全選
             </button>
-            <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('確定刪除選取項目？')">
+            <button type="submit" form="deleteMultiForm" class="btn btn-danger btn-sm"
+                onclick="return confirm('確定刪除選取項目？')">
                 刪除選取
             </button>
         </div>
@@ -93,7 +94,7 @@
             <tbody>
                 {% for thread in threads %}
                 <tr>
-                    <td><input type="checkbox" name="selected_ids" value="{{ thread.thread_id }}"
+                    <td><input type="checkbox" form="deleteMultiForm" name="selected_ids" value="{{ thread.thread_id }}"
                             class="thread-checkbox" onclick="checkSelectionState()"></td>
                     <td data-label="Thread ID" class="font-medium text-main">{{ thread.thread_id }}</td>
                     <td data-label="備註" class="editable-remark" data-thread-id="{{ thread.thread_id }}"
@@ -106,8 +107,8 @@
                             style="padding: 0.25rem 0.5rem; margin-right: 0.25rem; text-decoration: none;" title="查看對話">
                             👁️
                         </a>
-                        <button type="submit" formaction="/admin/threads/delete_multi" name="thread_id"
-                            value="{{ thread.thread_id }}" class="btn btn-danger btn-sm"
+                        <button type="submit" form="deleteMultiForm" formaction="/admin/threads/delete_multi"
+                            name="thread_id" value="{{ thread.thread_id }}" class="btn btn-danger btn-sm"
                             style="padding: 0.25rem 0.5rem;" onclick="return confirm('刪除？')">
                             🗑️
                         </button>
