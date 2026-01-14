@@ -33,7 +33,7 @@
         </div>
 
         <!-- Smart Select All Banner -->
-        <div id="selectAllBanner"
+        <div id="selectAllBanner" data-total="{{ total_threads_count }}" data-page-count="{{ threads|length }}"
             style="display: none; background: #e8f0fe; color: #1967d2; padding: 0.75rem; border-radius: 4px; margin-bottom: 1rem; text-align: center; border: 1px solid #d2e3fc;">
             <span id="selectAllBannerText">已選取本頁所有項目。</span>
             <a href="javascript:void(0)" onclick="selectAllAcrossPages()"
@@ -160,18 +160,17 @@
 
         function handleBannerVisibility(isAllPageChecked) {
             const banner = document.getElementById('selectAllBanner');
-            // Template vars injected by Jinja
-            const total = {{ total_threads_count }
-        };
-        const onPage = {{ threads| length }};
+            // Get data from DOM attributes to avoid Jinja/JS syntax conflict
+            const total = parseInt(banner.dataset.total) || 0;
+            const onPage = parseInt(banner.dataset.pageCount) || 0;
 
-        // Only show banner if there are more items than currently visible
-        if (isAllPageChecked && total > onPage) {
-            banner.style.display = 'block';
-        } else {
-            banner.style.display = 'none';
-            clearSelection();
-        }
+            // Only show banner if there are more items than currently visible
+            if (isAllPageChecked && total > onPage) {
+                banner.style.display = 'block';
+            } else {
+                banner.style.display = 'none';
+                clearSelection();
+            }
         }
 
         function selectAllAcrossPages() {
