@@ -40,7 +40,7 @@ def index():
     groups_data = []
     for p in projects:
         owners = [o.id for o in p.owners]
-        threads = [{'thread_id': t.thread_id, 'remark': t.remark} for t in p.threads]
+        # Optimization: Lazy load threads via pagination instead of eager loading all
         tags = [tag.name for tag in p.tags]
         groups_data.append({
             'group_id': p.id,
@@ -49,8 +49,8 @@ def index():
             'is_visible': p.is_visible,
             'version': p.version,
             'owners': owners,
-            'threads': threads,
-            'tags': tags
+            'tags': tags,
+            'thread_count': len(p.threads) # Keep stats for UI if needed
         })
 
     # Select Active Group
@@ -174,10 +174,23 @@ def index():
 
     # Fetch all tags for autocomplete
     all_tags = [t.name for t in Tag.query.with_entities(Tag.name).distinct()]
+    
+    # --- Server-Side Pagination for Threads ---
+    threads_pagination = None
+    threads_list = []
+    total_threads_count = 0
+    
+    if active_group:
+        # Paginating the threads for the active project
+        t_page = request.args.get('t_page', 1, type=int)
+        threads_pagination = Thread.query.filter_by(project_id=active_group['group_id'])\
+                                         .paginate(page=t_page, per_page=50, error_out=False)
+        threads_list = threads_pagination.items # This contains Thread objects with .remark accessible
+        total_threads_count = threads_pagination.total
 
     return render_template('admin.html', 
                          groups=groups_data, 
-                         grouped_projects=grouped_projects, # Ensure this is passed
+                         grouped_projects=grouped_projects, 
                          active_group=active_group,
                          username=session.get('username'),
                          current_role=session.get('role'),
@@ -186,11 +199,13 @@ def index():
                          ip_activity=ip_activity,
                          banned_ips=bans_pagination, 
                          bans_pagination=bans_pagination,
-                         all_tags=all_tags, # Pass to template
+                         all_tags=all_tags, 
                          user_map=user_map,
                          masked_key=masked_key,
                          auto_refresh_settings=database.load_settings().get('auto_refresh', {}),
-                         threads=active_group['threads'] if active_group else [])
+                         threads=threads_list, # Current Page Items
+                         threads_pagination=threads_pagination, # Pagination Controls
+                         total_threads_count=total_threads_count)
 
 @admin_bp.route('/group/create', methods=['POST'])
 def create_group():
@@ -392,31 +407,30 @@ def delete_multi():
     
     group_id = request.form.get('group_id')
     
-    # Support both batch (checkboxes) and single (button) deletion
-    thread_ids = request.form.getlist('selected_ids')
-    single_id = request.form.get('thread_id')
-    if single_id:
-        thread_ids.append(single_id)
+    # Handle Select All Pages (Batch Delete)
+    select_all_pages = request.form.get('select_all_pages') == 'true'
     
-    if not thread_ids:
-        flash('No threads selected', 'warning')
-        return redirect(url_for('admin.index', group_id=group_id))
+    if select_all_pages:
+        # Delete ALL threads in project
+        # Using bulk delete for performance
+        count = Thread.query.filter_by(project_id=project.id).delete()
+    else:
+        # Standard Checkbox Selection
+        if not thread_ids:
+            # Fallback for single button press
+            single_id = request.form.get('thread_id')
+            if single_id: thread_ids = [single_id]
         
-    project = Project.query.get(group_id)
-    if not project: return redirect(url_for('admin.index'))
-    
-    # Permission Check
-    is_owner = any(o.id == session.get('user_id') for o in project.owners)
-    if session.get('role') != 'admin' and not is_owner:
-        flash('權限不足', 'error')
-        return redirect(url_for('admin.index', group_id=group_id))
-    
-    count = 0
-    for tid in thread_ids:
-        t = Thread.query.filter_by(thread_id=tid, project_id=project.id).first()
-        if t:
-            db.session.delete(t)
-            count += 1
+        if not thread_ids:
+            flash('No threads selected', 'warning')
+            return redirect(url_for('admin.index', group_id=group_id))
+        
+        count = 0
+        for tid in thread_ids:
+            t = Thread.query.filter_by(thread_id=tid, project_id=project.id).first()
+            if t:
+                db.session.delete(t)
+                count += 1
 
     if count > 0:
         project.version += 1
@@ -592,15 +606,20 @@ def refresh_threads_cache():
     if not session.get('user_id'): return redirect(url_for('auth.login'))
     
     group_id = request.form.get('group_id')
-    thread_ids = request.form.getlist('selected_ids')
+    select_all_pages = request.form.get('select_all_pages') == 'true'
     
-    # If explicit "all" flag or just all checkboxes?
-    # Usually UI sends checkboxes.
-    
-    if not thread_ids:
-        # Check if single ID passed
-        single = request.form.get('thread_id')
-        if single: thread_ids = [single]
+    if select_all_pages:
+        # Fetch all IDs for project
+        all_objs = Thread.query.with_entities(Thread.thread_id).filter_by(project_id=project.id).all()
+        thread_ids = [t.thread_id for t in all_objs]
+    else:
+        if not thread_ids:
+            single = request.form.get('thread_id')
+            if single: thread_ids = [single]
+            
+        if not thread_ids:
+            flash('未選擇任何 Thread', 'warning')
+            return redirect(url_for('admin.index', group_id=group_id))
         
     project = Project.query.get(group_id)
     if not project: return redirect(url_for('admin.index'))

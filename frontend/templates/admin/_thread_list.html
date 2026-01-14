@@ -4,8 +4,12 @@
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <input type="hidden" name="group_id" value="{{ active_group.group_id }}">
 
+        <!-- Hidden input to toggle 'Select All Across Pages' mode -->
+        <input type="hidden" name="select_all_pages" id="selectAllPagesInput" value="false">
+
         <div class="flex items-center justify-between mb-4" style="margin-bottom: 1rem;">
-            <h3>📋 資料列表</h3>
+            <h3>clipboard 資料列表 <span class="text-secondary text-sm" style="font-weight: normal; font-size: 0.8rem;">(共
+                    {{ total_threads_count }} 筆)</span></h3>
             <div class="flex gap-2">
                 <input type="text" id="threadSearchInput" placeholder="🔍 搜尋 ID 或備註..." class="input input-sm"
                     style="width: 180px; margin-right: 0.5rem;" autocomplete="off">
@@ -28,11 +32,26 @@
             </div>
         </div>
 
+        <!-- Smart Select All Banner -->
+        <div id="selectAllBanner"
+            style="display: none; background: #e8f0fe; color: #1967d2; padding: 0.75rem; border-radius: 4px; margin-bottom: 1rem; text-align: center; border: 1px solid #d2e3fc;">
+            <span id="selectAllBannerText">已選取本頁所有項目。</span>
+            <a href="javascript:void(0)" onclick="selectAllAcrossPages()"
+                style="font-weight: bold; text-decoration: underline; margin-left: 8px;">
+                選取 Project 中的全部 {{ total_threads_count }} 筆資料
+            </a>
+            <span id="allSelectedMsg" style="display: none; font-weight: bold;">已選取 Project 中的全部 {{ total_threads_count
+                }} 筆資料。</span>
+            <a href="javascript:void(0)" id="clearSelectionLink" onclick="clearSelection()"
+                style="margin-left: 8px; font-size: 0.9em; display: none;">(清除選取)</a>
+        </div>
+
         <div class="table-responsive" style="max-height: 600px; overflow-y: auto;">
             <table>
                 <thead>
                     <tr>
-                        <th style="width: 40px;"><input type="checkbox" onclick="toggleAll(this)"></th>
+                        <th style="width: 40px;"><input type="checkbox" id="masterCheckbox" onclick="toggleAll(this)">
+                        </th>
                         <th>Thread ID</th>
                         <th>備註</th>
                         <th style="width: 80px;">操作</th>
@@ -41,7 +60,8 @@
                 <tbody>
                     {% for thread in threads %}
                     <tr>
-                        <td><input type="checkbox" name="selected_ids" value="{{ thread.thread_id }}"></td>
+                        <td><input type="checkbox" name="selected_ids" value="{{ thread.thread_id }}"
+                                class="thread-checkbox" onclick="checkSelectionState()"></td>
                         <td data-label="Thread ID" class="font-medium text-main">{{ thread.thread_id }}</td>
                         <td data-label="備註" class="editable-remark" data-thread-id="{{ thread.thread_id }}"
                             data-group-id="{{ active_group.group_id }}" style="cursor: pointer;" title="點擊編輯">
@@ -61,9 +81,114 @@
                             </button>
                         </td>
                     </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="4" style="text-align: center; padding: 2rem; color: var(--text-secondary);">
+                            沒有資料
+                        </td>
+                    </tr>
                     {% endfor %}
                 </tbody>
             </table>
         </div>
+
+        <!-- Pagination Controls -->
+        {% if threads_pagination and threads_pagination.pages > 1 %}
+        <div class="flex items-center justify-between"
+            style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--surface-border);">
+            <div class="text-sm text-secondary">
+                顯示 {{ threads_pagination.items|length }} 筆 (共 {{ total_threads_count }} 筆)
+            </div>
+            <div class="flex gap-1" style="display:flex; gap:0.5rem;">
+                {% if threads_pagination.has_prev %}
+                <a href="{{ url_for('admin.index', group_id=active_group.group_id, t_page=threads_pagination.prev_num) }}"
+                    class="btn btn-secondary btn-sm">‹ 上一頁</a>
+                {% endif %}
+
+                <span class="btn btn-sm"
+                    style="background: transparent; border: 1px solid transparent; cursor: default;">
+                    頁次 {{ threads_pagination.page }} / {{ threads_pagination.pages }}
+                </span>
+
+                {% if threads_pagination.has_next %}
+                <a href="{{ url_for('admin.index', group_id=active_group.group_id, t_page=threads_pagination.next_num) }}"
+                    class="btn btn-secondary btn-sm">下一頁 ›</a>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+
     </form>
+
+    <script>
+        function toggleAll(source) {
+            const checkboxes = document.querySelectorAll('.thread-checkbox');
+            for (let i = 0; i < checkboxes.length; i++) {
+                checkboxes[i].checked = source.checked;
+            }
+            handleBannerVisibility(source.checked);
+        }
+
+        function toggleAllMobile(btn) {
+            const checkboxes = document.querySelectorAll('.thread-checkbox');
+            let allChecked = true;
+            for (let c of checkboxes) { if (!c.checked) allChecked = false; }
+
+            const newState = !allChecked;
+            for (let c of checkboxes) { c.checked = newState; }
+
+            const master = document.getElementById('masterCheckbox');
+            if (master) master.checked = newState;
+
+            handleBannerVisibility(newState);
+        }
+
+        function checkSelectionState() {
+            const checkboxes = document.querySelectorAll('.thread-checkbox');
+            let allChecked = true;
+            for (let c of checkboxes) { if (!c.checked) allChecked = false; }
+
+            const master = document.getElementById('masterCheckbox');
+            if (master) master.checked = allChecked;
+
+            if (!allChecked) {
+                clearSelection();
+            } else {
+                handleBannerVisibility(true);
+            }
+        }
+
+        function handleBannerVisibility(isAllPageChecked) {
+            const banner = document.getElementById('selectAllBanner');
+            // Template vars injected by Jinja
+            const total = {{ total_threads_count }
+        };
+        const onPage = {{ threads| length }};
+
+        // Only show banner if there are more items than currently visible
+        if (isAllPageChecked && total > onPage) {
+            banner.style.display = 'block';
+        } else {
+            banner.style.display = 'none';
+            clearSelection();
+        }
+        }
+
+        function selectAllAcrossPages() {
+            document.getElementById('selectAllPagesInput').value = 'true';
+            document.getElementById('selectAllBannerText').style.display = 'none';
+            document.querySelector('#selectAllBanner a[onclick^="selectAllAcrossPages"]').style.display = 'none';
+            document.getElementById('allSelectedMsg').style.display = 'inline';
+            document.getElementById('clearSelectionLink').style.display = 'inline';
+        }
+
+        function clearSelection() {
+            document.getElementById('selectAllPagesInput').value = 'false';
+            document.getElementById('selectAllBannerText').style.display = 'inline';
+            const link = document.querySelector('#selectAllBanner a[onclick^="selectAllAcrossPages"]');
+            if (link) link.style.display = 'inline';
+            document.getElementById('allSelectedMsg').style.display = 'none';
+            document.getElementById('clearSelectionLink').style.display = 'none';
+        }
+    </script>
 </div>
