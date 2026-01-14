@@ -24,6 +24,13 @@
             <input form="searchForm" type="text" name="q" placeholder="🔍 搜尋 ID 或備註..." class="input input-sm"
                 style="width: 180px; margin-right: 0.5rem;" autocomplete="off" value="{{ search_query }}">
 
+            {% if search_query %}
+            <a href="{{ url_for('admin.index', group_id=active_group.group_id) }}" class="btn btn-secondary btn-sm"
+                title="清除搜尋" style="margin-right: 0.5rem; text-decoration: none; padding: 0.25rem 0.6rem;">
+                ❌
+            </a>
+            {% endif %}
+
             <button type="submit" formaction="/admin/threads/export" formmethod="POST" formtarget="_blank"
                 class="btn btn-secondary btn-sm" title="匯出完整 Excel (不受搜尋影響)">
                 📥 匯出 (完整)
