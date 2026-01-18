@@ -172,13 +172,10 @@ document.addEventListener('DOMContentLoaded', () => {
                         if (res.status === 200) {
                             // Success! 
                             clearInterval(pollInterval);
-                            statusDiv.textContent = '搜尋完成，正在載入結果...';
-                            const html = await res.text();
+                            statusDiv.textContent = '搜尋完成，正在跳轉...';
 
-                            // Replace current page content
-                            document.open();
-                            document.write(html);
-                            document.close();
+                            // Redirect to result page
+                            window.location.href = `/search/result/${taskId}`;
                         } else if (res.status === 500) {
                             clearInterval(pollInterval);
                             statusDiv.className = 'mt-3 alert alert-danger';

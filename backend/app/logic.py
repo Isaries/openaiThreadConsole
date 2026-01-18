@@ -494,3 +494,22 @@ def search_threads_sql(project_id, target_name, start_date, end_date):
 
     # Distinct because multiple messages can match
     return query.distinct().all()
+
+def get_search_result_page(task_id, page_index=0):
+    """
+    Retrieves a specific page of search results for a given task.
+    Returns a list of dicts (the results).
+    """
+    from .models import SearchResultChunk
+    import json
+    
+    chunk = SearchResultChunk.query.filter_by(task_id=task_id, page_index=page_index).first()
+    
+    if chunk and chunk.data_json:
+        try:
+            return json.loads(chunk.data_json)
+        except Exception as e:
+            logging.error(f"Failed to parse chunk JSON for task {task_id}, page {page_index}: {e}")
+            return []
+            
+    return []

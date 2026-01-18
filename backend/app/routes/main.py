@@ -98,30 +98,60 @@ def cancel_search(task_id):
 def search_result(task_id):
     from ..extensions import huey
     
-    # Correct Way: Use huey instance to get result by ID
-    # blocking=False returns None if not ready
-    # preserve=True ensures we can refresh the page
-    
+    # 1. Check Huey Status (Metadata only)
     try:
-        data = huey.result(task_id, blocking=False, preserve=True)
+        # We still rely on Huey for "Status" and "Metadata"
+        # The task now returns a lightweight dict
+        task_meta = huey.result(task_id, blocking=False, preserve=True)
     except Exception as e:
-        # Handle cases where huey might raise error on invalid ID format etc
         current_app.logger.error(f"Huey Result Error: {e}")
         return {'status': 'error', 'message': str(e)}, 500
 
-    if data is None:
-        # Task still running
+    if task_meta is None:
         return {'status': 'processing'}, 202
         
-    # Task Finished
-    if 'error' in data:
-        return f"Error: {data['error']}", 500
+    if 'error' in task_meta:
+        return f"Error: {task_meta['error']}", 500
         
+    # 2. Determine Page
+    page = request.args.get('page', 0, type=int)
+    
+    # 3. Fetch Data Chunk (Via Logic Layer)
+    results = logic.get_search_result_page(task_id, page)
+
+    # 4. Determine Response Type
+    is_xhr = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+    # search.js polling is XHR but expects Full HTML (no page param)
+    # pagination.js (our new logic) is XHR and sends page param
+    
+    # Logic: If XHR and Page is explicitly set > 0? No, Page 0 can be paginated too.
+    # We differentiate by assuming the polling call does NOT send ?page=...
+    # But wait, request.args.get('page', 0) defaults to 0.
+    # explicit_page = request.args.get('page') is not None
+    
+    explicit_page = 'page' in request.args
+    
+    if is_xhr and explicit_page:
+        # Partial Render for seamless pagination
+        return render_template('_thread_list.html', 
+            results=results, 
+            task_id=task_id,
+            page_index=page,
+            target_name=task_meta.get('target_name', '')
+        )
+    
+    # Full Page Render (First load or Refresh or Polling completion)
     return render_template('result.html', 
-        results=data['results'], 
-        target_name=data['target_name'], 
-        count=data['count'],
-        target_time=f"{data['duration']:.2f} 秒",
-        date_range=data['date_range'],
-        debug_log=data['debug_log']
+        results=results, 
+        target_name=task_meta['target_name'], 
+        count=task_meta['count'],
+        # Calculate target_time if not present
+        target_time=f"{task_meta.get('duration', 0):.2f} 秒",
+        date_range=task_meta.get('date_range'),
+        debug_log=task_meta.get('debug_log', []),
+        
+        # Pagination Meta
+        task_id=task_id,
+        total_pages=task_meta.get('total_pages', 1),
+        current_page=page
     )

@@ -1,0 +1,255 @@
+/* Admin Thread View Styles */
+
+body {
+    background-color: #f5f7fa;
+    padding: 2rem;
+}
+
+.view-container {
+    max-width: 900px;
+    margin: 0 auto;
+}
+
+.header-actions {
+    margin-bottom: 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.btn-back {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: #64748b;
+    text-decoration: none;
+    font-weight: 500;
+    transition: color 0.2s;
+}
+
+.btn-back:hover {
+    color: #334155;
+}
+
+.view-title {
+    margin: 0;
+    font-size: 1.25rem;
+    color: #334155;
+}
+
+/* Reusing thread card styles but enforcing expansion */
+.thread-card {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    overflow: hidden;
+    display: block !important;
+}
+
+.thread-header {
+    background: #f8fafc;
+    padding: 1.5rem;
+    border-bottom: 1px solid #e2e8f0;
+    cursor: default !important;
+}
+
+.thread-header-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: start;
+}
+
+.thread-subtitle {
+    margin: 0 0 0.5rem 0;
+    font-size: 1.1rem;
+    color: #1e293b;
+}
+
+.thread-meta-info {
+    font-size: 0.9rem;
+    color: #64748b;
+}
+
+.thread-actions {
+    text-align: right;
+}
+
+.thread-id-container {
+    font-weight: 600;
+    color: #3b82f6;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+}
+
+.btn-pdf-sm {
+    text-decoration: none;
+    background: #667eea;
+    color: white;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    transition: opacity 0.2s;
+}
+
+.btn-pdf-sm:hover {
+    opacity: 0.9;
+}
+
+.thread-remark {
+    font-size: 0.9rem;
+    color: #64748b;
+    margin-top: 4px;
+}
+
+.thread-body {
+    display: block !important;
+    padding: 0;
+    max-height: none !important;
+}
+
+.messages {
+    padding: 1.5rem;
+}
+
+.message {
+    margin-bottom: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.message-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-size: 0.85rem;
+    color: #64748b;
+}
+
+.role-icon {
+    font-size: 1.25rem;
+}
+
+.role-name {
+    font-weight: 600;
+}
+
+.message-time {
+    font-weight: normal;
+    opacity: 0.7;
+}
+
+.message-content {
+    background: #fff;
+    padding: 1rem;
+    border-radius: 8px;
+    line-height: 1.6;
+    color: #334155;
+    overflow-x: auto;
+}
+
+.message.user .message-content {
+    background: #f1f5f9;
+}
+
+.message.assistant .message-content {
+    background: white;
+    border: 1px solid #e2e8f0;
+}
+
+/* Markdown Styles */
+.message-content img {
+    max-width: 100%;
+    border-radius: 6px;
+    margin: 0.5rem 0;
+}
+
+.message-content pre {
+    background: #1e293b;
+    color: #e2e8f0;
+    padding: 1rem;
+    border-radius: 6px;
+    overflow-x: auto;
+}
+
+.message-content code {
+    font-family: 'Consolas', monospace;
+}
+
+/* Download Modal CSS */
+#downloadModal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(5px);
+    z-index: 9999;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+}
+
+.modal-content {
+    background: white;
+    padding: 30px;
+    border-radius: 12px;
+    text-align: center;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+    animation: popIn 0.3s ease;
+}
+
+@keyframes popIn {
+    from {
+        transform: scale(0.9);
+        opacity: 0;
+    }
+
+    to {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+.loader {
+    border: 4px solid #f3f3f3;
+    border-top: 4px solid #667eea;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    animation: spin 1s linear infinite;
+    margin: 0 auto 20px;
+}
+
+@keyframes spin {
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+.btn-cancel {
+    background: #ff4757;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 600;
+    margin-top: 15px;
+    transition: background 0.2s;
+}
+
+.btn-cancel:hover {
+    background: #ff6b81;
+}

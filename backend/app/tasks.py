@@ -1,4 +1,4 @@
-from .extensions import huey
+from .extensions import huey, db
 from . import logic
 import logging
 import time
@@ -8,13 +8,13 @@ from huey import crontab # For periodic tasks
 # Ensure logger is configured for the worker
 logger = logging.getLogger('huey')
 
-@huey.task()
-def search_task(project_id, target_name, start_date, end_date, api_key, group_id, group_name, mode='quick'):
+@huey.task(context=True)
+def search_task(project_id, target_name, start_date, end_date, api_key, group_id, group_name, mode='quick', task=None):
     """
     Background task to process search request.
     mode: 'quick' (DB only) or 'fresh' (Sync API then DB)
     """
-    logger.info(f"Starting {mode} search task for project: {group_name}")
+    logger.info(f"Starting {mode} search task for project: {group_name}. Task ID: {task.id if task else 'Unknown'}")
     
     from .models import Project
     from . import create_app
@@ -40,57 +40,92 @@ def search_task(project_id, target_name, start_date, end_date, api_key, group_id
                 except Exception as e:
                      logger.error(f"Sync failed for {t.thread_id}: {e}")
 
-        # 2. Search Phase (SQL Optimized)
-        # Instead of iterating all threads in Python, we ask DB for matches.
-        matching_threads = logic.search_threads_sql(project_id, target_name, start_date, end_date)
+    # Chunking Logic
+    BATCH_SIZE = 50
+    current_batch = []
+    page_index = 0
+    total_count = 0
+    
+    from .models import SearchResultChunk
+    import json
+    
+    # 2. Search Phase
+    matching_threads = logic.search_threads_sql(project_id, target_name, start_date, end_date)
+    
+    # 3. Processing & Chunk Writing
+    for t in matching_threads:
+        # Re-use existing logic
+        res = logic.process_thread_from_db(t, target_name, start_date, end_date)
         
-        # 3. Format/Snippet Generation Phase
-        for t in matching_threads:
-            # Re-use existing logic to generate snippets/highlighting
-            res = logic.process_thread_from_db(t, target_name, start_date, end_date)
+        # Collect debug info (Careful with memory here too, keep it small?)
+        # debug_log.append(res) # If thousands, this is huge. Let's limit debug log.
+        if len(debug_log) < 100:
+             debug_log.append(res)
+        
+        if res.get('keep'):
+            res['data']['group_name'] = group_name
+            current_batch.append(res['data'])
+            total_count += 1
             
-            # Collect debug info
-            debug_log.append(res)
-            
-            if res.get('keep'):
-                res['data']['group_name'] = group_name
-                results.append(res['data'])
+            # Flush Batch
+            if len(current_batch) >= BATCH_SIZE:
+                chunk = SearchResultChunk(
+                    task_id=task.id, # Accessing Huey task ID from context
+                    page_index=page_index,
+                    data_json=json.dumps(current_batch),
+                    count=len(current_batch)
+                )
+                db.session.add(chunk)
+                db.session.commit()
+                
+                current_batch = []
+                page_index += 1
+                time.sleep(0.2) # Throttling
 
-        endTime = time.time()
-        duration = endTime - startTime
+    # Flush Final Batch
+    if current_batch:
+        chunk = SearchResultChunk(
+            task_id=task.id,
+            page_index=page_index,
+            data_json=json.dumps(current_batch),
+            count=len(current_batch)
+        )
+        db.session.add(chunk)
+        db.session.commit()
+    
+    endTime = time.time()
+    duration = endTime - startTime
+    
+    # Save Search History Log (simplified)
+    from datetime import datetime, timezone, timedelta
+    utc8 = timezone(timedelta(hours=8))
+    log_time = datetime.now(utc8)
+    
+    date_range_str = None
+    if start_date or end_date:
+        d_start = start_date if start_date else 'Any'
+        d_end = end_date if end_date else 'Any'
+        date_range_str = f"{d_start} ~ {d_end}"
         
-        # Sort results
-        results.sort(key=lambda x: x['timestamp'], reverse=True)
-        
-        # Save Search History Log
-        from datetime import datetime, timezone, timedelta
-        utc8 = timezone(timedelta(hours=8))
-        log_time = datetime.now(utc8)
-        
-        date_range_str = None
-        if start_date or end_date:
-            d_start = start_date if start_date else 'Any'
-            d_end = end_date if end_date else 'Any'
-            date_range_str = f"{d_start} ~ {d_end}"
-            
-        log_entry = {
-             'timestamp': int(log_time.timestamp()),
-             'time': log_time.strftime('%Y-%m-%d %H:%M:%S'),
-             'group': group_name,
-             'target': target_name,
-             'date_range': date_range_str,
-             'matches': len(results),
-             'total': len(threads),
-             'api_results': debug_log 
-        }
-        import database
-        database.save_log(log_entry)
+    log_entry = {
+            'timestamp': int(log_time.timestamp()),
+            'time': log_time.strftime('%Y-%m-%d %H:%M:%S'),
+            'group': group_name,
+            'target': target_name,
+            'date_range': date_range_str,
+            'matches': total_count,
+            'total': len(matching_threads),
+            'api_results': [] # Don't save details in log to save space
+    }
+    import database
+    database.save_log(log_entry)
 
     return {
-        'results': results,
+        'status': 'done',
+        'count': total_count,
+        'total_pages': page_index + (1 if current_batch else 0),
         'debug_log': debug_log,
         'duration': duration,
-        'count': len(results),
         'target_name': target_name,
         'date_range': date_range_str
     }

@@ -99,3 +99,12 @@ class IPBan(db.Model):
     ip = db.Column(db.String(45), primary_key=True)
     reason = db.Column(db.String(200))
     expires_at = db.Column(db.Float) # -1 for permanent, else unix timestamp
+
+class SearchResultChunk(db.Model):
+    __tablename__ = 'search_result_chunks'
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    task_id = db.Column(db.String(100), index=True) 
+    page_index = db.Column(db.Integer)
+    data_json = db.Column(db.Text) # JSON list of 50 threads
+    created_at = db.Column(db.Integer, default=lambda: int(datetime.now().timestamp()))
+

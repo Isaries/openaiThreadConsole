@@ -1,0 +1,42 @@
+{% if results|length == 0 %}
+<div class="no-result">
+    <div class="icon">😕</div>
+    <h3>找不到相關對話</h3>
+    <p>沒有找到包含 "{{ target_name }}" 的對話紀錄</p>
+</div>
+{% else %}
+{% for thread in results %}
+<div class="thread-card expanded" id="thread-{{ thread.thread_id }}">
+    <div class="thread-header" onclick="toggleThread(this)">
+        <div class="thread-title-group">
+            <h3>對話 #{{ loop.index + (page_index * 50) }}</h3>
+        </div>
+        <div class="thread-center-action">
+            <span class="toggle-icon">▼</span>
+        </div>
+        <div class="thread-meta">
+            <span class="thread-time">📅 {{ thread.time }}</span>
+            <span class="thread-id" style="margin-bottom: 5px;">ID: {{ thread.thread_id }}</span>
+            <a href="/download/pdf/{{ thread.thread_id }}" onclick="event.stopPropagation()"
+                class="btn-pdf btn-thread-pdf">
+                📄 PDF
+            </a>
+        </div>
+    </div>
+    <div class="thread-body">
+        <div class="messages">
+            {% for msg in thread.messages %}
+            <div class="message {{ msg.role_class }}">
+                <div class="message-header">
+                    <span class="role-name">{{ msg.time }}</span>
+                    <span class="role-icon">{{ msg.role_icon }}</span>
+                    <span class="role-name">{{ msg.role_name }}</span>
+                </div>
+                <div class="message-content">{{ msg.content | trim | render_images | sanitize_html }}</div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endfor %}
+{% endif %}
