@@ -205,6 +205,7 @@
         }
 
         function checkSelectionState() {
+            // console.log('checkSelectionState triggered'); 
             const checkboxes = document.querySelectorAll('.thread-checkbox');
             let checkedCount = 0;
             let allChecked = true;
@@ -218,6 +219,7 @@
                     allChecked = false;
                 }
             }
+            // console.log(`Checked: ${checkedCount}/${checkboxes.length}`);
 
             // Master Checkbox Sync
             const master = document.getElementById('masterCheckbox');
@@ -232,9 +234,13 @@
                 countDisplay.textContent = checkedCount;
                 if (checkedCount > 0) {
                     sheet.classList.add('active');
+                    // console.log('Sheet activated');
                 } else {
                     sheet.classList.remove('active');
+                    // console.log('Sheet deactivated');
                 }
+            } else {
+                console.warn('Bottom Sheet elements missing in DOM');
             }
 
             // Update Mobile Select Button Text
