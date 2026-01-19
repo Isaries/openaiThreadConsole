@@ -47,6 +47,12 @@
             </div>
 
             <div class="btn-group">
+                <!-- Mobile Select All Trigger (Persistent) -->
+                <button type="button" class="btn btn-outline-secondary btn-sm mobile-only"
+                    onclick="window.toggleAllMobile(this)" title="全選/取消全選">
+                    ☑ 全選
+                </button>
+
                 <button type="submit" form="deleteMultiForm" formaction="/admin/threads/export" formmethod="POST"
                     formtarget="_blank" class="btn btn-secondary btn-sm desktop-only" title="匯出完整 Excel (不受搜尋影響)">
                     📥 匯出 (完整)
