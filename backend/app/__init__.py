@@ -49,7 +49,7 @@ def create_app():
         'style-src': ["'self'", "'unsafe-inline'", "https://cdnjs.cloudflare.com", "https://fonts.googleapis.com", "https://cdn.jsdelivr.net"],
         'font-src': ["'self'", "https://cdnjs.cloudflare.com", "https://fonts.gstatic.com"],
         'img-src': ["*"],
-        'connect-src': ["'self'", "https://cdnjs.cloudflare.com"]
+        'connect-src': ["'self'", "https://cdnjs.cloudflare.com", "https://cdn.jsdelivr.net"]
     }
     Talisman(app, content_security_policy=csp, force_https=False)
     
