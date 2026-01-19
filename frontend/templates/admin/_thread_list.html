@@ -196,6 +196,7 @@
         }
 
         window.toggleAllMobile = function (btn) {
+            alert('Debug: Mobile Select Clicked'); // Emergency Debug check
             // Prevent event bubbling
             if (window.event) {
                 window.event.stopPropagation();
@@ -230,8 +231,9 @@
 
             // UI Feedback
             if (btn) {
-                // btn.innerHTML = newState ? "☑ 已全選" : "☐ 全選";
-                // setTimeout(() => { btn.innerHTML = originalText; }, 1000); 
+                const originalText = "☑ 全選";
+                btn.innerHTML = newState ? "☑ 已全選" : "☐ 全選";
+                setTimeout(() => { btn.innerHTML = originalText; }, 1000);
             }
         }
 
