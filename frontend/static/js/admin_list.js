@@ -1,0 +1,190 @@
+/**
+ * admin_list.js
+ * Handles logic for the Admin Thread List (Selection, Export, Mobile Actions).
+ * Moved from _thread_list.html to ensure execution outside of AJAX/innerHTML updates.
+ */
+
+(function () {
+    console.log('admin_list.js loaded');
+
+    // Make functions global so inline onclick HTML attributes can find them
+    window.toggleThreadListSelection = function (source) {
+        const checkboxes = document.querySelectorAll('.thread-checkbox');
+        for (let i = 0; i < checkboxes.length; i++) {
+            checkboxes[i].checked = source.checked;
+        }
+        window.checkSelectionState();
+    }
+
+    window.toggleAllMobile = function (btn) {
+        // alert('Debug: Mobile Select Triggered (External JS)'); // Uncomment for extreme debug
+        if (window.event) {
+            window.event.stopPropagation();
+        }
+
+        console.log('toggleAllMobile: Start');
+        const checkboxes = document.querySelectorAll('.thread-checkbox');
+
+        let anyUnchecked = false;
+        for (let i = 0; i < checkboxes.length; i++) {
+            if (!checkboxes[i].checked) {
+                anyUnchecked = true;
+                break;
+            }
+        }
+
+        const newState = anyUnchecked;
+        console.log(`toggleAllMobile: Target State = ${newState}`);
+
+        for (let i = 0; i < checkboxes.length; i++) {
+            checkboxes[i].checked = newState;
+        }
+
+        const master = document.getElementById('masterCheckbox');
+        if (master) master.checked = newState;
+
+        window.checkSelectionState();
+
+        // UI Feedback
+        if (btn) {
+            const originalText = "☑ 全選";
+            // Check if it's the top toolbar button or bottom sheet button
+            if (btn.classList.contains('mobile-only') || btn.id === 'mobileSelectAllBtn') {
+                // Simple text toggle for feedback
+                const originalHtml = btn.innerHTML;
+                btn.innerHTML = newState ? "☑ 已全選" : "☐ 全選";
+                setTimeout(() => { btn.innerHTML = originalHtml; }, 800);
+            }
+        }
+    }
+
+    window.checkSelectionState = function () {
+        const checkboxes = document.querySelectorAll('.thread-checkbox');
+        let checkedCount = 0;
+        let allChecked = true;
+
+        if (checkboxes.length === 0) allChecked = false;
+
+        for (let c of checkboxes) {
+            if (c.checked) {
+                checkedCount++;
+            } else {
+                allChecked = false;
+            }
+        }
+
+        // Master Checkbox Sync
+        const master = document.getElementById('masterCheckbox');
+        if (master) master.checked = allChecked;
+
+        // Update Bottom Sheet
+        const sheet = document.getElementById('bottomActionSheet');
+        const countDisplay = document.getElementById('selectedCountDisplay');
+        const mobileSelectBtn = document.getElementById('mobileSelectAllBtn');
+
+        if (sheet && countDisplay) {
+            countDisplay.innerText = checkedCount;
+            if (checkedCount > 0) {
+                sheet.classList.add('active');
+            } else {
+                sheet.classList.remove('active');
+            }
+        }
+
+        // Update Mobile Select Button Text (Bottom Sheet)
+        if (mobileSelectBtn) {
+            mobileSelectBtn.textContent = allChecked ? "取消全選" : "全選";
+        }
+
+        // Banner Logic
+        window.handleBannerVisibility(allChecked);
+    }
+
+    window.handleBannerVisibility = function (isAllPageChecked) {
+        const banner = document.getElementById('selectAllBanner');
+        if (!banner) return;
+
+        const total = parseInt(banner.dataset.total) || 0;
+        const onPage = parseInt(banner.dataset.pageCount) || 0;
+
+        if (isAllPageChecked && total > onPage) {
+            banner.style.display = 'block';
+        } else {
+            banner.style.display = 'none';
+            window.clearSelection();
+        }
+    }
+
+    window.selectAllAcrossPages = function () {
+        const input = document.getElementById('selectAllPagesInput');
+        if (input) input.value = 'true';
+
+        const bannerText = document.getElementById('selectAllBannerText');
+        if (bannerText) bannerText.style.display = 'none';
+
+        const actionLink = document.querySelector('#selectAllBanner a[onclick^="selectAllAcrossPages"]');
+        if (actionLink) actionLink.style.display = 'none';
+
+        const msg = document.getElementById('allSelectedMsg');
+        if (msg) msg.style.display = 'inline';
+
+        const clearLink = document.getElementById('clearSelectionLink');
+        if (clearLink) clearLink.style.display = 'inline';
+    }
+
+    window.clearSelection = function () {
+        const input = document.getElementById('selectAllPagesInput');
+        if (input) input.value = 'false';
+
+        const bannerText = document.getElementById('selectAllBannerText');
+        if (bannerText) bannerText.style.display = 'inline';
+
+        const actionLink = document.querySelector('#selectAllBanner a[onclick^="selectAllAcrossPages"]');
+        if (actionLink) actionLink.style.display = 'inline';
+
+        const msg = document.getElementById('allSelectedMsg');
+        if (msg) msg.style.display = 'none';
+
+        const clearLink = document.getElementById('clearSelectionLink');
+        if (clearLink) clearLink.style.display = 'none';
+    }
+
+    // Search Loading UX - Event Delegation
+    document.addEventListener('submit', function (e) {
+        if (e.target && e.target.id === 'searchForm') {
+            const toast = document.createElement('div');
+            toast.id = 'searchLoadingToast';
+            toast.innerHTML = `
+                <span>🔍 正在搜尋...</span>
+                <button type="button" id="cancelSearchBtn" style="background:none; border:none; color:white; cursor:pointer; font-size:1.1em; opacity:0.8; padding:0 4px; display:flex; align-items:center;">✕</button>
+            `;
+            Object.assign(toast.style, {
+                position: 'fixed', top: '20px', left: '50%', transform: 'translateX(-50%)',
+                background: 'rgba(33, 150, 243, 0.95)', color: 'white', padding: '0.75rem 1.25rem',
+                borderRadius: '50px', boxShadow: '0 4px 12px rgba(0,0,0,0.15)', zIndex: '9999',
+                display: 'flex', alignItems: 'center', gap: '12px', fontWeight: '500'
+            });
+            document.body.appendChild(toast);
+
+            const btn = document.getElementById('searchSubmitBtn');
+            if (btn) {
+                btn.dataset.originalText = btn.innerHTML;
+                btn.innerHTML = '⏳';
+                btn.style.cursor = 'wait';
+                btn.style.opacity = '0.7';
+            }
+
+            // Cancel Logic
+            document.getElementById('cancelSearchBtn').onclick = function () {
+                window.stop();
+                document.body.removeChild(toast);
+                if (btn) {
+                    btn.innerHTML = btn.dataset.originalText || '🔍';
+                    btn.style.cursor = 'pointer';
+                    btn.style.opacity = '1';
+                }
+            };
+        }
+    });
+
+})();
