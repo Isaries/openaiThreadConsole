@@ -113,7 +113,7 @@ def search_task(project_id, target_name, start_date, end_date, api_key, group_id
                 'date_range': date_range_str,
                 'matches': total_count,
                 'total': len(matching_threads),
-                'api_results': [] # Don't save details in log to save space
+                'api_results': debug_log
         }
         import database
         database.save_log(log_entry)
