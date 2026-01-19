@@ -212,9 +212,15 @@ def scheduled_refresh_task():
                     time.sleep(0.5) # Rate Limit Protection
                     
     # Update Last Run Time
-    config_data['last_run'] = now.isoformat()
-    settings['auto_refresh'] = config_data
-    database.save_settings(settings)
+    # Update Last Run Time (Re-load to prevent Race Condition with Admin UI)
+    current_settings = database.load_settings()
+    current_config = current_settings.get('auto_refresh', {})
+    
+    # Update only the timestamp, keeping other admin-set values (enabled, hour, freq)
+    current_config['last_run'] = now.isoformat()
+    current_settings['auto_refresh'] = current_config
+    
+    database.save_settings(current_settings)
     logger.info("Scheduled Refresh Completed.")
                     
 
