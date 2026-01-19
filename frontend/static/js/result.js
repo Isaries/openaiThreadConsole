@@ -21,11 +21,12 @@ window.toggleThread = function (headerElement) {
     }
 }
 
-/**
- * Change Page
- * Called via onclick in HTML
- */
+// Global State
+let isLoading = false;
+
 window.changePage = async function (delta) {
+    if (isLoading) return; // Prevent double clicks
+
     const config = getConfig();
     const totalPages = config.totalPages || 1;
 
@@ -60,6 +61,12 @@ function getSkeletonHTML() {
  * Load Page Data via AJAX
  */
 async function loadPage(pageIndex) {
+    if (isLoading) return;
+    isLoading = true;
+
+    // Disable Inputs
+    setToolbarState(false);
+
     const config = getConfig();
     const taskId = config.taskId;
 
@@ -70,8 +77,10 @@ async function loadPage(pageIndex) {
         container.innerHTML = getSkeletonHTML();
 
         // Scroll to top to make it obvious
-        const header = document.querySelector('.header');
-        if (header) header.scrollIntoView({ behavior: 'smooth' });
+        // const header = document.querySelector('.header');
+        // if (header) header.scrollIntoView({ behavior: 'smooth' });
+        // Use scroll to top of body instead for better feel on mobile
+        window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
     try {
@@ -104,7 +113,18 @@ async function loadPage(pageIndex) {
         }
     } warning: {
         // No opacity cleanup needed anymore
+    } finally {
+        isLoading = false;
+        setToolbarState(true);
     }
+}
+
+function setToolbarState(enabled) {
+    const btns = document.querySelectorAll('.toolbar-btn');
+    const input = document.getElementById('pageInput');
+
+    btns.forEach(b => b.disabled = !enabled);
+    if (input) input.disabled = !enabled;
 }
 
 function updatePaginationUI() {
