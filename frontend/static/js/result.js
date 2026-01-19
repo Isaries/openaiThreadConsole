@@ -111,8 +111,6 @@ async function loadPage(pageIndex) {
                 </div>
             `;
         }
-    } warning: {
-        // No opacity cleanup needed anymore
     } finally {
         isLoading = false;
         setToolbarState(true);
