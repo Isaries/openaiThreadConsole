@@ -249,47 +249,99 @@ mark {
     border: 1px solid #e9ecef;
 }
 
-.back-btn-container {
+pointer-events: none;
+/* Container doesn't block clicks */
+}
+
+/* New Unified Floating Toolbar */
+.floating-toolbar {
     position: fixed;
-    bottom: 30px;
+    bottom: 20px;
     left: 50%;
     transform: translateX(-50%);
-    z-index: 998;
-    margin: 0;
-    text-align: center;
-    width: auto;
-    pointer-events: none;
-    /* Container doesn't block clicks */
-}
+    z-index: 1000;
 
-.back-button {
-    display: inline-flex;
+    display: flex;
     align-items: center;
-    justify-content: center;
-    background: #667eea;
-    color: white;
-    padding: 12px 28px;
-    text-decoration: none;
+    gap: 15px;
+    padding: 10px 20px;
+
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.4);
     border-radius: 50px;
-    font-weight: 600;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    box-shadow: 0 4px 20px rgba(102, 126, 234, 0.4);
-    border: 2px solid rgba(255, 255, 255, 0.2);
-    backdrop-filter: blur(5px);
-    pointer-events: auto;
-    /* Button captures clicks */
 }
 
-.back-button:hover {
-    transform: translateY(-2px) scale(1.05);
-    box-shadow: 0 8px 25px rgba(102, 126, 234, 0.5);
+.floating-toolbar:hover {
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
+    transform: translateX(-50%) translateY(-2px);
+    background: rgba(255, 255, 255, 0.95);
+}
+
+/* Toolbar Buttons */
+.toolbar-btn {
+    background: transparent;
+    border: none;
+    color: #444;
+    font-weight: 600;
+    font-size: 14px;
+    padding: 8px 12px;
+    border-radius: 20px;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    white-space: nowrap;
+}
+
+.toolbar-btn:hover:not(:disabled) {
+    background: rgba(0, 0, 0, 0.05);
+    color: var(--primary, #667eea);
+}
+
+.toolbar-btn:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+}
+
+/* Primary Action in Toolbar (Back to Search) */
+.toolbar-btn.primary {
+    background: var(--primary, #667eea);
+    color: white;
+    padding: 8px 16px;
+    box-shadow: 0 2px 10px rgba(102, 126, 234, 0.3);
+}
+
+.toolbar-btn.primary:hover {
     background: #5a6fd6;
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+    transform: translateY(-1px);
+}
+
+.toolbar-info {
+    font-size: 13px;
+    color: #666;
+    font-weight: 600;
+    min-width: 80px;
+    text-align: center;
+    user-select: none;
+}
+
+/* Deprecated: Old Back Button (Keep CSS for safety but hide if used) */
+.back-button {
+    display: none !important;
 }
 
 .scroll-top-btn {
     position: fixed;
-    bottom: 30px;
-    right: 30px;
+    bottom: 90px;
+    /* Moved up to avoid toolbar */
+    right: 20px;
     width: 50px;
     height: 50px;
     background: #667eea;

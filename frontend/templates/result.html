@@ -58,21 +58,32 @@
             {% include '_thread_list.html' %}
         </div>
 
-        <!-- Pagination Controls -->
-        {% if total_pages > 1 %}
-        <div class="pagination-controls"
-            style="display: flex; justify-content: center; align-items: center; gap: 15px; margin-top: 30px; margin-bottom: 50px;">
-            <button id="prevBtn" onclick="changePage(-1)" class="page-btn" disabled>« 上一頁</button>
-            <span id="pageInfo" style="font-weight: bold; color: #555;">第 1 頁 / 共 {{ total_pages }} 頁</span>
-            <button id="nextBtn" onclick="changePage(1)" class="page-btn" {% if total_pages <=1 %}disabled{% endif
-                %}>下一頁 »</button>
-        </div>
-        {% endif %}
+        <!-- Pagination (Hidden from flow, moved to floating toolbar) -->
+        <div style="height: 100px;"></div> <!-- Spacer for toolbar -->
 
         <!-- End Form Replacement -->
 
-        <div class="back-btn-container">
-            <a href="/" class="back-button">← 返回搜尋</a>
+        <!-- Floating Toolbar (Pagination + Back) -->
+        <div class="floating-toolbar">
+            <a href="/" class="toolbar-btn primary">
+                <span>🔍</span> 返回搜尋
+            </a>
+
+            <div style="width: 1px; height: 20px; background: #ddd; margin: 0 5px;"></div>
+
+            <button id="prevBtn" onclick="changePage(-1)" class="toolbar-btn" {% if current_page==0 %}disabled{% endif
+                %}>
+                « 上頁
+            </button>
+
+            <span id="pageInfo" class="toolbar-info">
+                {{ current_page + 1 }} / {{ total_pages }}
+            </span>
+
+            <button id="nextBtn" onclick="changePage(1)" class="toolbar-btn" {% if current_page>= total_pages - 1
+                %}disabled{% endif %}>
+                下頁 »
+            </button>
         </div>
     </div>
 

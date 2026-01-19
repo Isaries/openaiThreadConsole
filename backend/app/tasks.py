@@ -41,7 +41,7 @@ def search_task(project_id, target_name, start_date, end_date, api_key, group_id
                      logger.error(f"Sync failed for {t.thread_id}: {e}")
 
         # Chunking Logic
-        BATCH_SIZE = 50
+        BATCH_SIZE = 10
         current_batch = []
         page_index = 0
         total_count = 0
