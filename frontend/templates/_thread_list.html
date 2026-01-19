@@ -8,9 +8,7 @@
 {% for thread in results %}
 <div class="thread-card expanded" id="thread-{{ thread.thread_id }}">
     <div class="thread-header" onclick="toggleThread(this)">
-        <div class="thread-title-group">
-            <h3>對話 #{{ loop.index + (page_index * 50) }}</h3>
-        </div>
+        <h3>對話 #{{ loop.index + (page_index * 10) }}</h3>
         <div class="thread-center-action">
             <span class="toggle-icon">▼</span>
         </div>
