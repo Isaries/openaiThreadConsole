@@ -100,6 +100,11 @@ def download_pdf(thread_id):
 
 @files_bp.route('/file/<file_id>')
 def proxy_file(file_id):
+    # Security: Validate file_id format (OpenAI files usually start with file-)
+    import re
+    if not re.match(r'^file-[A-Za-z0-9]+$', file_id):
+        return "Invalid File ID format", 400
+        
     group_id = request.args.get('group_id')
     if not group_id: return "Missing group_id", 400
     
@@ -129,5 +134,8 @@ def proxy_file(file_id):
                    if name.lower() not in excluded_headers]
                    
         return Response(resp.content, resp.status_code, headers)
+    except requests.exceptions.Timeout:
+        return "OpenAI Request Timeout", 504
     except Exception as e:
-        return f"Proxy Error: {str(e)}", 500
+        current_app.logger.error(f"Proxy Error for {file_id}: {e}")
+        return "Internal Proxy Error", 500

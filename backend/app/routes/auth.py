@@ -18,10 +18,6 @@ def login():
             flash(f'嘗試次數過多，請於 {int(time_left)} 秒後再試。', 'error')
             return render_template('login.html')
 
-        if is_locked:
-            flash(f'嘗試次數過多，請於 {int(time_left)} 秒後再試。', 'error')
-            return render_template('login.html')
-
         username = request.form.get('username')
         password = request.form.get('password')
         
