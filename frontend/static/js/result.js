@@ -36,6 +36,27 @@ window.changePage = async function (delta) {
 }
 
 /**
+ * Helper: Generate Skeleton HTML
+ */
+function getSkeletonHTML() {
+    let html = '';
+    // Generate 5 items to mimic a page load
+    for (let i = 0; i < 5; i++) {
+        html += `
+        <div class="skeleton-card">
+            <div class="skeleton-left">
+                <div class="skeleton-loading skeleton-title"></div>
+            </div>
+            <div class="skeleton-right">
+                <div class="skeleton-loading skeleton-meta-line"></div>
+                <div class="skeleton-loading skeleton-meta-line" style="width: 80px;"></div>
+            </div>
+        </div>`;
+    }
+    return html;
+}
+
+/**
  * Load Page Data via AJAX
  */
 async function loadPage(pageIndex) {
@@ -43,7 +64,15 @@ async function loadPage(pageIndex) {
     const taskId = config.taskId;
 
     const container = document.getElementById('thread-list-container');
-    if (container) container.style.opacity = '0.5';
+
+    // UX Improvement: Inject Skeleton immediately
+    if (container) {
+        container.innerHTML = getSkeletonHTML();
+
+        // Scroll to top to make it obvious
+        const header = document.querySelector('.header');
+        if (header) header.scrollIntoView({ behavior: 'smooth' });
+    }
 
     try {
         const response = await fetch(`/search/result/${taskId}?page=${pageIndex}`, {
@@ -58,18 +87,16 @@ async function loadPage(pageIndex) {
         currentPage = pageIndex;
         updatePaginationUI();
 
-        // Scroll to top of list
-        const header = document.querySelector('.header');
-        if (header) header.scrollIntoView({ behavior: 'smooth' });
-
         // Re-attach listeners for new elements
         if (window.attachPdfListeners) window.attachPdfListeners();
 
     } catch (err) {
         alert("載入失敗，請重試");
         console.error(err);
+        // On error, maybe restore old content? Hard to do without keeping state.
+        // For now, user can just try clicking again.
     } finally {
-        if (container) container.style.opacity = '1';
+        // No opacity cleanup needed anymore
     }
 }
 
