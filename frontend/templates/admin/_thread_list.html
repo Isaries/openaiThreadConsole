@@ -53,15 +53,35 @@
                 </button>
                 <button type="submit" form="deleteMultiForm" formaction="/admin/threads/refresh" formmethod="POST"
                     class="btn btn-primary btn-sm" title="更新快取">
-                    🔄 更新
+                    🔄
+                    <span class="desktop-only" style="display:inline;">更新</span>
                 </button>
-                <button type="button" class="btn btn-secondary btn-sm mobile-only" data-action="select"
-                    onclick="toggleAllMobile(this)">
-                    全選
-                </button>
-                <button type="submit" form="deleteMultiForm" class="btn btn-danger btn-sm"
+
+                <!-- Mobile Actions are now in Bottom Sheet -->
+                <!-- Desktop Delete Button -->
+                <button type="submit" form="deleteMultiForm" class="btn btn-danger btn-sm desktop-only"
                     onclick="return confirm('確定刪除選取項目？')">
                     刪除選取
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mobile Bottom Action Sheet -->
+    <div id="bottomActionSheet" class="bottom-action-sheet mobile-only">
+        <div class="sheet-content">
+            <div class="selected-count">
+                <span id="selectedCountDisplay">0</span>
+                <span class="text-xs" style="opacity:0.8; margin-left:2px;">筆已選取</span>
+            </div>
+            <div class="sheet-actions">
+                <button type="button" class="btn btn-secondary btn-sm" onclick="toggleAllMobile(this)"
+                    id="mobileSelectAllBtn">全選</button>
+                <button type="submit" form="deleteMultiForm" formaction="/admin/threads/export" formmethod="POST"
+                    formtarget="_blank" class="btn btn-secondary btn-sm" title="匯出">📥</button>
+                <button type="submit" form="deleteMultiForm" class="btn btn-danger btn-sm"
+                    onclick="return confirm('確定刪除選取項目？')">
+                    🗑️ 刪除
                 </button>
             </div>
         </div>
@@ -165,36 +185,65 @@
             for (let i = 0; i < checkboxes.length; i++) {
                 checkboxes[i].checked = source.checked;
             }
-            handleBannerVisibility(source.checked);
+            checkSelectionState(); // Unified state check
         }
 
         function toggleAllMobile(btn) {
             const checkboxes = document.querySelectorAll('.thread-checkbox');
-            let allChecked = true;
-            for (let c of checkboxes) { if (!c.checked) allChecked = false; }
+            // Logic: If any is unchecked, check all. If all checked, uncheck all.
+            let anyUnchecked = false;
+            for (let c of checkboxes) { if (!c.checked) anyUnchecked = true; }
 
-            const newState = !allChecked;
+            const newState = anyUnchecked; // True means "Select All", False means "Deselect All"
+
             for (let c of checkboxes) { c.checked = newState; }
 
             const master = document.getElementById('masterCheckbox');
             if (master) master.checked = newState;
 
-            handleBannerVisibility(newState);
+            checkSelectionState(); // Unified state check
         }
 
         function checkSelectionState() {
             const checkboxes = document.querySelectorAll('.thread-checkbox');
+            let checkedCount = 0;
             let allChecked = true;
-            for (let c of checkboxes) { if (!c.checked) allChecked = false; }
 
+            if (checkboxes.length === 0) allChecked = false;
+
+            for (let c of checkboxes) {
+                if (c.checked) {
+                    checkedCount++;
+                } else {
+                    allChecked = false;
+                }
+            }
+
+            // Master Checkbox Sync
             const master = document.getElementById('masterCheckbox');
             if (master) master.checked = allChecked;
 
-            if (!allChecked) {
-                clearSelection();
-            } else {
-                handleBannerVisibility(true);
+            // Update Bottom Sheet
+            const sheet = document.getElementById('bottomActionSheet');
+            const countDisplay = document.getElementById('selectedCountDisplay');
+            const mobileSelectBtn = document.getElementById('mobileSelectAllBtn');
+
+            if (sheet && countDisplay) {
+                countDisplay.textContent = checkedCount;
+                if (checkedCount > 0) {
+                    sheet.classList.add('active');
+                } else {
+                    sheet.classList.remove('active');
+                }
             }
+
+            // Update Mobile Select Button Text
+            if (mobileSelectBtn) {
+                mobileSelectBtn.textContent = allChecked ? "取消全選" : "全選";
+            }
+
+            // Banner Logic
+            handleBannerVisibility(allChecked);
         }
 
         function handleBannerVisibility(isAllPageChecked) {
@@ -215,6 +264,7 @@
         function selectAllAcrossPages() {
             document.getElementById('selectAllPagesInput').value = 'true';
             document.getElementById('selectAllBannerText').style.display = 'none';
+
             document.querySelector('#selectAllBanner a[onclick^="selectAllAcrossPages"]').style.display = 'none';
             document.getElementById('allSelectedMsg').style.display = 'inline';
             document.getElementById('clearSelectionLink').style.display = 'inline';
