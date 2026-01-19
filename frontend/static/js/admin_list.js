@@ -17,12 +17,10 @@
     }
 
     window.toggleAllMobile = function (btn) {
-        // alert('Debug: Mobile Select Triggered (External JS)'); // Uncomment for extreme debug
         if (window.event) {
             window.event.stopPropagation();
         }
 
-        console.log('toggleAllMobile: Start');
         const checkboxes = document.querySelectorAll('.thread-checkbox');
 
         let anyUnchecked = false;
@@ -34,7 +32,6 @@
         }
 
         const newState = anyUnchecked;
-        console.log(`toggleAllMobile: Target State = ${newState}`);
 
         for (let i = 0; i < checkboxes.length; i++) {
             checkboxes[i].checked = newState;
