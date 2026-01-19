@@ -101,13 +101,21 @@
         const banner = document.getElementById('selectAllBanner');
         if (!banner) return;
 
-        const total = parseInt(banner.dataset.total) || 0;
-        const onPage = parseInt(banner.dataset.pageCount) || 0;
+        // Use getAttribute for robustness
+        const totalStr = banner.getAttribute('data-total');
+        const countStr = banner.getAttribute('data-page-count');
+
+        const total = parseInt(totalStr, 10) || 0;
+        const onPage = parseInt(countStr, 10) || 0;
+
+        console.log(`[SelectAll] AllChecked: ${isAllPageChecked}, Total: ${total}, OnPage: ${onPage}`);
 
         if (isAllPageChecked && total > onPage) {
             banner.style.display = 'block';
         } else {
             banner.style.display = 'none';
+            // Only clear selection if we are hiding the banner AND the user hasn't explicitly activated "Select All Pages" mode?
+            // Actually, if they uncheck one item, isAllPageChecked becomes false -> banner hides -> selection clears. Correct.
             window.clearSelection();
         }
     }
