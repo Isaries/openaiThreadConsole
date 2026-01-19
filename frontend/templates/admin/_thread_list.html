@@ -54,11 +54,11 @@
                 </button>
 
                 <button type="submit" form="deleteMultiForm" formaction="/admin/threads/export" formmethod="POST"
-                    formtarget="_blank" class="btn btn-secondary btn-sm desktop-only" title="匯出完整 Excel (不受搜尋影響)">
-                    📥 匯出 (完整)
+                    formtarget="_blank" class="btn btn-secondary btn-sm" title="匯出完整 Excel (不受搜尋影響)">
+                    📥 匯出
                 </button>
                 <button type="submit" form="deleteMultiForm" formaction="/admin/threads/refresh" formmethod="POST"
-                    class="btn btn-primary btn-sm" title="更新快取">
+                    class="btn btn-primary btn-sm desktop-only" title="更新快取">
                     🔄
                     <span class="desktop-only" style="display:inline;">更新</span>
                 </button>
@@ -85,6 +85,11 @@
                     id="mobileSelectAllBtn">全選</button>
                 <button type="submit" form="deleteMultiForm" formaction="/admin/threads/export" formmethod="POST"
                     formtarget="_blank" class="btn btn-secondary btn-sm" title="匯出">📥</button>
+                <!-- Refresh moved to bottom sheet -->
+                <button type="submit" form="deleteMultiForm" formaction="/admin/threads/refresh" formmethod="POST"
+                    class="btn btn-secondary btn-sm" onclick="return confirm('確定更新選取項目的快取？')" title="更新">
+                    🔄
+                </button>
                 <button type="submit" form="deleteMultiForm" class="btn btn-danger btn-sm"
                     onclick="return confirm('確定刪除選取項目？')">
                     🗑️ 刪除
