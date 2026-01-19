@@ -596,7 +596,36 @@ def export_excel():
          
     from ..services import excel_service
     try:
-        return excel_service.generate_excel_export(project.id, project.name)
+        # Handle Filtering Logic (Match Review/Refresh logic)
+        select_all_pages = request.form.get('select_all_pages') == 'true'
+        search_q = request.form.get('search_q', '').strip()
+        filtered_ids = None
+        
+        if not select_all_pages:
+             # If not selecting all pages, check for specific selections
+             ids = request.form.getlist('selected_ids')
+             # Fallback for single (if any)
+             if not ids and request.form.get('thread_id'):
+                 ids = [request.form.get('thread_id')]
+             
+             if ids:
+                 filtered_ids = ids
+        
+        # If select_all_pages is True, we pass search_q to service to filter everything matching search
+        # If select_all_pages is False but no IDs, it exports EVERYTHING (default behavior if nothing selected?)
+        # UX Decision: If user clicks Export without selecting anything, usually implies "Export All Current View" or "Export All".
+        # Current UI logic: 
+        # - Top Toolbar Export: Outside of form? No, it's form="deleteMultiForm".
+        # - If nothing selected, form submission sends empty selected_ids and select_all_pages=false.
+        # - In that case, we should probably Export All (Project Backup behavior).
+        
+        # Pass filters to service
+        return excel_service.generate_excel_export(
+            project.id, 
+            project.name, 
+            filtered_ids=filtered_ids, 
+            search_q=search_q if select_all_pages else None
+        )
     except Exception as e:
         flash(f'Export Failed: {e}', 'error')
         return redirect(url_for('admin.index', group_id=group_id))

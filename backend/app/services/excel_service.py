@@ -125,12 +125,26 @@ def process_import_data(project_id, thread_data_map, action='add'):
         db.session.rollback()
         return {'error': str(e)}
 
-def generate_excel_export(project_id, project_name):
+def generate_excel_export(project_id, project_name, filtered_ids=None, search_q=None):
     """
     Generates an Excel file for the threads of a project.
+    Supports filtering by specific IDs or search query.
     """
     try:
-        threads = Thread.query.filter_by(project_id=project_id).all()
+        query = Thread.query.filter_by(project_id=project_id)
+        
+        # Priority 1: Specific IDs (Selection)
+        if filtered_ids:
+             query = query.filter(Thread.thread_id.in_(filtered_ids))
+        
+        # Priority 2: Search Query (Select All pages with filter)
+        elif search_q:
+             query = query.filter(
+                (Thread.thread_id.contains(search_q)) | 
+                (Thread.remark.contains(search_q))
+             )
+             
+        threads = query.all()
         data = []
         for t in threads:
             data.append({
