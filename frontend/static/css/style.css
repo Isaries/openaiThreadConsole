@@ -768,6 +768,11 @@ tr:hover {
         /* Prevent iOS zoom */
     }
 
+    /* Prevent bottom sheet from covering content */
+    body {
+        padding-bottom: 80px;
+    }
+
     .thread-toolbar .btn-group {
         display: flex;
         width: 100%;
