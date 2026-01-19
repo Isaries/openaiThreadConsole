@@ -120,7 +120,7 @@ def check_ban(ip):
         return False, "", 0
         
     ban_info = bans[ip]
-    until = ban_info.get('until')
+    until = ban_info.get('expires_at')
     
     # If until is 0 or -1, it means permanent
     if until <= 0:
@@ -145,7 +145,7 @@ def ban_ip(ip, duration_seconds, reason="Admin Ban"):
         until = time.time() + duration_seconds
         
     bans[ip] = {
-        'until': until,
+        'expires_at': until,
         'reason': reason,
         'created_at': time.time()
     }
