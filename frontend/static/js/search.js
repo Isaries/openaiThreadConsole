@@ -8,6 +8,84 @@ document.addEventListener('DOMContentLoaded', () => {
     const dateInfo = document.getElementById('dateInfo');
     const errorMessage = document.getElementById('errorMessage');
 
+    // --- Captcha Logic ---
+    const modeRefresh = document.getElementById('modeRefresh');
+    const captchaContainer = document.getElementById('captchaContainer');
+    const captchaImg = document.getElementById('captchaImg');
+    const captchaInput = document.getElementById('captchaInput');
+    const toggleBtn = document.getElementById('toggleCaptchaMode');
+
+    let captchaMode = 'normal'; // 'normal' or 'math'
+
+    // Inject hidden input for UUID
+    let captchaUidInput = document.createElement('input');
+    captchaUidInput.type = 'hidden';
+    captchaUidInput.name = 'captcha_uid';
+    if (form) form.appendChild(captchaUidInput);
+
+    // Simple UUID Generator
+    function generateUUID() {
+        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+            var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+            return v.toString(16);
+        });
+    }
+
+    window.refreshCaptcha = function () {
+        if (!captchaImg) return;
+        const timestamp = new Date().getTime();
+        const uid = generateUUID();
+        captchaUidInput.value = uid;
+        captchaImg.src = `/captcha?type=${captchaMode}&uid=${uid}&t=${timestamp}`;
+        captchaInput.value = '';
+        if (captchaContainer.style.display !== 'none') {
+            captchaInput.focus();
+        }
+    };
+
+    function syncCaptchaState() {
+        if (!modeRefresh || !captchaContainer) return;
+
+        if (modeRefresh.checked) {
+            captchaContainer.style.display = 'block';
+            captchaInput.required = true;
+            // Only refresh if empty source (first load) or invisible
+            if (!captchaImg.src || captchaImg.src.endsWith('undefined')) {
+                refreshCaptcha();
+            }
+        } else {
+            captchaContainer.style.display = 'none';
+            captchaInput.required = false;
+            captchaInput.value = '';
+        }
+    }
+
+    if (modeRefresh && captchaContainer) {
+        modeRefresh.addEventListener('change', () => {
+            // Force refresh on explicit user change to checked
+            if (modeRefresh.checked) refreshCaptcha();
+            syncCaptchaState();
+        });
+
+        // Initial Sync (Fixes browser cache verify issue)
+        syncCaptchaState();
+    }
+
+    if (toggleBtn) {
+        toggleBtn.addEventListener('click', () => {
+            if (captchaMode === 'normal') {
+                captchaMode = 'math';
+                toggleBtn.innerHTML = '<span>🔤</span><span style="font-size: 0.7rem;">一般文字</span>';
+                captchaInput.placeholder = '請計算 f\'(c)=?';
+            } else {
+                captchaMode = 'normal';
+                toggleBtn.innerHTML = '<span>🧠</span><span style="font-size: 0.7rem;">挑戰數學</span>';
+                captchaInput.placeholder = '請輸入圖片中的文字';
+            }
+            refreshCaptcha();
+        });
+    }
+
     // Date Logic
     function updateDateInfo() {
         const start = startDate.value;
@@ -106,7 +184,21 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
 
                 if (!startResp.ok) {
-                    throw new Error(await startResp.text());
+                    let errMsg = await startResp.text();
+                    try {
+                        const jsonErr = JSON.parse(errMsg);
+                        if (jsonErr.error) errMsg = jsonErr.error;
+                    } catch (e) {
+                        // Not JSON, use text
+                    }
+
+                    // Auto-Refresh Captcha on specific errors
+                    if ((startResp.status === 400 || startResp.status === 429) &&
+                        modeRefresh && modeRefresh.checked) {
+                        refreshCaptcha();
+                    }
+
+                    throw new Error(errMsg);
                 }
 
                 const startData = await startResp.json();

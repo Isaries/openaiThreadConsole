@@ -7,6 +7,7 @@ import security
 import time
 from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor
+from ..services.captcha_service import CaptchaService
 
 main_bp = Blueprint('main', __name__)
 
@@ -81,6 +82,30 @@ def search():
         if recent_count >= 2:
             current_app.logger.warning(f"Rate Limit Hit (Fresh) for {ip}")
             return {'error': '強制刷新頻率過高 (每分鐘限 2 次)，請稍後再試。'}, 429
+
+        if recent_count >= 2:
+            current_app.logger.warning(f"Rate Limit Hit (Fresh) for {ip}")
+            return {'error': '強制刷新頻率過高 (每分鐘限 2 次)，請稍後再試。'}, 429
+
+        # --- Captcha Validation (Multi-Slot) ---
+        user_captcha = request.form.get('captcha', '').strip()
+        captcha_uid = request.form.get('captcha_uid', '').strip()
+        
+        captcha_store = session.get('captcha_store', {})
+        correct_answer = captcha_store.get(captcha_uid)
+        
+        # Cleanup used answer (Prevent Replay)
+        if captcha_uid in captcha_store:
+            del captcha_store[captcha_uid]
+            session['captcha_store'] = captcha_store
+            session.modified = True
+        
+        if not correct_answer:
+            return {'error': '驗證碼無效或已過期，請重新整理'}, 400
+            
+        # Case Insensitive Check
+        if user_captcha.lower() != str(correct_answer).lower():
+            return {'error': '驗證碼錯誤，請再試一次'}, 400
 
     # Audit (Log initiation to count later)
     action_name = 'Search Init Fresh' if mode == 'fresh' else 'Search Init Quick'
@@ -166,3 +191,29 @@ def search_result(task_id):
         current_page=page,
         page_index=page
     )
+
+@main_bp.route('/captcha')
+@limiter.limit("60 per minute")
+def get_captcha():
+    mode = request.args.get('type', 'normal')
+    uid = request.args.get('uid')
+    
+    if not uid:
+        return {'error': 'Missing UID'}, 400
+
+    data = CaptchaService.generate(mode=mode)
+    
+    # Store Answer in Session Store (Max 5 items to prevent cookie overflow)
+    captcha_store = session.get('captcha_store', {})
+    
+    # Prune if too large (remove random/oldest)
+    if len(captcha_store) >= 5:
+        # Simple prune: remove the first key found (FIFO-ish in Python 3.7+)
+        first_key = next(iter(captcha_store))
+        del captcha_store[first_key]
+        
+    captcha_store[uid] = data['answer']
+    session['captcha_store'] = captcha_store
+    
+    from flask import Response
+    return Response(data['image'], mimetype=data['content_type'])
