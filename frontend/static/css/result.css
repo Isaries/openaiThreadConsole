@@ -341,6 +341,7 @@ mark {
     font-size: 14px;
     outline: none;
     -moz-appearance: textfield;
+    appearance: textfield;
     /* Firefox */
 }
 
