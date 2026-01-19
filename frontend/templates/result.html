@@ -63,28 +63,28 @@
 
         <!-- End Form Replacement -->
 
-        <!-- Floating Toolbar (Pagination + Back) -->
-        <div class="floating-toolbar">
-            <a href="/" class="toolbar-btn primary">
-                <span>🔍</span> 返回搜尋
-            </a>
+    </div>
 
-            <div style="width: 1px; height: 20px; background: #ddd; margin: 0 5px;"></div>
+    <!-- Floating Toolbar (Pagination + Back) -->
+    <div class="floating-toolbar">
+        <a href="/" class="toolbar-btn primary">
+            <span>🔍</span> 返回搜尋
+        </a>
 
-            <button id="prevBtn" onclick="changePage(-1)" class="toolbar-btn" {% if current_page==0 %}disabled{% endif
-                %}>
-                « 上頁
-            </button>
+        <div style="width: 1px; height: 20px; background: #ddd; margin: 0 5px;"></div>
 
-            <span id="pageInfo" class="toolbar-info">
-                {{ current_page + 1 }} / {{ total_pages }}
-            </span>
+        <button id="prevBtn" onclick="changePage(-1)" class="toolbar-btn" {% if current_page==0 %}disabled{% endif %}>
+            « 上頁
+        </button>
 
-            <button id="nextBtn" onclick="changePage(1)" class="toolbar-btn" {% if current_page>= total_pages - 1
-                %}disabled{% endif %}>
-                下頁 »
-            </button>
-        </div>
+        <span id="pageInfo" class="toolbar-info">
+            {{ current_page + 1 }} / {{ total_pages }}
+        </span>
+
+        <button id="nextBtn" onclick="changePage(1)" class="toolbar-btn" {% if current_page>= total_pages - 1
+            %}disabled{% endif %}>
+            下頁 »
+        </button>
     </div>
 
     <button id="scrollTopBtn" class="scroll-top-btn" title="回到頂部">↑</button>
