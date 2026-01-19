@@ -854,3 +854,61 @@ tr:hover {
         display: none;
     }
 }
+
+/* --- Bottom Action Sheet (Mobile Contextual) --- */
+.bottom-action-sheet {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: rgba(255, 255, 255, 0.94);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    padding: 1rem 1.5rem;
+    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.1);
+    border-top: 1px solid rgba(255, 255, 255, 0.5);
+    z-index: 900;
+
+    display: flex;
+    justify-content: center;
+
+    transform: translateY(120%);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.bottom-action-sheet.active {
+    transform: translateY(0);
+}
+
+.bottom-action-sheet .sheet-content {
+    max-width: 600px;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.bottom-action-sheet .selected-count {
+    font-weight: 700;
+    font-size: 1.25rem;
+    color: var(--primary);
+    display: flex;
+    align-items: baseline;
+}
+
+.bottom-action-sheet .sheet-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.bottom-action-sheet .btn {
+    padding: 0.5rem 1rem;
+    border-radius: 50px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+}
+
+@media (min-width: 601px) {
+    .bottom-action-sheet {
+        display: none !important;
+    }
+}
