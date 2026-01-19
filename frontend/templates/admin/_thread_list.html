@@ -180,31 +180,41 @@
     </form>
 
     <script>
-        function toggleThreadListSelection(source) {
+        // Ensure functions are global
+        window.toggleThreadListSelection = function (source) {
             const checkboxes = document.querySelectorAll('.thread-checkbox');
             for (let i = 0; i < checkboxes.length; i++) {
                 checkboxes[i].checked = source.checked;
             }
-            checkSelectionState(); // Unified state check
+            window.checkSelectionState(); // Unified state check
         }
 
-        function toggleAllMobile(btn) {
+        window.toggleAllMobile = function (btn) {
+            // Prevent event bubbling if event is available
+            if (window.event) {
+                window.event.stopPropagation();
+                window.event.preventDefault();
+            }
+
+            console.log('toggleAllMobile called');
             const checkboxes = document.querySelectorAll('.thread-checkbox');
+
             // Logic: If any is unchecked, check all. If all checked, uncheck all.
             let anyUnchecked = false;
             for (let c of checkboxes) { if (!c.checked) anyUnchecked = true; }
 
             const newState = anyUnchecked; // True means "Select All", False means "Deselect All"
+            console.log(`Toggling to: ${newState}`);
 
             for (let c of checkboxes) { c.checked = newState; }
 
             const master = document.getElementById('masterCheckbox');
             if (master) master.checked = newState;
 
-            checkSelectionState(); // Unified state check
+            window.checkSelectionState(); // Unified state check
         }
 
-        function checkSelectionState() {
+        window.checkSelectionState = function () {
             // console.log('checkSelectionState triggered'); 
             const checkboxes = document.querySelectorAll('.thread-checkbox');
             let checkedCount = 0;
@@ -234,10 +244,8 @@
                 countDisplay.textContent = checkedCount;
                 if (checkedCount > 0) {
                     sheet.classList.add('active');
-                    // console.log('Sheet activated');
                 } else {
                     sheet.classList.remove('active');
-                    // console.log('Sheet deactivated');
                 }
             } else {
                 console.warn('Bottom Sheet elements missing in DOM');
