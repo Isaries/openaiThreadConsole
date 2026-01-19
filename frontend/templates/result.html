@@ -68,13 +68,13 @@
     <!-- Floating Toolbar (Pagination + Back) -->
     <div class="floating-toolbar">
         <a href="/" class="toolbar-btn primary">
-            <span>🔍</span> 返回搜尋
+            <span class="btn-icon">🔍</span> <span class="btn-text">返回搜尋</span>
         </a>
 
         <div style="width: 1px; height: 20px; background: #ddd; margin: 0 5px;"></div>
 
         <button id="prevBtn" onclick="changePage(-1)" class="toolbar-btn" {% if current_page==0 %}disabled{% endif %}>
-            « 上頁
+            <span class="btn-icon">«</span> <span class="btn-text">上頁</span>
         </button>
 
         <div class="toolbar-pagination-group">
@@ -87,7 +87,7 @@
 
         <button id="nextBtn" onclick="changePage(1)" class="toolbar-btn" {% if current_page>= total_pages - 1
             %}disabled{% endif %}>
-            下頁 »
+            <span class="btn-text">下頁</span> <span class="btn-icon">»</span>
         </button>
     </div>
 

@@ -464,6 +464,42 @@ mark {
         width: 100%;
         text-align: center;
     }
+
+    /* Mobile Toolbar Optimization */
+    .floating-toolbar {
+        padding: 8px 12px;
+        gap: 8px;
+        width: 90%;
+        max-width: 360px;
+        justify-content: space-between;
+        bottom: 15px;
+    }
+
+    .btn-text {
+        display: none;
+    }
+
+    .btn-icon {
+        font-size: 16px;
+    }
+
+    .toolbar-btn {
+        padding: 8px;
+    }
+
+    .toolbar-btn.primary {
+        padding: 8px 12px;
+    }
+
+    .toolbar-pagination-group {
+        margin: 0;
+        padding: 4px 8px;
+    }
+
+    /* Move scroll top button slightly higher to clear toolbar */
+    .scroll-top-btn {
+        bottom: 80px;
+    }
 }
 
 .chat-image {
