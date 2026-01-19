@@ -196,28 +196,43 @@
         }
 
         window.toggleAllMobile = function (btn) {
-            // Prevent event bubbling if event is available
+            // Prevent event bubbling
             if (window.event) {
                 window.event.stopPropagation();
-                window.event.preventDefault();
             }
 
-            console.log('toggleAllMobile called');
+            console.log('toggleAllMobile: Start');
             const checkboxes = document.querySelectorAll('.thread-checkbox');
 
-            // Logic: If any is unchecked, check all. If all checked, uncheck all.
+            // Logic: Scan first.
             let anyUnchecked = false;
-            for (let c of checkboxes) { if (!c.checked) anyUnchecked = true; }
+            for (let i = 0; i < checkboxes.length; i++) {
+                if (!checkboxes[i].checked) {
+                    anyUnchecked = true;
+                    break;
+                }
+            }
 
-            const newState = anyUnchecked; // True means "Select All", False means "Deselect All"
-            console.log(`Toggling to: ${newState}`);
+            const newState = anyUnchecked; // Target state
+            console.log(`toggleAllMobile: Target State = ${newState}`);
 
-            for (let c of checkboxes) { c.checked = newState; }
+            // Apply state
+            for (let i = 0; i < checkboxes.length; i++) {
+                checkboxes[i].checked = newState;
+            }
 
+            // Sync Master
             const master = document.getElementById('masterCheckbox');
             if (master) master.checked = newState;
 
-            window.checkSelectionState(); // Unified state check
+            // Trigger Update immediately
+            window.checkSelectionState();
+
+            // UI Feedback
+            if (btn) {
+                // btn.innerHTML = newState ? "☑ 已全選" : "☐ 全選";
+                // setTimeout(() => { btn.innerHTML = originalText; }, 1000); 
+            }
         }
 
         window.checkSelectionState = function () {
