@@ -16,15 +16,20 @@
 
     <!-- Independent Search Form -->
 
-    <div class="flex items-center justify-between mb-4" style="margin-bottom: 1rem;">
-        <h3>clipboard 資料列表 <span class="text-secondary text-sm" style="font-weight: normal; font-size: 0.8rem;">(共
-                {{ total_threads_count }} 筆)</span></h3>
-        <div class="flex gap-2 items-center">
+    <!-- Independent Search Form -->
+
+    <div class="thread-toolbar flex items-center justify-between mb-4" style="margin-bottom: 1rem;">
+        <div class="toolbar-header">
+            <h3>clipboard 資料列表 <span class="text-secondary text-sm" style="font-weight: normal; font-size: 0.8rem;">(共
+                    {{ total_threads_count }} 筆)</span></h3>
+        </div>
+
+        <div class="toolbar-actions flex gap-2 items-center">
             <!-- Search Form (GET) -->
             <!-- Search Form Input Group -->
-            <div
+            <div class="search-group"
                 style="display: flex; gap: 0; align-items: center; background: white; border: 1px solid var(--surface-border); border-radius: 6px; overflow: hidden; margin-right: 0.5rem; height: 32px;">
-                <input form="searchForm" type="text" name="q" placeholder="🔍 搜尋 ID 或備註..."
+                <input form="searchForm" type="text" name="q" placeholder="🔍 搜尋 ID 或備註..." class="search-input"
                     style="border: none; padding: 0 0.5rem; width: 180px; font-size: 0.875rem; outline: none; height: 100%;"
                     autocomplete="off" value="{{ search_query }}">
 
@@ -41,22 +46,24 @@
                 </button>
             </div>
 
-            <button type="submit" form="deleteMultiForm" formaction="/admin/threads/export" formmethod="POST"
-                formtarget="_blank" class="btn btn-secondary btn-sm" title="匯出完整 Excel (不受搜尋影響)">
-                📥 匯出 (完整)
-            </button>
-            <button type="submit" form="deleteMultiForm" formaction="/admin/threads/refresh" formmethod="POST"
-                class="btn btn-primary btn-sm" title="更新快取">
-                🔄 更新
-            </button>
-            <button type="button" class="btn btn-secondary btn-sm mobile-only" data-action="select"
-                onclick="toggleAllMobile(this)">
-                全選
-            </button>
-            <button type="submit" form="deleteMultiForm" class="btn btn-danger btn-sm"
-                onclick="return confirm('確定刪除選取項目？')">
-                刪除選取
-            </button>
+            <div class="btn-group">
+                <button type="submit" form="deleteMultiForm" formaction="/admin/threads/export" formmethod="POST"
+                    formtarget="_blank" class="btn btn-secondary btn-sm desktop-only" title="匯出完整 Excel (不受搜尋影響)">
+                    📥 匯出 (完整)
+                </button>
+                <button type="submit" form="deleteMultiForm" formaction="/admin/threads/refresh" formmethod="POST"
+                    class="btn btn-primary btn-sm" title="更新快取">
+                    🔄 更新
+                </button>
+                <button type="button" class="btn btn-secondary btn-sm mobile-only" data-action="select"
+                    onclick="toggleAllMobile(this)">
+                    全選
+                </button>
+                <button type="submit" form="deleteMultiForm" class="btn btn-danger btn-sm"
+                    onclick="return confirm('確定刪除選取項目？')">
+                    刪除選取
+                </button>
+            </div>
         </div>
     </div>
 
@@ -80,7 +87,7 @@
     </div>
 
     <div class="table-responsive" style="max-height: 600px; overflow-y: auto;">
-        <table>
+        <table class="thread-list-table">
             <thead>
                 <tr>
                     <th style="width: 40px;"><input type="checkbox" id="masterCheckbox"
