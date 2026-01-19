@@ -214,7 +214,7 @@ def preprocess_html_for_pdf(html_content, group_id, get_headers_func):
     target_images = [img for img in images if img.get('src')]
     
     if not target_images:
-        return html_content
+        return html_content, []
 
     from app.models import Project
     import security
