@@ -428,12 +428,21 @@ def search_threads_sql(project_id, target_name, start_date, end_date):
     start_ts = 0
     end_ts = 0
     
+    from sqlalchemy.orm import subqueryload, joinedload
+    from datetime import timezone, timedelta
     from dateutil import parser
     
+    # Pre-load messages to avoid N+1 problem
+    query = query.options(subqueryload(Thread.messages))
+    
+    utc8 = timezone(timedelta(hours=8))
+
     if start_date:
         try:
             # Robust parsing (handles many formats)
             dt = parser.parse(start_date)
+            # FORCE UTC+8
+            dt = dt.replace(tzinfo=utc8)
             start_ts = int(dt.timestamp())
         except Exception as e:
             logging.getLogger().warning(f"Date Parse Error (Start): {start_date} - {e}")
@@ -442,6 +451,7 @@ def search_threads_sql(project_id, target_name, start_date, end_date):
     if end_date:
         try:
             dt = parser.parse(end_date)
+            dt = dt.replace(tzinfo=utc8)
             # End of day
             dt = dt.replace(hour=23, minute=59, second=59)
             end_ts = int(dt.timestamp())

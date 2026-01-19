@@ -31,16 +31,23 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    let captchaTimeout;
     window.refreshCaptcha = function () {
         if (!captchaImg) return;
-        const timestamp = new Date().getTime();
-        const uid = generateUUID();
-        captchaUidInput.value = uid;
-        captchaImg.src = `/captcha?type=${captchaMode}&uid=${uid}&t=${timestamp}`;
-        captchaInput.value = '';
-        if (captchaContainer.style.display !== 'none') {
-            captchaInput.focus();
-        }
+
+        // Debounce: Prevent rapid accumulation of sessions (Max 5 slots on backend)
+        if (captchaTimeout) clearTimeout(captchaTimeout);
+
+        captchaTimeout = setTimeout(() => {
+            const timestamp = new Date().getTime();
+            const uid = generateUUID();
+            captchaUidInput.value = uid;
+            captchaImg.src = `/captcha?type=${captchaMode}&uid=${uid}&t=${timestamp}`;
+            captchaInput.value = '';
+            if (captchaContainer.style.display !== 'none') {
+                captchaInput.focus();
+            }
+        }, 300); // 300ms delay
     };
 
     function syncCaptchaState() {

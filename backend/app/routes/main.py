@@ -83,9 +83,7 @@ def search():
             current_app.logger.warning(f"Rate Limit Hit (Fresh) for {ip}")
             return {'error': '強制刷新頻率過高 (每分鐘限 2 次)，請稍後再試。'}, 429
 
-        if recent_count >= 2:
-            current_app.logger.warning(f"Rate Limit Hit (Fresh) for {ip}")
-            return {'error': '強制刷新頻率過高 (每分鐘限 2 次)，請稍後再試。'}, 429
+
 
         # --- Captcha Validation (Multi-Slot) ---
         user_captcha = request.form.get('captcha', '').strip()

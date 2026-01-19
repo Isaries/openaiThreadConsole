@@ -34,33 +34,58 @@ class CaptchaService:
 
     @staticmethod
     def _generate_math_problem():
-        # Generate: d/dx (ax^n + bx) | x=c
-        # To keep it simple but look "hard":
-        # a, b in [2..5]
-        # n in [2, 3]
-        # c in [1, 2, 3]
+        # Difficulty Pool
+        # 1. Polynomial (40%): d/dx (ax^n + bx) | x=c
+        # 2. Trigonometry (30%): d/dx (A sin(Bx)) | x=0
+        # 3. Chain Rule (30%): d/dx (ax + b)^2 | x=c
         
-        a = random.randint(2, 5)
-        b = random.randint(2, 9)
-        n = random.randint(2, 3)
-        c = random.randint(1, 3)
+        topic = random.choices(['poly', 'trig', 'chain'], weights=[40, 30, 30], k=1)[0]
         
-        # Question String for SVG: "d/dx ( {a}x^{n} + {b}x ) | x={c}"
-        if n == 2:
-            term1 = f"{a}x²"
-        elif n == 3:
-            term1 = f"{a}x³"
-        else:
-            term1 = f"{a}x^{n}"
+        question_text = ""
+        ans_val = 0
+
+        if topic == 'trig':
+            # f(x) = A sin(Bx)  at x=0
+            # f'(x) = A*B cos(Bx) -> f'(0) = A*B
+            # f(x) = A cos(Bx)  at x=0 -> f'(0) = 0
+            vals = list(range(2, 10))
+            A = random.choice(vals)
+            B = random.choice(vals)
+            func_type = random.choice(['sin', 'cos'])
+
+            if func_type == 'sin':
+                question_text = f"d/dx ({A}sin({B}x)) ,x=0"
+                ans_val = A * B
+            else:
+                question_text = f"d/dx ({A}cos({B}x)) ,x=0"
+                ans_val = 0
+                
+        elif topic == 'chain':
+            # f(x) = (ax + b)^2
+            # f'(x) = 2(ax+b)*a
+            a = random.randint(2, 5)
+            b = random.randint(1, 5)
+            c = random.randint(0, 2) 
             
-        question_text = f"d/dx ({term1} + {b}x) ,x={c}"
-        
-        # Calculate Answer
-        # f(x) = ax^n + bx
-        # f'(x) = n*a*x^(n-1) + b
-        # f'(c) = n*a*(c**(n-1)) + b
-        
-        ans_val = (n * a * (c ** (n - 1))) + b
+            question_text = f"d/dx ({a}x + {b})² ,x={c}"
+            ans_val = 2 * (a * c + b) * a
+
+        else:
+            # Existing Polynomial: d/dx (ax^n + bx) | x=c
+            a = random.randint(2, 5)
+            b = random.randint(2, 9)
+            n = random.randint(2, 3)
+            c = random.randint(1, 3)
+            
+            if n == 2:
+                term1 = f"{a}x²"
+            elif n == 3:
+                term1 = f"{a}x³"
+            else:
+                term1 = f"{a}x^{n}"
+                
+            question_text = f"d/dx ({term1} + {b}x) ,x={c}"
+            ans_val = (n * a * (c ** (n - 1))) + b
         
         svg_content = CaptchaService._create_svg_xml(question_text, is_math=True)
         
