@@ -276,3 +276,45 @@ def cleanup_temp_files_task():
             
     logger.info(f"Cleanup Complete. Deleted {count} files.")
 
+# --- System Monitoring ---
+@huey.periodic_task(crontab(minute=0, hour='*/3'))
+def collect_system_metrics_task():
+    logger.info("Starting System Metric Collection")
+    try:
+        import psutil
+        from .models import SystemMetric
+        from . import create_app
+        import time
+        
+        # 1. Collect Metrics
+        # cpu_percent with interval blocks for 1 sec to get accurate reading
+        cpu = psutil.cpu_percent(interval=1) 
+        mem = psutil.virtual_memory()
+        
+        app = create_app()
+        with app.app_context():
+            # 2. Save to DB
+            new_metric = SystemMetric(
+                timestamp=int(time.time()),
+                cpu_percent=cpu,
+                memory_percent=mem.percent,
+                memory_used=round(mem.used / (1024**3), 2), # GB
+                memory_total=round(mem.total / (1024**3), 2) # GB
+            )
+            db.session.add(new_metric)
+            
+            # 3. Cleanup Old Data (> 10 Days)
+            # 10 days = 86400 * 10 seconds
+            cutoff = int(time.time()) - (10 * 86400)
+            
+            # Efficient delete
+            deleted = SystemMetric.query.filter(SystemMetric.timestamp < cutoff).delete()
+            if deleted:
+                logger.info(f"Cleaned up {deleted} old metric records.")
+                
+            db.session.commit()
+        
+        logger.info(f"Metrics Saved: CPU={cpu}%, MEM={mem.percent}%")
+    except Exception as e:
+        logger.error(f"System Metric Collection Failed: {e}")
+

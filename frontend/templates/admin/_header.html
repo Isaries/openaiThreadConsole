@@ -8,6 +8,9 @@
             ☰
         </button>
         <a href="/admin" class="font-bold text-main" style="font-size: 1.125rem;">⚙️ Thread 管理後台</a>
+        {% if session.get('role') == 'admin' %}
+        <a href="/admin/performance" class="btn btn-sm btn-ghost" style="margin-left: 1rem; color: #666;">📊 效能監控</a>
+        {% endif %}
     </div>
 
     <div class="flex items-center gap-4">

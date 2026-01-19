@@ -1,6 +1,7 @@
 from .extensions import db
 from datetime import datetime
 
+
 # removed db = SQLAlchemy() as it is in extensions
 
 # Association Table for Project Owners
@@ -108,4 +109,13 @@ class SearchResultChunk(db.Model):
     page_index = db.Column(db.Integer)
     data_json = db.Column(db.Text) # JSON list of 50 threads
     created_at = db.Column(db.Integer, default=lambda: int(datetime.now().timestamp()))
+
+class SystemMetric(db.Model):
+    __tablename__ = 'sys_metrics'
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    timestamp = db.Column(db.Integer, index=True, nullable=False)
+    cpu_percent = db.Column(db.Float)
+    memory_percent = db.Column(db.Float)
+    memory_used = db.Column(db.Float) # GB
+    memory_total = db.Column(db.Float) # GB
 

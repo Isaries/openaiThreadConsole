@@ -2,7 +2,7 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash,
 import io
 from ..extensions import db
 from ..extensions import db
-from ..models import User, Project, Thread, Message, SearchHistory, AuditLog, IPBan, Tag
+from ..models import User, Project, Thread, Message, SearchHistory, AuditLog, IPBan, Tag, SystemMetric
 from .. import utils
 from .. import logic
 import security
@@ -1011,4 +1011,66 @@ def update_refresh_schedule():
     
     from flask import jsonify
     return jsonify({'success': True})
+
+@admin_bp.route('/performance')
+def performance_dashboard():
+    if not session.get('user_id'): return redirect(url_for('auth.login'))
+    if session.get('role') != 'admin':
+        flash('權限不足', 'error')
+        return redirect(url_for('admin.index'))
+        
+    # 1. Fetch History
+    # Limit to 10 days (80 records max roughly if 3hr interval)
+    metrics_query = SystemMetric.query.order_by(SystemMetric.timestamp.asc()).all()
+    
+    max_history_seconds = 10 * 86400
+    cutoff = datetime.now().timestamp() - max_history_seconds
+    
+    metrics = [m for m in metrics_query if m.timestamp >= cutoff]
+    
+    chart_data = [{
+        'time': utils.unix_to_utc8(m.timestamp),
+        'timestamp': m.timestamp,
+        'cpu': m.cpu_percent,
+        'mem_pct': m.memory_percent,
+        'mem_gb': m.memory_used
+    } for m in metrics]
+    
+    # 2. Real-time Snapshot (The "Now" point)
+    try:
+        import psutil
+        import time
+        
+        # Fast sampling (0.5s)
+        current_cpu = psutil.cpu_percent(interval=0.5)
+        
+        mem = psutil.virtual_memory()
+        current_mem_pct = mem.percent
+        current_mem_gb = round(mem.used / (1024**3), 2)
+        current_mem_total = round(mem.total / (1024**3), 2)
+        
+        current_snapshot = {
+            'time': '現在 (即時)',
+            'timestamp': int(time.time()),
+            'cpu': current_cpu,
+            'mem_pct': current_mem_pct,
+            'mem_gb': current_mem_gb
+        }
+        
+        # Append snapshot to chart data
+        chart_data.append(current_snapshot)
+        
+    except ImportError:
+        flash('錯誤: 尚未安裝 psutil 套件，無法讀取即時數據。請執行 pip install psutil', 'error')
+        current_snapshot = {'time': 'N/A', 'cpu': 0, 'mem_pct': 0, 'mem_gb': 0}
+        current_mem_total = 0
+    except Exception as e:
+        flash(f'讀取系統數據失敗: {str(e)}', 'error')
+        current_snapshot = {'time': 'Error', 'cpu': 0, 'mem_pct': 0, 'mem_gb': 0}
+        current_mem_total = 0
+    
+    return render_template('admin/performance.html', 
+                           chart_data=chart_data, 
+                           current=current_snapshot,
+                           mem_total=current_mem_total)
 

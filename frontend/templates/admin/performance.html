@@ -1,0 +1,181 @@
+{% extends "base.html" %}
+
+{% block title %}系統效能監控 - Thread Console{% endblock %}
+
+{% block head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+    .kpi-card {
+        background: var(--surface-bg);
+        border: 1px solid var(--surface-border);
+        border-radius: var(--radius-lg);
+        padding: 1.5rem;
+        text-align: center;
+        flex: 1;
+        min-width: 200px;
+    }
+
+    .kpi-value {
+        font-size: 2.5rem;
+        font-weight: 700;
+        margin: 0.5rem 0;
+    }
+
+    .kpi-label {
+        color: var(--secondary);
+        font-size: 0.875rem;
+        font-weight: 500;
+    }
+
+    .chart-container {
+        background: white;
+        border: 1px solid var(--surface-border);
+        border-radius: var(--radius-lg);
+        padding: 1.5rem;
+        margin-top: 1.5rem;
+        height: 400px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+{% include "admin/_header.html" %}
+
+<div class="container" style="padding: 2rem;">
+    <div class="flex items-center justify-between mb-4">
+        <h1>📊 系統效能監控</h1>
+        <div class="text-secondary text-sm">
+            最近更新: {{ current.time }}
+            <a href="/admin/performance" class="btn btn-sm btn-secondary ml-2">🔄 立即刷新</a>
+        </div>
+    </div>
+
+    <!-- KPI Cards -->
+    <div class="flex gap-4 flex-wrap">
+        <div class="kpi-card">
+            <div class="kpi-label">即時 CPU 使用率</div>
+            <div class="kpi-value {{ 'text-red' if current.cpu > 80 else 'text-green' }}">
+                {{ current.cpu }}%
+            </div>
+            <div class="text-xs text-secondary">正常範圍 &lt; 80%</div>
+        </div>
+
+        <div class="kpi-card">
+            <div class="kpi-label">即時 RAM 使用率</div>
+            <div class="kpi-value {{ 'text-red' if current.mem_pct > 85 else 'text-green' }}">
+                {{ current.mem_pct }}%
+            </div>
+            <div class="text-xs text-secondary">{{ current.mem_gb }} GB / {{ mem_total }} GB</div>
+        </div>
+    </div>
+
+    <!-- CPU Chart -->
+    <div class="chart-container">
+        <h3>CPU 歷史趨勢 (由每3小時排程 + 即時點組成)</h3>
+        <canvas id="cpuChart"></canvas>
+    </div>
+
+    <!-- Memory Chart -->
+    <div class="chart-container">
+        <h3>記憶體 歷史趨勢</h3>
+        <canvas id="memChart"></canvas>
+    </div>
+</div>
+
+<script id="perf-data" type="application/json">
+    {{ chart_data | tojson }}
+</script>
+<script>
+    const rawData = JSON.parse(document.getElementById('perf-data').textContent);
+
+    const labels = rawData.map(d => d.time);
+    const cpuData = rawData.map(d => d.cpu);
+    const memData = rawData.map(d => d.mem_gb);
+
+    // Common Chart Options
+    const commonOptions = {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: {
+            mode: 'index',
+            intersect: false,
+        },
+        plugins: {
+            legend: {
+                position: 'top',
+            }
+        },
+        scales: {
+            x: {
+                ticks: {
+                    maxRotation: 45,
+                    minRotation: 45
+                }
+            }
+        }
+    };
+
+    // CPU Chart
+    new Chart(document.getElementById('cpuChart'), {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'CPU Usage (%)',
+                data: cpuData,
+                borderColor: 'rgb(75, 192, 192)',
+                backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                tension: 0.2,
+                fill: true,
+                pointRadius: (ctx) => {
+                    // Make the last point (Real-time) larger
+                    return ctx.dataIndex === rawData.length - 1 ? 6 : 3;
+                },
+                pointBackgroundColor: (ctx) => {
+                    return ctx.dataIndex === rawData.length - 1 ? 'red' : 'rgb(75, 192, 192)';
+                }
+            }]
+        },
+        options: {
+            ...commonOptions,
+            scales: {
+                y: {
+                    min: 0,
+                    max: 100
+                }
+            }
+        }
+    });
+
+    // Memory Chart
+    new Chart(document.getElementById('memChart'), {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Memory Usage (GB)',
+                data: memData,
+                borderColor: 'rgb(153, 102, 255)',
+                backgroundColor: 'rgba(153, 102, 255, 0.2)',
+                tension: 0.2,
+                fill: true,
+                pointRadius: (ctx) => {
+                    return ctx.dataIndex === rawData.length - 1 ? 6 : 3;
+                },
+                pointBackgroundColor: (ctx) => {
+                    return ctx.dataIndex === rawData.length - 1 ? 'red' : 'rgb(153, 102, 255)';
+                }
+            }]
+        },
+        options: {
+            ...commonOptions,
+            scales: {
+                y: {
+                    min: 0,
+                    // Suggested Max slightly above total ram usually, but dynamic is fine
+                }
+            }
+        }
+    });
+</script>
+{% endblock %}
