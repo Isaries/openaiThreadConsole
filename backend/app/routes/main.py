@@ -153,5 +153,6 @@ def search_result(task_id):
         # Pagination Meta
         task_id=task_id,
         total_pages=task_meta.get('total_pages', 1),
-        current_page=page
+        current_page=page,
+        page_index=page
     )
