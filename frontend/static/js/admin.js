@@ -17,28 +17,7 @@ function toggleSidebar() {
 }
 
 // Logic Preservation
-function toggleAll(source) {
-    const checkboxes = document.getElementsByName('selected_ids');
-    for (var i = 0, n = checkboxes.length; i < n; i++) {
-        const row = checkboxes[i].closest('tr');
-        // Only toggle if row is visible (not filtered out)
-        if (row && row.style.display !== 'none') {
-            checkboxes[i].checked = source.checked;
-        }
-    }
-    updateMobileSelectBtnState();
-}
-
 // Logic moved to admin_list.js
-
-document.addEventListener('DOMContentLoaded', function () {
-    const checkboxes = document.getElementsByName('selected_ids');
-    checkboxes.forEach(cb => {
-        cb.addEventListener('change', updateMobileSelectBtnState);
-    });
-    // Initial check
-    updateMobileSelectBtnState();
-});
 
 function toggleSettings() {
     var el = document.getElementById('settingsSection');
