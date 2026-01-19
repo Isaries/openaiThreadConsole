@@ -72,8 +72,7 @@ def search_task(project_id, target_name, start_date, end_date, api_key, group_id
                     chunk = SearchResultChunk(
                         task_id=task.id, # Accessing Huey task ID from context
                         page_index=page_index,
-                        data_json=json.dumps(current_batch),
-                        count=len(current_batch)
+                        data_json=json.dumps(current_batch)
                     )
                     db.session.add(chunk)
                     db.session.commit()
@@ -87,8 +86,7 @@ def search_task(project_id, target_name, start_date, end_date, api_key, group_id
             chunk = SearchResultChunk(
                 task_id=task.id,
                 page_index=page_index,
-                data_json=json.dumps(current_batch),
-                count=len(current_batch)
+                data_json=json.dumps(current_batch)
             )
             db.session.add(chunk)
             db.session.commit()
