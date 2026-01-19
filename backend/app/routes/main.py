@@ -25,6 +25,16 @@ def index():
     
     return render_template('index.html', groups=groups, all_tags=all_tags)
 
+@main_bp.route('/favicon.ico')
+def favicon():
+    from flask import send_from_directory
+    import os
+    # Since we don't have a real .ico, we serve the .svg or just 404 cleanly.
+    # But to stop the browser error, let's serve the svg with correct mime or just return 204.
+    # Serving svg as ico might not work in all browsers but it stops the 502.
+    # Better: Serve the svg if it exists.
+    return send_from_directory(current_app.static_folder, 'favicon.svg', mimetype='image/svg+xml')
+
 @main_bp.route('/search', methods=['POST'])
 @limiter.limit("20 per minute")
 def search():
