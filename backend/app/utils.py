@@ -25,8 +25,10 @@ def render_markdown_images(value):
     pattern = re.compile(r'!\[(.*?)\]\((.*?)\)')
     
     def replace_func(match):
-        alt = match.group(1)
-        src = match.group(2)
+        # Security: Escape to prevent attribute injection (e.g. src="x" onerror="alert(1)")
+        # Although bleach follows, this ensures structurally valid HTML.
+        alt = escape(match.group(1))
+        src = escape(match.group(2))
         return f'<img src="{src}" alt="{alt}" class="chat-image" loading="lazy">'
     
     return pattern.sub(replace_func, value)

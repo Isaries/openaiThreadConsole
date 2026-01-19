@@ -5,6 +5,17 @@ from datetime import datetime
 from ..models import Thread, Project
 from ..extensions import db
 
+def sanitize_for_excel(value):
+    """
+    Sanitize value to prevent CSV/Excel Formula Injection.
+    Prefixes values starting with =, +, -, @ with a single quote.
+    """
+    if not value: return ""
+    val_str = str(value)
+    if val_str.startswith(('=', '+', '-', '@')):
+        return f"'{val_str}"
+    return val_str
+
 def parse_excel_for_import(file, default_remark=None):
     """
     Parses an uploaded Excel file to extract thread IDs and remarks.
@@ -47,6 +58,10 @@ def parse_excel_for_import(file, default_remark=None):
             remark_val = default_remark
             if remark_col and not pd.isna(row[remark_col]):
                 remark_val = str(row[remark_col]).strip()
+                # De-sanitize: If it starts with ' followed by formula char, strip the quote
+                # This handles round-trip of sanitized data (e.g. '+1' -> ''+1' -> '+1')
+                if len(remark_val) > 1 and remark_val.startswith("'") and remark_val[1] in ('=', '+', '-', '@'):
+                    remark_val = remark_val[1:]
                 
             thread_data_map[tid] = remark_val
             
@@ -148,8 +163,8 @@ def generate_excel_export(project_id, project_name, filtered_ids=None, search_q=
         data = []
         for t in threads:
             data.append({
-                'thread_id': t.thread_id,
-                'remark': t.remark
+                'thread_id': sanitize_for_excel(t.thread_id),
+                'remark': sanitize_for_excel(t.remark)
             })
             
         df = pd.DataFrame(data)

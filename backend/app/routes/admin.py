@@ -1,7 +1,6 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session, send_file
 import io
-from ..extensions import db
-from ..extensions import db
+from ..extensions import db, limiter
 from ..models import User, Project, Thread, Message, SearchHistory, AuditLog, IPBan, Tag, SystemMetric
 from .. import utils
 from .. import logic
@@ -683,6 +682,7 @@ def view_thread(thread_id):
     )
 
 @admin_bp.route('/threads/refresh', methods=['POST'])
+@limiter.limit("10 per hour")
 def refresh_threads_cache():
     if not session.get('user_id'): return redirect(url_for('auth.login'))
     
