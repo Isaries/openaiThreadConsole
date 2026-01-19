@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, session, send_file
+from flask import Blueprint, render_template, request, redirect, url_for, flash, session, send_file, jsonify
 import io
 from ..extensions import db, limiter
 from ..models import User, Project, Thread, Message, SearchHistory, AuditLog, IPBan, Tag, SystemMetric
@@ -10,13 +10,14 @@ from datetime import datetime
 import pandas as pd
 import uuid
 import config
+import json
+import psutil
 from ..tasks import refresh_specific_threads
 
 admin_bp = Blueprint('admin', __name__, url_prefix='/admin')
 
 @admin_bp.app_template_filter('pretty_json')
 def pretty_json(value):
-    import json
     return json.dumps(value, indent=2, ensure_ascii=False)
 
 @admin_bp.route('/')
@@ -1001,7 +1002,6 @@ def update_settings():
 @admin_bp.route('/settings/refresh_schedule', methods=['POST'])
 def update_refresh_schedule():
     if not session.get('user_id') or session.get('role') != 'admin':
-        from flask import jsonify
         return jsonify({'error': 'Unauthorized'}), 403
         
     data = request.json
@@ -1010,17 +1010,14 @@ def update_refresh_schedule():
         frequency = int(data.get('frequency', 1))
         hour = int(data.get('hour', 2))
     except (ValueError, TypeError):
-        from flask import jsonify
         return jsonify({'error': 'Invalid parameters'}), 400
         
     # Validation: 1-360 days
     if not (1 <= frequency <= 360):
-        from flask import jsonify
         return jsonify({'error': 'Frequency must be between 1 and 360 days'}), 400
         
     # Validation: 0-23 hours
     if not (0 <= hour <= 23):
-        from flask import jsonify
         return jsonify({'error': 'Hour must be between 0 and 23'}), 400
     
     settings = database.load_settings()
@@ -1038,7 +1035,6 @@ def update_refresh_schedule():
     
     database.save_settings(settings)
     
-    from flask import jsonify
     return jsonify({'success': True})
 
 @admin_bp.route('/performance')
@@ -1066,9 +1062,9 @@ def performance_dashboard():
     } for m in metrics]
     
     # 2. Real-time Snapshot (The "Now" point)
+    # 2. Real-time Snapshot (The "Now" point)
     try:
-        import psutil
-        import time
+        import time # Keep time, it wasn't at top yet
         
         # Fast sampling (0.5s)
         current_cpu = psutil.cpu_percent(interval=0.5)

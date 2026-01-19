@@ -3,7 +3,16 @@ from . import logic
 import logging
 import time
 import os
+import glob
+import json
+import database
 from huey import crontab # For periodic tasks
+from datetime import datetime, timezone, timedelta
+from dateutil import parser
+try:
+    import psutil
+except ImportError:
+    psutil = None
 
 # Ensure logger is configured for the worker
 logger = logging.getLogger('huey')
@@ -47,7 +56,6 @@ def search_task(project_id, target_name, start_date, end_date, api_key, group_id
         total_count = 0
         
         from .models import SearchResultChunk
-        import json
         
         # 2. Search Phase
         matching_threads = logic.search_threads_sql(project_id, target_name, start_date, end_date)
@@ -95,7 +103,6 @@ def search_task(project_id, target_name, start_date, end_date, api_key, group_id
         duration = endTime - startTime
         
         # Save Search History Log (simplified)
-        from datetime import datetime, timezone, timedelta
         utc8 = timezone(timedelta(hours=8))
         log_time = datetime.now(utc8)
         
@@ -115,7 +122,6 @@ def search_task(project_id, target_name, start_date, end_date, api_key, group_id
                 'total': len(matching_threads),
                 'api_results': debug_log
         }
-        import database
         database.save_log(log_entry)
     
         return {
@@ -135,9 +141,6 @@ def scheduled_refresh_task():
     logger.info("Starting Scheduled Refresh Check (Hourly)")
     
     # 1. Load Settings & Check Conditions
-    import database
-    from dateutil import parser
-    from datetime import datetime
     from . import utils
     
     settings = database.load_settings()
@@ -156,8 +159,6 @@ def scheduled_refresh_task():
         return
 
     # Get Current Time (UTC+8)
-    # database.utc8_converter() returns a struct_time, let's use utils or datetime directly
-    from datetime import timezone, timedelta
     utc8 = timezone(timedelta(hours=8))
     now = datetime.now(utc8)
     
@@ -257,7 +258,6 @@ def refresh_specific_threads(project_id, thread_ids, group_name=""):
 @huey.periodic_task(crontab(minute=0, hour=18, day='*/3')) # UTC 18:00 = UTC+8 02:00
 def cleanup_temp_files_task():
     logger.info("Starting Temp File Cleanup")
-    import glob
     from app.services.pdf_service import TEMP_PDF_IMG_DIR
     
     if not os.path.exists(TEMP_PDF_IMG_DIR):
@@ -285,7 +285,9 @@ def cleanup_temp_files_task():
 def collect_system_metrics_task():
     logger.info("Starting System Metric Collection")
     try:
-        import psutil
+        if not psutil:
+             raise ImportError("psutil not installed")
+
         from .models import SystemMetric
         from . import create_app
         import time
