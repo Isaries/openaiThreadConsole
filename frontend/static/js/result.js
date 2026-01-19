@@ -91,11 +91,18 @@ async function loadPage(pageIndex) {
         if (window.attachPdfListeners) window.attachPdfListeners();
 
     } catch (err) {
-        alert("載入失敗，請重試");
         console.error(err);
-        // On error, maybe restore old content? Hard to do without keeping state.
-        // For now, user can just try clicking again.
-    } finally {
+        if (container) {
+            container.innerHTML = `
+                <div class="no-result" style="text-align:center; padding: 40px;">
+                    <div class="icon" style="font-size: 3rem; margin-bottom: 1rem;">⚠️</div>
+                    <h3>載入失敗</h3>
+                    <p style="color: #666;">無法讀取資料，請稍後再試。</p>
+                    <button onclick="location.reload()" class="btn btn-secondary" style="margin-top: 1rem;">重新整理頁面</button>
+                </div>
+            `;
+        }
+    } warning: {
         // No opacity cleanup needed anymore
     }
 }
