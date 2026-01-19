@@ -29,39 +29,7 @@ function toggleAll(source) {
     updateMobileSelectBtnState();
 }
 
-function toggleAllMobile(btn) {
-    const checkboxes = document.getElementsByName('selected_ids');
-    const isSelecting = btn.dataset.action === 'select';
-
-    for (let i = 0; i < checkboxes.length; i++) {
-        const row = checkboxes[i].closest('tr');
-        if (row && row.style.display !== 'none') {
-            checkboxes[i].checked = isSelecting;
-        }
-    }
-
-    updateMobileSelectBtnState();
-
-    // Sync with desktop header checkbox if it exists
-    const headerCheckbox = document.querySelector('th input[type="checkbox"]');
-    if (headerCheckbox) headerCheckbox.checked = isSelecting;
-}
-
-function updateMobileSelectBtnState() {
-    const checkboxes = document.getElementsByName('selected_ids');
-    const btn = document.querySelector('button[data-action]');
-    if (!btn) return;
-
-    const allChecked = Array.from(checkboxes).length > 0 && Array.from(checkboxes).every(c => c.checked);
-
-    if (allChecked) {
-        btn.innerText = '取消全選';
-        btn.dataset.action = 'deselect';
-    } else {
-        btn.innerText = '全選';
-        btn.dataset.action = 'select';
-    }
-}
+// Logic moved to admin_list.js
 
 document.addEventListener('DOMContentLoaded', function () {
     const checkboxes = document.getElementsByName('selected_ids');
