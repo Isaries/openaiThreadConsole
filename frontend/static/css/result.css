@@ -249,9 +249,7 @@ mark {
     border: 1px solid #e9ecef;
 }
 
-pointer-events: none;
-/* Container doesn't block clicks */
-}
+/* Cleaned up old styles */
 
 /* New Unified Floating Toolbar */
 .floating-toolbar {
