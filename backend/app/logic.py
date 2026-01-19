@@ -11,7 +11,7 @@ import database
 import security
 from . import utils
 import config
-import database # For loading settings in get_headers
+
 from app.extensions import db
 from app.models import Thread, Message
 import time

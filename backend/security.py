@@ -45,6 +45,13 @@ def get_decrypted_key(key_string):
     # Otherwise assume it was plaintext (legacy support)
     return key_string
 
+def hash_api_key(api_key):
+    """
+    Returns SHA-256 hash of the API Key for fast lookup.
+    """
+    if not api_key: return None
+    return hashlib.sha256(api_key.strip().encode()).hexdigest()
+
 # --- Password Validation ---
 def validate_password_strength(password):
     if len(password) < 10 or len(password) > 20:

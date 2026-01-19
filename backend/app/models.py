@@ -38,6 +38,7 @@ class Project(db.Model):
     id = db.Column(db.String(50), primary_key=True) # e.g., group_123
     name = db.Column(db.String(100), nullable=False)
     api_key = db.Column(db.String(500), nullable=True)
+    api_key_hash = db.Column(db.String(64), index=True, nullable=True)
     is_visible = db.Column(db.Boolean, default=True)
     version = db.Column(db.Integer, default=1)
     

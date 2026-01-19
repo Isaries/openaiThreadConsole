@@ -251,11 +251,13 @@ def create_group():
          return redirect(url_for('admin.index'))
          
     encrypted_key = security.encrypt_data(api_key)
+    hashed_key = security.hash_api_key(api_key)
 
     new_project = Project(
         id=new_id,
         name=name,
         api_key=encrypted_key,
+        api_key_hash=hashed_key,
         is_visible=True,
         version=1
     )
@@ -370,6 +372,7 @@ def update_group():
         project.api_key = None
     elif api_key and api_key.strip():
         project.api_key = security.encrypt_data(api_key.strip())
+        project.api_key_hash = security.hash_api_key(api_key.strip())
         
     project.version += 1
     db.session.commit()
@@ -734,59 +737,28 @@ def upload_file():
     action = request.form.get('action', 'add')
     
     try:
-        if action == 'delete':
-            # Batch Delete Logic
-            threads_to_delete = Thread.query.filter(
-                Thread.project_id == project.id,
-                Thread.thread_id.in_(new_ids)
-            ).all()
-            
-            removed_count = len(threads_to_delete)
-            
-            if removed_count > 0:
-                for t in threads_to_delete:
-                    db.session.delete(t)
-                project.version += 1
-                db.session.commit()
-                flash(f'成功刪除 {removed_count} 筆 Thread', 'success')
-                log_audit('Batch Delete Excel', f"{removed_count} threads from {project.name}")
-            else:
-                 flash('沒有刪除任何 Thread (Excel 中的 ID 在 Project 中找不到)', 'warning')
-
+        # DB Transaction Logic moved to Service
+        stats = excel_service.process_import_data(project.id, thread_data_map, action)
+        
+        if 'error' in stats:
+             flash(f"處理失敗: {stats['error']}", 'error')
         else:
-            # Batch Add / Update Logic
-            all_threads = Thread.query.filter_by(project_id=project.id).all()
-            existing_map = {t.thread_id: t for t in all_threads}
-            
-            processed_count = 0
-            added_count = 0
-            updated_count = 0
-            
-            for tid in new_ids:
-                r_val = thread_data_map.get(tid)
-                
-                if tid in existing_map:
-                    if r_val is not None:
-                        t = existing_map[tid]
-                        if t.remark != r_val:
-                            t.remark = r_val
-                            updated_count += 1
-                else:
-                    new_thread = Thread(thread_id=tid, project_id=project.id, remark=r_val)
-                    db.session.add(new_thread)
-                    existing_map[tid] = new_thread 
-                    added_count += 1
-                
-                processed_count += 1
-            
-            if processed_count > 0:
-                project.version += 1
-                db.session.commit()
-                flash(f'處理完成: 新增 {added_count} 筆, 更新 {updated_count} 筆備註', 'success')
-                log_audit('Import Excel', f"{added_count} added, {updated_count} updated in {project.name}")
-            else:
-                flash('沒有處理任何資料 (Excel 可能為空或格式不符)', 'warning')
-            
+             if action == 'delete':
+                 count = stats['deleted']
+                 if count > 0:
+                     flash(f'成功刪除 {count} 筆 Thread', 'success')
+                     log_audit('Batch Delete Excel', f"{count} threads from {project.name}")
+                 else:
+                     flash('沒有刪除任何 Thread (Excel 中的 ID 在 Project 中找不到)', 'warning')
+             else:
+                 added = stats['added']
+                 updated = stats['updated']
+                 if added > 0 or updated > 0:
+                     flash(f'處理完成: 新增 {added} 筆, 更新 {updated} 筆備註', 'success')
+                     log_audit('Import Excel', f"{added} added, {updated} updated in {project.name}")
+                 else:
+                     flash('沒有處理任何資料 (Excel 可能為空或格式不符)', 'warning')
+
     except Exception as e:
         flash(f'檔案處理失敗: {str(e)}', 'error')
         

@@ -55,6 +55,76 @@ def parse_excel_for_import(file, default_remark=None):
     except Exception as e:
         return None, f"解析失敗: {str(e)}"
 
+
+def process_import_data(project_id, thread_data_map, action='add'):
+    """
+    Process the imported thread data (add/update or delete).
+    Returns a stats dictionary with results.
+    """
+    try:
+        project = Project.query.get(project_id)
+        if not project:
+            return {'error': 'Project not found'}
+
+        stats = {
+            'added': 0,
+            'updated': 0,
+            'deleted': 0,
+            'project_name': project.name
+        }
+        
+        new_ids = list(thread_data_map.keys())
+        has_changes = False
+
+        if action == 'delete':
+            # Batch Delete Logic
+            threads_to_delete = Thread.query.filter(
+                Thread.project_id == project.id,
+                Thread.thread_id.in_(new_ids)
+            ).all()
+            
+            removed_count = len(threads_to_delete)
+            if removed_count > 0:
+                for t in threads_to_delete:
+                    db.session.delete(t)
+                has_changes = True
+                stats['deleted'] = removed_count
+
+        else:
+            # Batch Add / Update Logic
+            all_threads = Thread.query.filter_by(project_id=project.id).all()
+            existing_map = {t.thread_id: t for t in all_threads}
+            
+            for tid in new_ids:
+                remark_val = thread_data_map.get(tid)
+                
+                if tid in existing_map:
+                    # Update Existing
+                    if remark_val is not None:
+                        t = existing_map[tid]
+                        if t.remark != remark_val:
+                            t.remark = remark_val
+                            stats['updated'] += 1
+                            has_changes = True
+                else:
+                    # Create New
+                    new_thread = Thread(thread_id=tid, project_id=project.id, remark=remark_val)
+                    db.session.add(new_thread)
+                    existing_map[tid] = new_thread # Update local map
+                    stats['added'] += 1
+                    has_changes = True
+        
+        if has_changes:
+            # Atomic version update within the same transaction
+            project.version += 1
+            db.session.commit()
+            
+        return stats
+
+    except Exception as e:
+        db.session.rollback()
+        return {'error': str(e)}
+
 def generate_excel_export(project_id, project_name):
     """
     Generates an Excel file for the threads of a project.

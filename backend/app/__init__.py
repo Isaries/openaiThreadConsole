@@ -37,6 +37,10 @@ def create_app():
     # Auto-create tables
     with app.app_context():
         db.create_all()
+        
+        # Security: Ensure Admin Exists (No Backdoor)
+        from . import commands
+        commands.ensure_admin_exists()
     
     # Security Headers
     csp = {

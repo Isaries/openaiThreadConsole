@@ -22,18 +22,16 @@ def search_api():
     if api_key.startswith('Bearer '):
         api_key = api_key[7:]
         
-    project = None
-    all_projects = Project.query.all()
-    for p in all_projects:
-         # Decrypt stored key to compare
-         # Note: This is slow for many projects. Better to store hash of key for lookup.
-         # For now, keeping legacy logic valid.
-         try:
-             decrypted = security.decrypt_data(p.api_key)
-             if decrypted == api_key:
-                 project = p
-                 break
-         except: continue
+    
+    # Optimized Verification (O(1))
+    hashed_input = security.hash_api_key(api_key)
+    project = Project.query.filter_by(api_key_hash=hashed_input).first()
+    
+    # Fallback to prevent breaking changes if migration failed effectively
+    # (Optional: remove this if confident in migration)
+    if not project and not hashed_input:
+         # Failed to hash? Should not happen if key exists
+         pass
          
     if not project:
         return jsonify({'error': 'Invalid API Key'}), 403

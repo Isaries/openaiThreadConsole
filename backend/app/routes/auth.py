@@ -32,38 +32,9 @@ def login():
              pass
         import config
 
-        if not username:
-             # Legacy: Password-only login -> Admin
-             if password in config.ADMIN_PASSWORDS:
-                 username = 'Administrator'
-             else:
-                 utils.log_access("Unknown", "Login Failed (Password Only)")
-                 security.record_login_attempt(client_ip, False) # Record Failure
-                 flash('密碼錯誤 (Password-Only Login Failed)', 'error')
-                 return render_template('login.html')
-                 
-        if username == 'Administrator' and password in config.ADMIN_PASSWORDS:
-            session['user_id'] = 'admin'
-            session['username'] = 'Administrator'
-            session['role'] = 'admin'
-            session.permanent = True
-            
-            # Ensure Admin exists in DB (Shadow Account)
-            admin_user = User.query.filter_by(username='Administrator').first()
-            if not admin_user:
-                from werkzeug.security import generate_password_hash
-                admin_user = User(
-                    id='admin', 
-                    username='Administrator', 
-                    password_hash=generate_password_hash(password),
-                    is_admin=True
-                )
-                db.session.add(admin_user)
-                db.session.commit()
-                
-            utils.log_access(username, "Login Success (Admin ENV)")
-            security.record_login_attempt(client_ip, True) # Record Success
-            return redirect(url_for('admin.index'))
+        if not username or not password:
+             flash('請輸入帳號與密碼', 'error')
+             return render_template('login.html')
 
         # DB User Check
         from sqlalchemy import or_
