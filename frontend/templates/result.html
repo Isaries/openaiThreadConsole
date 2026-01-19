@@ -77,9 +77,12 @@
             « 上頁
         </button>
 
-        <span id="pageInfo" class="toolbar-info">
-            {{ current_page + 1 }} / {{ total_pages }}
-        </span>
+        <div class="toolbar-pagination-group">
+            <input type="number" id="pageInput" class="toolbar-input" value="{{ current_page + 1 }}" min="1"
+                max="{{ total_pages }}" onchange="handlePageInput(this)">
+            <span class="toolbar-divider">/</span>
+            <span id="totalPages">{{ total_pages }}</span>
+        </div>
 
         <button id="nextBtn" onclick="changePage(1)" class="toolbar-btn" {% if current_page>= total_pages - 1
             %}disabled{% endif %}>

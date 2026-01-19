@@ -111,13 +111,39 @@ function updatePaginationUI() {
     const config = getConfig();
     const totalPages = config.totalPages || 1;
 
-    const pageInfo = document.getElementById('pageInfo');
+    const pageInput = document.getElementById('pageInput');
+    const totalPagesSpan = document.getElementById('totalPages');
     const prevBtn = document.getElementById('prevBtn');
     const nextBtn = document.getElementById('nextBtn');
 
-    if (pageInfo) pageInfo.innerText = `第 ${currentPage + 1} 頁 / 共 ${totalPages} 頁`;
+    if (pageInput) pageInput.value = currentPage + 1;
+    if (totalPagesSpan) totalPagesSpan.innerText = totalPages;
+
     if (prevBtn) prevBtn.disabled = (currentPage === 0);
     if (nextBtn) nextBtn.disabled = (currentPage >= totalPages - 1);
+}
+
+window.handlePageInput = function (input) {
+    const config = getConfig();
+    const totalPages = config.totalPages || 1;
+
+    let val = parseInt(input.value);
+
+    // Validate
+    if (isNaN(val) || val < 1) val = 1;
+    if (val > totalPages) val = totalPages;
+
+    // Reset visual value if corrected
+    if (val !== parseInt(input.value)) {
+        input.value = val;
+    }
+
+    // Convert to 0-indexed page
+    const newPage = val - 1;
+
+    if (newPage !== currentPage) {
+        changePage(newPage - currentPage); // Reuse changePage logic
+    }
 }
 
 /**

@@ -321,6 +321,45 @@ mark {
     transform: translateY(-1px);
 }
 
+.toolbar-pagination-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(0, 0, 0, 0.05);
+    padding: 4px 12px;
+    border-radius: 20px;
+    margin: 0 5px;
+}
+
+.toolbar-input {
+    width: 40px;
+    background: transparent;
+    border: none;
+    text-align: center;
+    font-weight: 600;
+    color: #444;
+    font-size: 14px;
+    outline: none;
+    -moz-appearance: textfield;
+    /* Firefox */
+}
+
+/* Chrome, Safari, Edge, Opera */
+.toolbar-input::-webkit-outer-spin-button,
+.toolbar-input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.toolbar-input:focus {
+    color: var(--primary, #667eea);
+}
+
+.toolbar-divider {
+    color: #999;
+    font-size: 14px;
+}
+
 .toolbar-info {
     font-size: 13px;
     color: #666;
