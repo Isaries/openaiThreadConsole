@@ -79,7 +79,8 @@
 
         <div class="toolbar-pagination-group">
             <input type="number" id="pageInput" class="toolbar-input" value="{{ current_page + 1 }}" min="1"
-                max="{{ total_pages }}" onchange="handlePageInput(this)">
+                max="{{ total_pages }}" onchange="handlePageInput(this)"
+                onkeydown="if(event.key === 'Enter') this.blur()" onfocus="this.select()">
             <span class="toolbar-divider">/</span>
             <span id="totalPages">{{ total_pages }}</span>
         </div>
