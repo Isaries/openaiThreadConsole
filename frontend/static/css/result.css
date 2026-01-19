@@ -255,12 +255,19 @@ mark {
 .floating-toolbar {
     position: fixed;
     bottom: 20px;
-    left: 50%;
-    transform: translateX(-50%);
+    /* Robust Centering */
+    left: 0;
+    right: 0;
+    margin-left: auto;
+    margin-right: auto;
+    width: -moz-fit-content;
+    width: fit-content;
+
     z-index: 1000;
 
     display: flex;
     align-items: center;
+    justify-content: center;
     gap: 15px;
     padding: 10px 20px;
 
@@ -276,7 +283,7 @@ mark {
 
 .floating-toolbar:hover {
     box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
-    transform: translateX(-50%) translateY(-2px);
+    transform: translateY(-2px);
     background: rgba(255, 255, 255, 0.95);
 }
 
@@ -468,10 +475,11 @@ mark {
     /* Mobile Toolbar Optimization */
     .floating-toolbar {
         padding: 8px 12px;
-        gap: 8px;
-        width: 90%;
-        max-width: 360px;
-        justify-content: space-between;
+        gap: 12px;
+        width: -moz-fit-content;
+        width: fit-content;
+        max-width: 95%;
+        justify-content: center;
         bottom: 15px;
     }
 
