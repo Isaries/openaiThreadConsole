@@ -254,8 +254,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 };
 
-                // 2. Poll for Status
+                // 2. Poll for Status with Timeout & Retry
                 let elapsed = 0;
+                let retryCount = 0;
+                const MAX_RETRIES = 5;
+                const MAX_TIMEOUT_SEC = 300; // 5 Minutes
                 let isRequestActive = false;
 
                 const pollInterval = setInterval(async () => {
@@ -266,24 +269,70 @@ document.addEventListener('DOMContentLoaded', () => {
                     const timer = document.getElementById('timer');
                     if (timer) timer.textContent = `(${elapsed}s)`;
 
+                    // Timeout Check
+                    if (elapsed >= MAX_TIMEOUT_SEC) {
+                        clearInterval(pollInterval);
+                        statusDiv.className = 'mt-3 alert alert-danger';
+                        statusDiv.textContent = '搜尋請求超時 (5分鐘)，請稍後再試或縮小搜尋範圍。';
+                        btn.disabled = false;
+                        btn.innerText = '開始搜尋';
+                        loading.style.display = 'none';
+                        isRequestActive = false;
+                        return;
+                    }
+
                     try {
                         const res = await fetch(`/search/result/${taskId}`);
+                        
+                        // Handle 200 OK (Success)
                         if (res.status === 200) {
-                            // Success! 
                             clearInterval(pollInterval);
+                            statusDiv.className = 'mt-3 alert alert-success';
                             statusDiv.textContent = '搜尋完成，正在跳轉...';
-
-                            // Redirect to result page
                             window.location.href = `/search/result/${taskId}`;
-                        } else if (res.status === 500) {
+                            return;
+                        } 
+                        // Handle 202 Processing (Continue Polling)
+                        else if (res.status === 202) {
+                            retryCount = 0; // Reset retry on successful connection but processing
+                        }
+                        // Handle 404/403 (Task Lost or Forbidden) - Stop Polling
+                        else if (res.status === 404 || res.status === 403) {
                             clearInterval(pollInterval);
                             statusDiv.className = 'mt-3 alert alert-danger';
-                            statusDiv.textContent = '搜尋發生錯誤: ' + await res.text();
+                            statusDiv.textContent = '搜尋任務已失效或被拒絕 (Code ' + res.status + ')。請刷新頁面重新搜尋。';
                             btn.disabled = false;
                             btn.innerText = '開始搜尋';
+                            loading.style.display = 'none';
+                            return;
                         }
+                        // Handle 500 (Server Error) - Stop Polling
+                        else if (res.status === 500) {
+                            clearInterval(pollInterval);
+                            statusDiv.className = 'mt-3 alert alert-danger';
+                            let errText = await res.text();
+                            statusDiv.textContent = '搜尋發生伺服器錯誤: ' + errText;
+                            btn.disabled = false;
+                            btn.innerText = '開始搜尋';
+                            loading.style.display = 'none';
+                            return;
+                        }
+                        // Other codes? Count as retry to be safe
+                        else {
+                            throw new Error(`Unexpected status ${res.status}`);
+                        }
+
                     } catch (err) {
                         console.error("Polling error", err);
+                        retryCount++;
+                        if (retryCount > MAX_RETRIES) {
+                            clearInterval(pollInterval);
+                            statusDiv.className = 'mt-3 alert alert-danger';
+                            statusDiv.textContent = '網路連線不穩定，已停止搜尋。請檢查網路並重試。';
+                            btn.disabled = false;
+                            btn.innerText = '開始搜尋';
+                            loading.style.display = 'none';
+                        }
                     } finally {
                         isRequestActive = false;
                     }

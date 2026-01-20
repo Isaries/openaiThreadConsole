@@ -840,6 +840,35 @@ def create_user():
     flash(f'教師帳戶 {username} 建立成功', 'success')
     return redirect(url_for('admin.index'))
 
+# --- API for Refresh History ---
+@admin_bp.route('/api/refresh_history')
+def get_refresh_history():
+    if not session.get('user_id'): return {'error': 'Unauthorized'}, 401
+    
+    # Optional: Admin only?
+    if session.get('role') != 'admin':
+         return {'error': 'Permission Denied'}, 403
+         
+    from ..models import RefreshHistory
+    from .. import utils
+    
+    # Get last 5
+    items = RefreshHistory.query.order_by(RefreshHistory.timestamp.desc()).limit(5).all()
+    
+    data = []
+    for item in items:
+        data.append({
+            'time': utils.unix_to_utc8(item.timestamp),
+            'duration': f"{item.duration}s",
+            'status': item.result_status,
+            'total': item.total_scanned,
+            'updated': item.updated_count,
+            'errors': item.error_count,
+            'logs': item.log_json
+        })
+        
+    return {'data': data}
+
 @admin_bp.route('/user/reset', methods=['POST'])
 def reset_user_password():
     if not session.get('user_id') or session.get('role') != 'admin':

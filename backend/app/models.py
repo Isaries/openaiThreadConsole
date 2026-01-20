@@ -119,3 +119,16 @@ class SystemMetric(db.Model):
     memory_used = db.Column(db.Float) # GB
     memory_total = db.Column(db.Float) # GB
 
+class RefreshHistory(db.Model):
+    __tablename__ = 'refresh_history'
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    timestamp = db.Column(db.Integer, nullable=False, index=True) # Start Time
+    duration = db.Column(db.Float) # Seconds
+    result_status = db.Column(db.String(20)) # Success / Partial / Failed
+    
+    total_scanned = db.Column(db.Integer, default=0)
+    updated_count = db.Column(db.Integer, default=0)
+    error_count = db.Column(db.Integer, default=0)
+    
+    log_json = db.Column(db.Text) # JSON string for error details (Limited size)
+

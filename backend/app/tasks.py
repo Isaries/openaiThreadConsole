@@ -187,42 +187,100 @@ def scheduled_refresh_task():
             
     logger.info("Conditions met. Executing Refresh Logic...")
 
-    from .models import Project
+    logger.info("Conditions met. Executing Refresh Logic...")
+
+    from .models import Project, RefreshHistory
     from . import create_app
     app = create_app()
     
-    with app.app_context():
-        projects = Project.query.all()
-        current_ts = int(time.time())
-        day_seconds = 86400
-        interval = frequency_days * day_seconds 
-        
-        count = 0
-        
-        for p in projects:
-            for t in p.threads:
-                last_sync = t.last_synced_at or 0
-                
-                # Double check against individual thread latency
-                # Even if task runs, we only update stale threads
-                if (current_ts - last_sync) > interval:
-                    logger.info(f"Refeshing stale cache: {t.thread_id}")
-                    s, m = logic.sync_thread_to_db(t.thread_id, p.api_key, p.id)
-                    if s: count += 1
-                    else: logger.warning(f"Failed to refresh {t.thread_id}: {m}")
-                    time.sleep(0.5) # Rate Limit Protection
+    start_ts = time.time()
+    total_scanned = 0
+    updated_count = 0
+    error_count = 0
+    error_logs = []
+    
+    try:
+        with app.app_context():
+            projects = Project.query.all()
+            current_ts = int(time.time())
+            day_seconds = 86400
+            interval = frequency_days * day_seconds 
+            
+            for p in projects:
+                for t in p.threads:
+                    total_scanned += 1
                     
-    # Update Last Run Time
-    # Update Last Run Time (Re-load to prevent Race Condition with Admin UI)
-    current_settings = database.load_settings()
-    current_config = current_settings.get('auto_refresh', {})
-    
-    # Update only the timestamp, keeping other admin-set values (enabled, hour, freq)
-    current_config['last_run'] = now.isoformat()
-    current_settings['auto_refresh'] = current_config
-    
-    database.save_settings(current_settings)
-    logger.info("Scheduled Refresh Completed.")
+                    last_sync = t.last_synced_at or 0
+                    
+                    # Double check against individual thread latency
+                    # Even if task runs, we only update stale threads
+                    if (current_ts - last_sync) > interval:
+                        logger.info(f"Refeshing stale cache: {t.thread_id}")
+                        s, m = logic.sync_thread_to_db(t.thread_id, p.api_key, p.id)
+                        if s: 
+                            updated_count += 1
+                        else: 
+                            error_count += 1
+                            logger.warning(f"Failed to refresh {t.thread_id}: {m}")
+                            if len(error_logs) < 10: # Limit log size
+                                error_logs.append(f"{t.thread_id}: {m}")
+                                
+                        time.sleep(0.5) # Rate Limit Protection
+            
+            # --- Save History ---
+            duration = time.time() - start_ts
+            status = 'Success'
+            if error_count > 0:
+                status = 'Partial' if updated_count > 0 else 'Failed'
+                
+            history = RefreshHistory(
+                timestamp=int(start_ts),
+                duration=round(duration, 2),
+                result_status=status,
+                total_scanned=total_scanned,
+                updated_count=updated_count,
+                error_count=error_count,
+                log_json=json.dumps(error_logs, ensure_ascii=False)
+            )
+            db.session.add(history)
+            
+            # --- Cleanup Old History (> 30 Days) ---
+            cutoff_ts = int(start_ts) - (30 * 86400)
+            RefreshHistory.query.filter(RefreshHistory.timestamp < cutoff_ts).delete()
+            
+            db.session.commit()
+                        
+        # Update Last Run Time
+        # Update Last Run Time (Re-load to prevent Race Condition with Admin UI)
+        current_settings = database.load_settings()
+        current_config = current_settings.get('auto_refresh', {})
+        
+        # Update only the timestamp, keeping other admin-set values (enabled, hour, freq)
+        current_config['last_run'] = now.isoformat()
+        current_settings['auto_refresh'] = current_config
+        
+        database.save_settings(current_settings)
+        logger.info(f"Scheduled Refresh Completed. Updated: {updated_count}, Errors: {error_count}")
+
+    except Exception as e:
+        logger.error(f"Scheduled Refresh CRITICAL FAILURE: {e}")
+        # Try to log failure to DB even if unexpected error
+        try:
+            with app.app_context():
+                duration = time.time() - start_ts
+                history = RefreshHistory(
+                    timestamp=int(start_ts),
+                    duration=round(duration, 2),
+                    result_status='Critical Failed',
+                    total_scanned=total_scanned,
+                    updated_count=updated_count,
+                    error_count=error_count + 1,
+                    log_json=json.dumps([f"System Error: {str(e)}"], ensure_ascii=False)
+                )
+                db.session.add(history)
+                db.session.commit()
+        except:
+            pass
                     
 
 @huey.task()

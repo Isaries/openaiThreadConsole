@@ -55,150 +55,224 @@
                     </div>
                 </div>
             </div>
-
-            <script>
-                // Auto-correction for Frequency Input
-                document.addEventListener('DOMContentLoaded', function () {
-                    const freqInput = document.getElementById('refresh_frequency');
-                    if (freqInput) {
-                        freqInput.addEventListener('blur', function () {
-                            let val = parseInt(this.value);
-                            if (isNaN(val) || val < 1) {
-                                this.value = 1;
-                            } else if (val > 360) {
-                                this.value = 360;
-                            }
-                        });
-                    }
-                });
-
-                function saveRefreshSettings() {
-                    const enabled = document.getElementById('refresh_enabled').checked;
-                    const frequency = document.getElementById('refresh_frequency').value;
-                    const hour = document.getElementById('refresh_hour').value;
-                    const csrf = "{{ csrf_token() }}";
-
-                    fetch('/admin/settings/refresh_schedule', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-CSRFToken': csrf
-                        },
-                        body: JSON.stringify({ enabled, frequency, hour })
-                    })
-                        .then(r => r.json())
-                        .then(data => {
-                            if (data.success) alert('設定已儲存！');
-                            else alert('儲存失敗');
-                        })
-                        .catch(e => alert('Error: ' + e));
-                }
-            </script>
-            {% endif %}
-
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem;">
-                <div>
-                    <div class="form-group">
-                        <label>Project 名稱</label>
-                        <input type="text" name="name" value="{{ active_group.name }}" required class="input">
-                    </div>
-
-                    {% if current_role == 'admin' %}
-                    <div class="form-group">
-                        <label>擁有者 (Owners)</label>
-                        <div
-                            style="background: white; border: 1px solid var(--surface-border); padding: 0.5rem; border-radius: var(--radius-md); max-height: 120px; overflow-y: auto;">
-                            {% for u in users %}
-                            <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem;">
-                                {% set is_self = (u.username == session.get('username')) %}
-                                {% set is_checked = u.id in active_group.get('owners', []) or (is_self and
-                                current_role == 'admin') %}
-                                {% set is_disabled = is_self and current_role == 'admin' %}
-                                <input type="checkbox" name="owner_ids" value="{{ u.id }}" id="owner_{{ u.id }}" {% if
-                                    is_checked %}checked{% endif %} {% if is_disabled %}disabled{% endif %}>
-                                <label for="owner_{{ u.id }}" class="{{ 'text-secondary' if is_disabled else '' }}"
-                                    style="margin:0; font-weight: normal; font-size: 0.8rem;">
-                                    {{ u.username }}
-                                    {% if is_self %}(您){% endif %}
-                                </label>
-                                {% if is_self and current_role == 'admin' %}
-                                <!-- Ensure it submits even if disabled -->
-                                <input type="hidden" name="owner_ids" value="{{ u.id }}">
-                                {% endif %}
-                            </div>
-                            {% endfor %}
-                        </div>
-                    </div>
-                    {% endif %}
-
-                    <div style="display: flex; align-items: center; gap: 0.5rem; margin-top: 1rem;">
-                        <input type="checkbox" name="is_visible" id="is_visible" {% if active_group.get('is_visible',
-                            True) %}checked{% endif %} style="width: 1.25rem; height: 1.25rem;">
-                        <label for="is_visible" style="margin:0;">顯示於搜尋頁面</label>
-                    </div>
-                </div>
-
-                <div>
-                    <div class="form-group">
-                        <label>
-                            OpenAI API Key
-                            {% if '金鑰失效' in masked_key %}
-                            <span class="badge badge-red">失效</span>
-                            {% elif masked_key != '尚未設定 (使用環境變數/預設)' %}
-                            <span class="badge badge-green">已連結</span>
-                            {% endif %}
-                        </label>
-                        <div class="flex gap-2">
-                            <input type="text" name="api_key" placeholder="輸入新 Key 以更新..." class="input">
-                            {% if '尚未設定' not in masked_key %}
-                            <button type="submit" name="clear_key" value="true" class="btn btn-secondary btn-sm"
-                                onclick="return confirm('確定清除？')">清除</button>
-                            {% endif %}
-                        </div>
-                        <p class="text-xs text-secondary mt-1">目前: <code>{{ masked_key }}</code></p>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Tags Section -->
-            <div style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid var(--surface-border);">
-                <div class="form-group">
-                    <label>Project Tag</label>
-                    <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.5rem;"
-                        id="tagList_{{ active_group.group_id }}">
-                        {% for tag in active_group.tags %}
-                        <span class="badge badge-gray" style="display: inline-flex; align-items: center; gap: 4px;">
-                            {{ tag }}
-                            <button type="button" data-group-id="{{ active_group.group_id }}" data-tag-name="{{ tag }}"
-                                onclick="removeTag(this.dataset.groupId, this.dataset.tagName)"
-                                style="background: none; border: none; cursor: pointer; color: #666; font-size: 1rem; line-height: 1; padding: 0 2px;">×</button>
-                        </span>
-                        {% endfor %}
-                    </div>
-
-                    <div class="flex gap-2" style="max-width: 300px;">
-                        <input type="text" id="newTagInput_{{ active_group.group_id }}" placeholder="新增 Tag..."
-                            class="input" style="flex:1;" list="availableTags"
-                            onkeydown="if(event.key === 'Enter') { event.preventDefault(); addTag('{{ active_group.group_id }}'); return false; }">
-                        <button type="button" class="btn btn-secondary btn-sm"
-                            onclick="addTag('{{ active_group.group_id }}')">新增</button>
-
-                        <datalist id="availableTags">
-                            {% for tag in all_tags %}
-                            <option value="{{ tag }}">
-                                {% endfor %}
-                        </datalist>
-                    </div>
-                </div>
-            </div>
-
-            <div class="flex items-center justify-between"
-                style="margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid var(--surface-border);">
-                <button type="submit" formaction="/admin/group/delete" formmethod="POST" class="btn btn-danger btn-sm"
-                    onclick="return confirm('⚠️ 確定刪除 Project？無法復原！')">
-                    🗑️ 刪除 Project
-                </button>
-                <button type="submit" class="btn btn-primary">儲存變更</button>
-            </div>
-        </form>
     </div>
+
+    <!-- Auto Refresh History Table -->
+    <div style="margin-top: 1.5rem; padding-top: 0.5rem; border-top: 1px dashed var(--surface-border);">
+        <h5 style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.5rem;">📜 最近 5 次執行紀錄</h5>
+        <div class="card" style="background: white; border: 1px solid var(--surface-border); padding: 0.5rem;">
+            <table style="width: 100%; font-size: 0.8rem; border-collapse: collapse;">
+                <thead>
+                    <tr style="border-bottom: 2px solid #eee; text-align: left;">
+                        <th style="padding: 4px;">時間</th>
+                        <th style="padding: 4px;">狀態</th>
+                        <th style="padding: 4px;">耗時</th>
+                        <th style="padding: 4px;">更新/總數</th>
+                        <th style="padding: 4px;">錯誤</th>
+                        <th style="padding: 4px;">詳情</th>
+                    </tr>
+                </thead>
+                <tbody id="refreshHistoryBody">
+                    <tr>
+                        <td colspan="6" style="text-align:center; padding: 1rem;">載入中...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Auto-correction for Frequency Input
+    document.addEventListener('DOMContentLoaded', function () {
+        const freqInput = document.getElementById('refresh_frequency');
+        if (freqInput) {
+            freqInput.addEventListener('blur', function () {
+                let val = parseInt(this.value);
+                if (isNaN(val) || val < 1) {
+                    this.value = 1;
+                } else if (val > 360) {
+                    this.value = 360;
+                }
+            });
+        }
+        // Load history on load (or when panel opens if we hook it)
+        loadRefreshHistory();
+    });
+
+    function loadRefreshHistory() {
+        fetch('/admin/api/refresh_history')
+            .then(r => r.json())
+            .then(resp => {
+                const tbody = document.getElementById('refreshHistoryBody');
+                if (!tbody) return;
+                tbody.innerHTML = '';
+
+                if (resp.error) {
+                    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:red;">Error: ${resp.error}</td></tr>`;
+                    return;
+                }
+
+                if (!resp.data || resp.data.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:#999;">尚無執行紀錄</td></tr>`;
+                    return;
+                }
+
+                resp.data.forEach(item => {
+                    let statusColor = 'green';
+                    if (item.status === 'Partial') statusColor = 'orange';
+                    if (item.status === 'Failed' || item.status === 'Critical Failed') statusColor = 'red';
+
+                    let logsHtml = '-';
+                    if (item.logs && item.logs !== '[]') {
+                        logsHtml = `<span title="${item.logs.replace(/"/g, '&quot;')}" style="cursor:help; border-bottom:1px dotted #999;">查看</span>`;
+                    }
+
+                    const row = `
+                                    <tr style="border-bottom: 1px solid #f0f0f0;">
+                                        <td style="padding: 6px;">${item.time}</td>
+                                        <td style="padding: 6px;"><span class="badge" style="background:${statusColor}; color:white; padding:2px 6px; font-size:0.75rem;">${item.status}</span></td>
+                                        <td style="padding: 6px;">${item.duration}</td>
+                                        <td style="padding: 6px;">${item.updated} / ${item.total}</td>
+                                        <td style="padding: 6px; color:${item.errors > 0 ? 'red' : 'inherit'}">${item.errors}</td>
+                                        <td style="padding: 6px;">${logsHtml}</td>
+                                    </tr>
+                                `;
+                    tbody.insertAdjacentHTML('beforeend', row);
+                });
+            })
+            .catch(e => {
+                console.error(e);
+            });
+    }
+
+    function saveRefreshSettings() {
+        const enabled = document.getElementById('refresh_enabled').checked;
+        const frequency = document.getElementById('refresh_frequency').value;
+        const hour = document.getElementById('refresh_hour').value;
+        const csrf = "{{ csrf_token() }}";
+
+        fetch('/admin/settings/refresh_schedule', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrf
+            },
+            body: JSON.stringify({ enabled, frequency, hour })
+        })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) alert('設定已儲存！');
+                else alert('儲存失敗');
+            })
+            .catch(e => alert('Error: ' + e));
+    }
+</script>
+{% endif %}
+
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem;">
+    <div>
+        <div class="form-group">
+            <label>Project 名稱</label>
+            <input type="text" name="name" value="{{ active_group.name }}" required class="input">
+        </div>
+
+        {% if current_role == 'admin' %}
+        <div class="form-group">
+            <label>擁有者 (Owners)</label>
+            <div
+                style="background: white; border: 1px solid var(--surface-border); padding: 0.5rem; border-radius: var(--radius-md); max-height: 120px; overflow-y: auto;">
+                {% for u in users %}
+                <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem;">
+                    {% set is_self = (u.username == session.get('username')) %}
+                    {% set is_checked = u.id in active_group.get('owners', []) or (is_self and
+                    current_role == 'admin') %}
+                    {% set is_disabled = is_self and current_role == 'admin' %}
+                    <input type="checkbox" name="owner_ids" value="{{ u.id }}" id="owner_{{ u.id }}" {% if is_checked
+                        %}checked{% endif %} {% if is_disabled %}disabled{% endif %}>
+                    <label for="owner_{{ u.id }}" class="{{ 'text-secondary' if is_disabled else '' }}"
+                        style="margin:0; font-weight: normal; font-size: 0.8rem;">
+                        {{ u.username }}
+                        {% if is_self %}(您){% endif %}
+                    </label>
+                    {% if is_self and current_role == 'admin' %}
+                    <!-- Ensure it submits even if disabled -->
+                    <input type="hidden" name="owner_ids" value="{{ u.id }}">
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <div style="display: flex; align-items: center; gap: 0.5rem; margin-top: 1rem;">
+            <input type="checkbox" name="is_visible" id="is_visible" {% if active_group.get('is_visible', True)
+                %}checked{% endif %} style="width: 1.25rem; height: 1.25rem;">
+            <label for="is_visible" style="margin:0;">顯示於搜尋頁面</label>
+        </div>
+    </div>
+
+    <div>
+        <div class="form-group">
+            <label>
+                OpenAI API Key
+                {% if '金鑰失效' in masked_key %}
+                <span class="badge badge-red">失效</span>
+                {% elif masked_key != '尚未設定 (使用環境變數/預設)' %}
+                <span class="badge badge-green">已連結</span>
+                {% endif %}
+            </label>
+            <div class="flex gap-2">
+                <input type="text" name="api_key" placeholder="輸入新 Key 以更新..." class="input">
+                {% if '尚未設定' not in masked_key %}
+                <button type="submit" name="clear_key" value="true" class="btn btn-secondary btn-sm"
+                    onclick="return confirm('確定清除？')">清除</button>
+                {% endif %}
+            </div>
+            <p class="text-xs text-secondary mt-1">目前: <code>{{ masked_key }}</code></p>
+        </div>
+    </div>
+</div>
+
+<!-- Tags Section -->
+<div style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid var(--surface-border);">
+    <div class="form-group">
+        <label>Project Tag</label>
+        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.5rem;"
+            id="tagList_{{ active_group.group_id }}">
+            {% for tag in active_group.tags %}
+            <span class="badge badge-gray" style="display: inline-flex; align-items: center; gap: 4px;">
+                {{ tag }}
+                <button type="button" data-group-id="{{ active_group.group_id }}" data-tag-name="{{ tag }}"
+                    onclick="removeTag(this.dataset.groupId, this.dataset.tagName)"
+                    style="background: none; border: none; cursor: pointer; color: #666; font-size: 1rem; line-height: 1; padding: 0 2px;">×</button>
+            </span>
+            {% endfor %}
+        </div>
+
+        <div class="flex gap-2" style="max-width: 300px;">
+            <input type="text" id="newTagInput_{{ active_group.group_id }}" placeholder="新增 Tag..." class="input"
+                style="flex:1;" list="availableTags"
+                onkeydown="if(event.key === 'Enter') { event.preventDefault(); addTag('{{ active_group.group_id }}'); return false; }">
+            <button type="button" class="btn btn-secondary btn-sm"
+                onclick="addTag('{{ active_group.group_id }}')">新增</button>
+
+            <datalist id="availableTags">
+                {% for tag in all_tags %}
+                <option value="{{ tag }}">
+                    {% endfor %}
+            </datalist>
+        </div>
+    </div>
+</div>
+
+<div class="flex items-center justify-between"
+    style="margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid var(--surface-border);">
+    <button type="submit" formaction="/admin/group/delete" formmethod="POST" class="btn btn-danger btn-sm"
+        onclick="return confirm('⚠️ 確定刪除 Project？無法復原！')">
+        🗑️ 刪除 Project
+    </button>
+    <button type="submit" class="btn btn-primary">儲存變更</button>
+</div>
+</form>
+</div>
