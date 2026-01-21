@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, session, send_file, jsonify
+from flask import Blueprint, render_template, request, redirect, url_for, flash, session, send_file, jsonify, current_app
 import io
 from ..extensions import db, limiter
 from ..models import User, Project, Thread, Message, SearchHistory, AuditLog, IPBan, Tag, SystemMetric
@@ -15,6 +15,7 @@ import psutil
 from sqlalchemy.orm import subqueryload, joinedload
 from sqlalchemy import func
 from ..tasks import refresh_specific_threads
+from .. import tasks
 
 admin_bp = Blueprint('admin', __name__, url_prefix='/admin')
 
