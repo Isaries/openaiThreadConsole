@@ -17,15 +17,84 @@ document.addEventListener('DOMContentLoaded', () => {
      * 1. If Tag Filter is active: Show only matching projects (Flat list or simplified grouping)
      * 2. If No Tag Filter: Show all projects grouped by their FIRST tag (or 'Uncategorized')
      */
+    // Init Tom Select (Global variable to access in closures)
+    let tomControl = null;
+
+    if (window.TomSelect) {
+        tomControl = new TomSelect('#projectSelect', {
+            create: false,
+            sortField: {
+                field: "text",
+                direction: "asc"
+            },
+            placeholder: '請選擇或搜尋 Project...',
+            maxOptions: null // Show all
+        });
+    }
+
+    /**
+     * Renders Project Options into the Select Element
+     * Grouping strategy:
+     * 1. If Tag Filter is active: Show only matching projects (Flat list or simplified grouping)
+     * 2. If No Tag Filter: Show all projects grouped by their FIRST tag (or 'Uncategorized')
+     */
     function renderProjectOptions(projects, isFiltered = false) {
         // Clear current options (keep default disabled one)
-        projectSelect.innerHTML = '<option value="" disabled selected>請選擇 Project...</option>';
+        // Note: For TomSelect, modifying the underlying option and calling sync() is the way.
+
+        // 1. Destroy old options if not using TomSelect (Vanilla Fallback)
+        if (!tomControl) {
+            projectSelect.innerHTML = '<option value="" disabled selected>請選擇 Project...</option>';
+        } else {
+            // For TomSelect, we can clear via API or clear DOM and sync.
+            // Clearing DOM is safer for re-grouping logic.
+            tomControl.clear();
+            tomControl.clearOptions();
+        }
+
+        // Helper to add option
+        const addOption = (parent, value, text) => {
+            if (tomControl) {
+                tomControl.addOption({ value: value, text: text });
+            } else {
+                const opt = document.createElement('option');
+                opt.value = value;
+                opt.textContent = text;
+                parent.appendChild(opt);
+            }
+        };
+
+        const addGroup = (label) => {
+            if (tomControl) {
+                tomControl.addOptionGroup(label, { label: label });
+                return label; // ID is label
+            } else {
+                const el = document.createElement('optgroup');
+                el.label = label;
+                projectSelect.appendChild(el);
+                return el;
+            }
+        };
+
+        const addOptionToGroup = (groupHandle, value, text) => {
+            if (tomControl) {
+                tomControl.addOption({ value: value, text: text, optgroup: groupHandle });
+            } else {
+                const opt = document.createElement('option');
+                opt.value = value;
+                opt.textContent = text;
+                groupHandle.appendChild(opt);
+            }
+        };
 
         if (projects.length === 0) {
-            const opt = document.createElement('option');
-            opt.textContent = "(無符合專案)";
-            opt.disabled = true;
-            projectSelect.appendChild(opt);
+            if (!tomControl) {
+                const opt = document.createElement('option');
+                opt.textContent = "(無符合專案)";
+                opt.disabled = true;
+                projectSelect.appendChild(opt);
+            }
+            // TomSelect handles empty state via 'no_results' option, but we can't easily push a disabled option to it dynamically as main option.
             return;
         }
 
@@ -36,10 +105,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (isFiltered) {
             // Flat list for specific filter
             projects.forEach(p => {
-                const opt = document.createElement('option');
-                opt.value = p.id;
-                opt.textContent = `📁 ${p.name}`;
-                projectSelect.appendChild(opt);
+                addOption(projectSelect, p.id, `📁 ${p.name}`);
             });
         } else {
             // Group by Tag logic for "All Projects"
@@ -59,39 +125,35 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // Render Groups (Sorted keys)
             Object.keys(groups).sort().forEach(tagName => {
-                const groupEl = document.createElement('optgroup');
-                groupEl.label = tagName;
+                const groupHandle = addGroup(tagName);
                 groups[tagName].forEach(p => {
-                    const opt = document.createElement('option');
-                    opt.value = p.id;
-                    opt.textContent = p.name;
-                    groupEl.appendChild(opt);
+                    addOptionToGroup(groupHandle, p.id, p.name);
                 });
-                projectSelect.appendChild(groupEl);
             });
 
             // Render Uncategorized
             if (noTag.length > 0) {
-                const groupEl = document.createElement('optgroup');
-                groupEl.label = "未分類";
+                const groupHandle = addGroup("未分類");
                 noTag.forEach(p => {
-                    const opt = document.createElement('option');
-                    opt.value = p.id;
-                    opt.textContent = p.name;
-                    groupEl.appendChild(opt);
+                    addOptionToGroup(groupHandle, p.id, p.name);
                 });
-                projectSelect.appendChild(groupEl);
             }
         }
+
+        if (tomControl) tomControl.refreshOptions(false);
     }
 
     function selectProject(id) {
         if (id) {
-            projectSelect.value = id;
+            if (tomControl) tomControl.setValue(id);
+            else projectSelect.value = id;
+
             hiddenGroupId.value = id;
             localStorage.setItem('threadConsole_selectedGroupId', id);
         } else {
-            projectSelect.value = "";
+            if (tomControl) tomControl.clear();
+            else projectSelect.value = "";
+
             hiddenGroupId.value = "";
         }
     }
@@ -102,17 +164,20 @@ document.addEventListener('DOMContentLoaded', () => {
     // Restore Selection logic
     const savedId = localStorage.getItem('threadConsole_selectedGroupId');
     if (savedId) {
-        // Verify it exists in current set
         const exists = ALL_PROJECTS.find(p => p.id === savedId);
         if (exists) selectProject(savedId);
     }
 
     // Project Select Handler (Change event is robust for Selects)
+    // TomSelect updates the original Select, so this Listener DOES fire.
     projectSelect.addEventListener('change', () => {
         const val = projectSelect.value;
         if (val) {
             hiddenGroupId.value = val;
             localStorage.setItem('threadConsole_selectedGroupId', val);
+        } else {
+            // Also handle clear
+            hiddenGroupId.value = "";
         }
     });
 
