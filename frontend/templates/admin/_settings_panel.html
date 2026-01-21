@@ -237,7 +237,7 @@
 <!-- Tags Section -->
 <div style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid var(--surface-border);">
     <div class="form-group">
-        <label>Project Tag</label>
+        <label>Organization</label>
         <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.5rem;"
             id="tagList_{{ active_group.group_id }}">
             {% for tag in active_group.tags %}
@@ -251,8 +251,8 @@
         </div>
 
         <div class="flex gap-2" style="max-width: 300px;">
-            <input type="text" id="newTagInput_{{ active_group.group_id }}" placeholder="新增 Tag..." class="input"
-                style="flex:1;" list="availableTags"
+            <input type="text" id="newTagInput_{{ active_group.group_id }}" placeholder="新增 Organization..."
+                class="input" style="flex:1;" list="availableTags"
                 onkeydown="if(event.key === 'Enter') { event.preventDefault(); addTag('{{ active_group.group_id }}'); return false; }">
             <button type="button" class="btn btn-secondary btn-sm"
                 onclick="addTag('{{ active_group.group_id }}')">新增</button>

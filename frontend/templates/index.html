@@ -40,9 +40,9 @@
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
 
             <div class="form-group">
-                <label>Tag 篩選 (選填)</label>
+                <label>Organization 篩選 (選填)</label>
                 <select id="tagFilter" class="input" style="margin-bottom: 0.5rem; cursor: pointer;">
-                    <option value="" disabled selected>選擇 Tag...</option>
+                    <option value="" disabled selected>選擇 Organization...</option>
                     <option value="Ignore">顯示全部 (Ignore)</option>
                     {% for tag in all_tags %}
                     <option value="{{ tag }}">{{ tag }}</option>
@@ -110,29 +110,30 @@
             </div>
 
             <!-- CAPTCHA Container (Hidden by default) -->
-            <div id="captchaContainer" class="form-group" style="display: none; background: rgba(0,0,0,0.02); padding: 10px; border-radius: 6px; margin-bottom: 1rem; border: 1px dashed var(--surface-border);">
+            <div id="captchaContainer" class="form-group"
+                style="display: none; background: rgba(0,0,0,0.02); padding: 10px; border-radius: 6px; margin-bottom: 1rem; border: 1px dashed var(--surface-border);">
                 <label style="display: block; margin-bottom: 5px; font-size: 0.9rem;">
-                    🛡️ 安全驗證 <span id="captchaHint" style="font-size: 0.8em; color: var(--text-secondary);">(點擊圖片更換)</span>
+                    🛡️ 安全驗證 <span id="captchaHint"
+                        style="font-size: 0.8em; color: var(--text-secondary);">(點擊圖片更換)</span>
                 </label>
-                
+
                 <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 8px;">
                     <!-- Captcha Image -->
-                    <div style="cursor: pointer; border: 1px solid #ddd; border-radius: 4px; overflow: hidden; height: 50px; display: flex; align-items: center; background: white;" 
-                         onclick="refreshCaptcha()" title="看不清楚？點擊換一張">
+                    <div style="cursor: pointer; border: 1px solid #ddd; border-radius: 4px; overflow: hidden; height: 50px; display: flex; align-items: center; background: white;"
+                        onclick="refreshCaptcha()" title="看不清楚？點擊換一張">
                         <img id="captchaImg" src="" alt="Captcha" style="height: 100%; display: block;">
                     </div>
-                    
+
                     <!-- Toggle Mode Button -->
-                    <button type="button" id="toggleCaptchaMode" class="btn btn-sm btn-outline" 
-                            style="height: 50px; padding: 0 12px; font-size: 0.85rem; border: 1px solid var(--surface-border); display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 2px;">
+                    <button type="button" id="toggleCaptchaMode" class="btn btn-sm btn-outline"
+                        style="height: 50px; padding: 0 12px; font-size: 0.85rem; border: 1px solid var(--surface-border); display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 2px;">
                         <span>🧠</span>
                         <span style="font-size: 0.7rem;">挑戰數學</span>
                     </button>
                 </div>
-                
-                <input type="text" id="captchaInput" name="captcha" class="input" 
-                       placeholder="請輸入圖片中的文字" autocomplete="off" 
-                       style="letter-spacing: 2px; text-align: center;">
+
+                <input type="text" id="captchaInput" name="captcha" class="input" placeholder="請輸入圖片中的文字"
+                    autocomplete="off" style="letter-spacing: 2px; text-align: center;">
             </div>
 
             <button type="submit" class="btn btn-primary btn-block" style="padding: 0.75rem; font-size: 1rem;">

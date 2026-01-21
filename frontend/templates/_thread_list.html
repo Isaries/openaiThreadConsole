@@ -15,6 +15,12 @@
         <div class="thread-meta">
             <span class="thread-time">📅 {{ thread.time }}</span>
             <span class="thread-id" style="margin-bottom: 5px;">ID: {{ thread.thread_id }}</span>
+            {% if thread.remark %}
+            <div class="thread-remark"
+                style="margin-bottom: 5px; color: var(--text-secondary); font-size: 0.9em; word-break: break-all;">
+                📝 {{ thread.remark }}
+            </div>
+            {% endif %}
             <a href="/download/pdf/{{ thread.thread_id }}" onclick="event.stopPropagation()"
                 class="btn-pdf btn-thread-pdf">
                 📄 PDF

@@ -200,7 +200,7 @@ function addTag(groupId) {
 }
 
 function removeTag(groupId, tagName) {
-    if (!confirm(`移除 Tag: ${tagName}?`)) return;
+    if (!confirm(`移除 Organization: ${tagName}?`)) return;
 
     const csrfToken = document.querySelector('input[name="csrf_token"]')?.value;
 
