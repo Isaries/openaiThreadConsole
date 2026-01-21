@@ -2,7 +2,7 @@ from flask import request, render_template, redirect, url_for, flash, session
 from . import admin_bp
 from ...models import User
 from ...extensions import db
-from ...extensions import db
+
 import security as core_security
 from datetime import datetime
 import uuid
