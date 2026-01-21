@@ -12,6 +12,8 @@ import uuid
 import config
 import json
 import psutil
+from sqlalchemy.orm import subqueryload, joinedload
+from sqlalchemy import func
 from ..tasks import refresh_specific_threads
 
 admin_bp = Blueprint('admin', __name__, url_prefix='/admin')
@@ -28,21 +30,37 @@ def index():
     projects = []
     
     # Permission Filter
+    # Permission Filter & Eager Loading
+    query = Project.query.options(
+        subqueryload(Project.tags),
+        subqueryload(Project.owners)
+    )
+    
     if session.get('role') == 'admin':
-        projects = Project.query.all()
+        projects = query.all()
     else:
         user_id = session.get('user_id')
         user = User.query.get(user_id)
         if user:
-            projects = user.owned_projects
+            # Re-query explicitly to use eager loading options for owned projects
+            # (User.owned_projects is lazy, accessing it loses our options unless we query Project directly)
+            projects = query.filter(Project.owners.any(id=user_id)).all()
             
+    # Optimization: Aggregate Thread Counts (1 Query instead of N)
+    # SELECT project_id, COUNT(id) FROM threads GROUP BY project_id
+    thread_counts = dict(db.session.query(
+        Thread.project_id, func.count(Thread.id)
+    ).group_by(Thread.project_id).all())
+
     # Convert to dicts for template compatibility
-    # TODO: Update templates to use objects directly
     groups_data = []
     for p in projects:
-        owners = [o.id for o in p.owners]
-        # Optimization: Lazy load threads via pagination instead of eager loading all
-        tags = [tag.name for tag in p.tags]
+        owners = [o.id for o in p.owners] # Already loaded
+        tags = [tag.name for tag in p.tags] # Already loaded
+        
+        # Use O(1) lookup fro counts
+        count = thread_counts.get(p.id, 0)
+        
         groups_data.append({
             'group_id': p.id,
             'name': p.name,
@@ -51,7 +69,7 @@ def index():
             'version': p.version,
             'owners': owners,
             'tags': tags,
-            'thread_count': len(p.threads) # Keep stats for UI if needed
+            'thread_count': count
         })
 
     # Select Active Group
