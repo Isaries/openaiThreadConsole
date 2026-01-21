@@ -299,4 +299,5 @@ access.log
 groups.json
 ip_bans.json
 huey.db
+huey.db
 backend/huey.db
