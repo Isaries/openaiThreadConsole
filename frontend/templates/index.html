@@ -8,6 +8,12 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        .disabled-fresh-mode {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+    </style>
 </head>
 
 <body class="auth-layout">
@@ -100,12 +106,16 @@
                 ⚠️ 請至少填寫「關鍵字」或「日期」其中一項!
             </div>
 
-            <div class="form-group"
+            <div class="form-group {% if not session.get('user_id') %}disabled-fresh-mode{% endif %}"
                 style="display: flex; align-items: center; gap: 8px; margin-bottom: 1rem; padding: 0.5rem; background: rgba(0,0,0,0.03); border-radius: 6px;">
-                <input type="checkbox" id="modeRefresh" name="mode" value="fresh" style="width:auto; cursor: pointer;">
+                <input type="checkbox" id="modeRefresh" name="mode" value="fresh" style="width:auto; cursor: pointer;"
+                    {% if not session.get('user_id') %}disabled{% endif %}>
                 <label for="modeRefresh"
                     style="margin:0; font-size: 0.9rem; cursor: pointer; color: var(--text-primary); user-select: none;">
                     強制完整刷新 <span style="font-size: 0.8em; opacity: 0.7;">(與 API 同步，速度較慢)</span>
+                    {% if not session.get('user_id') %}
+                    <span style="color: #dc3545; font-weight: bold; margin-left: 5px; font-size: 0.8rem;">(需登入)</span>
+                    {% endif %}
                 </label>
             </div>
 

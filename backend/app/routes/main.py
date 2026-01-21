@@ -64,8 +64,12 @@ def search():
     # Mode Extraction (default: quick)
     mode = request.form.get('mode', 'quick')
     
-    # --- Fresh Mode Rate Limiting (2 per minute) ---
+    # --- Fresh Mode Rate Limiting & Permission Check ---
     if mode == 'fresh':
+        # Permission Check
+        if not session.get('user_id'):
+            return {'error': '權限不足：強制刷新功能僅限登入用戶使用'}, 403
+
         ip = utils.get_client_ip()
         from ..models import AuditLog
         from datetime import datetime, timedelta
