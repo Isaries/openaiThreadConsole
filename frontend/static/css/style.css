@@ -930,3 +930,54 @@ tr:hover {
         display: none !important;
     }
 }
+
+/* Markdown Content Styles (Global) */
+.message-content img {
+    max-width: 100%;
+    height: auto;
+    border: 1px solid #e2e8f0;
+    border-radius: var(--radius-md);
+    margin-top: 0.5rem;
+}
+
+.message-content table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1rem 0;
+    font-size: 0.9em;
+}
+
+.message-content th,
+.message-content td {
+    border: 1px solid #e2e8f0;
+    padding: 0.5rem;
+}
+
+.message-content th {
+    background: #f8fafc;
+    font-weight: 600;
+}
+
+.message-content pre {
+    background: #f1f5f9;
+    padding: 1rem;
+    border-radius: var(--radius-md);
+    overflow-x: auto;
+    margin: 1rem 0;
+    font-family: monospace;
+}
+
+.message-content code {
+    background: #f1f5f9;
+    padding: 0.2rem 0.4rem;
+    border-radius: var(--radius-sm);
+    font-family: monospace;
+    font-size: 0.9em;
+}
+
+.message-content blockquote {
+    border-left: 4px solid var(--primary-light);
+    margin: 1rem 0;
+    padding-left: 1rem;
+    color: var(--text-secondary);
+}
