@@ -18,8 +18,12 @@ def _get_retry_session():
     session.mount('http://', adapter)
     return session
 
+import config
+from flask import current_app
+
 # --- Configuration ---
-TEMP_PDF_IMG_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), 'temp_pdf_images')
+# Use config value, ensuring it exists
+TEMP_PDF_IMG_DIR = config.TEMP_PDF_IMG_DIR
 if not os.path.exists(TEMP_PDF_IMG_DIR):
     os.makedirs(TEMP_PDF_IMG_DIR)
 

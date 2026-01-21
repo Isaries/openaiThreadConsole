@@ -45,12 +45,16 @@ def get_decrypted_key(key_string):
     # Otherwise assume it was plaintext (legacy support)
     return key_string
 
+import hmac
+
 def hash_api_key(api_key):
     """
-    Returns SHA-256 hash of the API Key for fast lookup.
+    Returns HMAC-SHA256 hash of the API Key using the application SECRET_KEY.
+    Salted (Keyed) with SECRET_KEY.
     """
     if not api_key: return None
-    return hashlib.sha256(api_key.strip().encode()).hexdigest()
+    secret = config.SECRET_KEY.encode()
+    return hmac.new(secret, api_key.strip().encode(), hashlib.sha256).hexdigest()
 
 # --- Password Validation ---
 def validate_password_strength(password):

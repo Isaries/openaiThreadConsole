@@ -24,7 +24,12 @@ document.addEventListener('DOMContentLoaded', () => {
     if (form) form.appendChild(captchaUidInput);
 
     // Simple UUID Generator
+    // Secure UUID Generator
     function generateUUID() {
+        if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+            return crypto.randomUUID();
+        }
+        // Fallback for older browsers
         return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
             var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
             return v.toString(16);
@@ -220,85 +225,57 @@ document.addEventListener('DOMContentLoaded', () => {
                     </div>
                 `;
 
-                // Bind Cancel Action
-                const cancelBtn = document.getElementById('cancelSearchBtn');
-                cancelBtn.onclick = async (ev) => {
-                    ev.preventDefault();
-                    if (!confirm('確定要取消搜尋嗎？')) return;
+                // Cancel Logic will be bound after polling setup to capture timer
 
-                    try {
-                        cancelBtn.disabled = true;
-                        cancelBtn.textContent = '取消中...';
-
-                        const csrfToken = document.querySelector('input[name="csrf_token"]').value;
-
-                        await fetch(`/search/cancel/${taskId}`, {
-                            method: 'POST',
-                            headers: {
-                                'X-CSRFToken': csrfToken
-                            }
-                        });
-
-                        clearInterval(pollInterval);
-                        statusDiv.className = 'mt-3 alert alert-warning';
-                        statusDiv.textContent = '搜尋已取消';
-
-                        // Reset UI State
-                        btn.disabled = false;
-                        btn.innerHTML = '開始搜尋';
-                        loading.style.display = 'none';
-                    } catch (err) {
-                        alert('取消請求失敗: ' + err.message);
-                        cancelBtn.disabled = false;
-                        cancelBtn.textContent = '取消';
-                    }
-                };
-
-                // 2. Poll for Status with Timeout & Retry
+                // 2. Poll for Status with Exponential Backoff
                 let elapsed = 0;
-                let retryCount = 0;
+                let retryCount = 0; // Network Errors
                 const MAX_RETRIES = 5;
                 const MAX_TIMEOUT_SEC = 300; // 5 Minutes
+
+                let pollDelay = 1000; // Start with 1s
+                const MAX_POLL_DELAY = 10000; // Cap at 10s
+
                 let isRequestActive = false;
+                let pollTimer = null;
 
-                const pollInterval = setInterval(async () => {
-                    if (isRequestActive) return; // Prevent overlap
-                    isRequestActive = true;
-
-                    elapsed += 1;
-                    const timer = document.getElementById('timer');
-                    if (timer) timer.textContent = `(${elapsed}s)`;
-
-                    // Timeout Check
+                const pollFunction = async () => {
+                    // Check Timeout
                     if (elapsed >= MAX_TIMEOUT_SEC) {
-                        clearInterval(pollInterval);
                         statusDiv.className = 'mt-3 alert alert-danger';
                         statusDiv.textContent = '搜尋請求超時 (5分鐘)，請稍後再試或縮小搜尋範圍。';
                         btn.disabled = false;
                         btn.innerText = '開始搜尋';
                         loading.style.display = 'none';
-                        isRequestActive = false;
                         return;
                     }
 
                     try {
                         const res = await fetch(`/search/result/${taskId}`);
-                        
+
                         // Handle 200 OK (Success)
                         if (res.status === 200) {
-                            clearInterval(pollInterval);
                             statusDiv.className = 'mt-3 alert alert-success';
                             statusDiv.textContent = '搜尋完成，正在跳轉...';
                             window.location.href = `/search/result/${taskId}`;
                             return;
-                        } 
+                        }
                         // Handle 202 Processing (Continue Polling)
                         else if (res.status === 202) {
-                            retryCount = 0; // Reset retry on successful connection but processing
+                            retryCount = 0;
+
+                            // Exponential Backoff Logic
+                            elapsed += (pollDelay / 1000);
+                            const timer = document.getElementById('timer');
+                            if (timer) timer.textContent = `(${Math.floor(elapsed)}s)`;
+
+                            // Increase delay by 50%, capped at 10s
+                            pollDelay = Math.min(pollDelay * 1.5, MAX_POLL_DELAY);
+
+                            pollTimer = setTimeout(pollFunction, pollDelay);
                         }
-                        // Handle 404/403 (Task Lost or Forbidden) - Stop Polling
+                        // Handle 404/403 (Task Lost or Forbidden)
                         else if (res.status === 404 || res.status === 403) {
-                            clearInterval(pollInterval);
                             statusDiv.className = 'mt-3 alert alert-danger';
                             statusDiv.textContent = '搜尋任務已失效或被拒絕 (Code ' + res.status + ')。請刷新頁面重新搜尋。';
                             btn.disabled = false;
@@ -306,9 +283,8 @@ document.addEventListener('DOMContentLoaded', () => {
                             loading.style.display = 'none';
                             return;
                         }
-                        // Handle 500 (Server Error) - Stop Polling
+                        // Handle 500 (Server Error)
                         else if (res.status === 500) {
-                            clearInterval(pollInterval);
                             statusDiv.className = 'mt-3 alert alert-danger';
                             let errText = await res.text();
                             statusDiv.textContent = '搜尋發生伺服器錯誤: ' + errText;
@@ -317,7 +293,6 @@ document.addEventListener('DOMContentLoaded', () => {
                             loading.style.display = 'none';
                             return;
                         }
-                        // Other codes? Count as retry to be safe
                         else {
                             throw new Error(`Unexpected status ${res.status}`);
                         }
@@ -326,17 +301,48 @@ document.addEventListener('DOMContentLoaded', () => {
                         console.error("Polling error", err);
                         retryCount++;
                         if (retryCount > MAX_RETRIES) {
-                            clearInterval(pollInterval);
                             statusDiv.className = 'mt-3 alert alert-danger';
                             statusDiv.textContent = '網路連線不穩定，已停止搜尋。請檢查網路並重試。';
                             btn.disabled = false;
                             btn.innerText = '開始搜尋';
                             loading.style.display = 'none';
+                        } else {
+                            // Retry with delay (don't increase backoff on network error, just wait)
+                            pollTimer = setTimeout(pollFunction, 2000);
                         }
-                    } finally {
-                        isRequestActive = false;
                     }
-                }, 1000);
+                };
+
+                // Start Polling
+                pollTimer = setTimeout(pollFunction, 1000);
+
+                // Update Cancel Logic to clear Timeout
+                // Re-bind to ensure closure captures pollTimer
+                const cancelBtn = document.getElementById('cancelSearchBtn');
+                // Remove old listener (helper) or just overwrite onclick
+                cancelBtn.onclick = async (ev) => {
+                    ev.preventDefault();
+                    if (!confirm('確定要取消搜尋嗎？')) return;
+
+                    if (pollTimer) clearTimeout(pollTimer);
+
+                    try {
+                        cancelBtn.disabled = true;
+                        cancelBtn.textContent = '取消中...';
+                        const csrfToken = document.querySelector('input[name="csrf_token"]').value;
+                        await fetch(`/search/cancel/${taskId}`, {
+                            method: 'POST',
+                            headers: { 'X-CSRFToken': csrfToken }
+                        });
+                        statusDiv.className = 'mt-3 alert alert-warning';
+                        statusDiv.textContent = '搜尋已取消';
+                        btn.disabled = false;
+                        btn.innerText = '開始搜尋';
+                        loading.style.display = 'none';
+                    } catch (e) {
+                        alert('取消失敗');
+                    }
+                };
 
             } catch (error) {
                 console.error('Search failed:', error);

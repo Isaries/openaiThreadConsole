@@ -13,6 +13,7 @@ else:
 load_dotenv(env_path)
 
 # File Paths
+TEMP_PDF_IMG_DIR = os.path.join(basedir, 'temp_pdf_images')
 GROUPS_FILE = 'groups.json'
 USERS_FILE = 'users.json'
 SETTINGS_FILE = 'settings.json'

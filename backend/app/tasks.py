@@ -316,7 +316,8 @@ def refresh_specific_threads(project_id, thread_ids, group_name=""):
 @huey.periodic_task(crontab(minute=0, hour=18, day='*/3')) # UTC 18:00 = UTC+8 02:00
 def cleanup_temp_files_task():
     logger.info("Starting Temp File Cleanup")
-    from app.services.pdf_service import TEMP_PDF_IMG_DIR
+    import config
+    TEMP_PDF_IMG_DIR = config.TEMP_PDF_IMG_DIR
     
     if not os.path.exists(TEMP_PDF_IMG_DIR):
         return
