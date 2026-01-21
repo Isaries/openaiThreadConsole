@@ -38,7 +38,8 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
 # App Config
 MAX_CONTENT_LENGTH = 2 * 1024 * 1024  # 2MB
-OPENAI_API_URL = "https://api.openai.com/v1/threads/{}/messages"
+OPENAI_BASE_URL = os.getenv("OPENAI_BASE_URL", "https://api.openai.com/v1")
+OPENAI_API_URL = f"{OPENAI_BASE_URL}/threads/{{}}/messages"
 
 # Validation
 ADMIN_PASSWORDS = [p.strip() for p in (ADMIN_PASSWORD_ENV or "").split(',') if p.strip()]
