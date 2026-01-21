@@ -74,12 +74,53 @@
             white-space: pre-wrap;
         }
 
-        .chat-image {
+        .chat-image,
+        .message-content img {
             max-width: 300px;
             /* Limit image size for print */
             height: auto;
             border: 1px solid #ddd;
             margin-top: 5px;
+        }
+
+        /* Markdown Elements */
+        .message-content table {
+            border-collapse: collapse;
+            width: 100%;
+            margin-bottom: 10px;
+            font-size: 13px;
+        }
+
+        .message-content th,
+        .message-content td {
+            border: 1px solid #ddd;
+            padding: 6px;
+            text-align: left;
+        }
+
+        .message-content pre {
+            background: #f4f4f4;
+            padding: 10px;
+            overflow-x: auto;
+            border-radius: 4px;
+        }
+
+        .message-content code {
+            background: #f4f4f4;
+            padding: 2px 4px;
+            border-radius: 3px;
+            font-family: monospace;
+        }
+
+        .message-content p {
+            margin: 0 0 10px 0;
+        }
+
+        .message-content h1,
+        .message-content h2,
+        .message-content h3 {
+            margin: 10px 0 5px 0;
+            font-size: 1.1em;
         }
 
         @media print {
@@ -95,6 +136,7 @@
                 break-inside: avoid;
             }
         }
+
 
         .action-bar {
             text-align: center;
@@ -137,7 +179,7 @@
                 <div class="message-header">
                     {{ msg.role_name }} ({{ msg.time }})
                 </div>
-                <div class="message-content">{{ msg.content | trim | render_images | sanitize_html }}</div>
+                <div class="message-content">{{ msg.content | render_markdown | sanitize_html }}</div>
             </div>
             {% endfor %}
         </div>

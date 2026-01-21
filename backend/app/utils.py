@@ -1,8 +1,8 @@
 import bleach
 from datetime import datetime, timezone, timedelta
-from datetime import datetime, timezone, timedelta
 from markupsafe import escape, Markup
 import requests
+import markdown
 
 # In-Memory Cache for IP Info
 IP_CACHE = {}
@@ -12,37 +12,35 @@ def log_access(user, action):
     current_app.logger.info(f"User: {user} | Action: {action}")
 
 # --- Template Filters ---
+# --- Template Filters ---
 def nl2br(value):
     if not value: return ""
-    # Escape first, then replace newline with <br>
     return Markup(str(escape(value)).replace('\n', '<br>'))
 
-def render_markdown_images(value):
+def render_markdown(value):
     if not value: return ""
-    # Replace ![alt](url) with <img src="url" alt="alt" class="chat-image">
-    # Note: Regex allows for optional text in [] and non-empty url in ()
-    import re
-    pattern = re.compile(r'!\[(.*?)\]\((.*?)\)')
-    
-    def replace_func(match):
-        # Security: Escape to prevent attribute injection (e.g. src="x" onerror="alert(1)")
-        # Although bleach follows, this ensures structurally valid HTML.
-        alt = escape(match.group(1))
-        src = escape(match.group(2))
-        return f'<img src="{src}" alt="{alt}" class="chat-image" loading="lazy">'
-    
-    return pattern.sub(replace_func, value)
+    # Use standard markdown with tables and fenced code
+    # nl2br extension converts newlines to <br> which mimics previous behavior
+    html = markdown.markdown(value, extensions=['fenced_code', 'tables', 'nl2br'])
+    return html
 
 def sanitize_html(value):
     if not value: return ""
-    allowed_tags = ['b', 'i', 'u', 'em', 'strong', 'a', 'p', 'br', 'span', 'div', 'mark', 'code', 'pre', 'ul', 'li', 'ol', 'img']
+    
+    allowed_tags = [
+        'a', 'abbr', 'acronym', 'b', 'blockquote', 'br', 'code', 'div', 'em', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+        'hr', 'i', 'img', 'li', 'ol', 'p', 'pre', 'span', 'strong', 'table', 'tbody', 'td', 'th', 'thead', 'tr', 'ul'
+    ]
+    
     allowed_attrs = {
         '*': ['class', 'style'],
-        'a': ['href', 'target', 'rel'],
-        'img': ['src', 'alt', 'class', 'loading']
+        'a': ['href', 'title', 'target', 'rel'],
+        'img': ['src', 'alt', 'title', 'width', 'height', 'loading']
     }
+    
     from bleach.css_sanitizer import CSSSanitizer
-    css_sanitizer = CSSSanitizer(allowed_css_properties=['text-align', 'color', 'background-color'])
+    css_sanitizer = CSSSanitizer(allowed_css_properties=['text-align', 'color', 'background-color', 'font-weight', 'font-style', 'text-decoration'])
+    
     cleaned = bleach.clean(value, tags=allowed_tags, attributes=allowed_attrs, strip=True, css_sanitizer=css_sanitizer)
     return Markup(cleaned)
 
