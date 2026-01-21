@@ -36,7 +36,7 @@
                     <span class="role-icon">{{ msg.role_icon }}</span>
                     <span class="role-name">{{ msg.role_name }}</span>
                 </div>
-                <div class="message-content">{{ msg.content | trim | render_images | sanitize_html }}</div>
+                <div class="message-content">{{ msg.content | trim | render_markdown | sanitize_html }}</div>
             </div>
             {% endfor %}
         </div>

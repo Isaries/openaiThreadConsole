@@ -53,7 +53,8 @@
                             <span class="message-time">• {{ msg.time }}</span>
                         </div>
                         <div class="message-content">
-                            {{ msg.content | trim | render_images | sanitize_html }}
+                            <div class="message-content">{{ msg.content | trim | render_markdown | sanitize_html }}
+                            </div>
                         </div>
                     </div>
                     {% endfor %}
