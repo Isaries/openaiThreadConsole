@@ -154,6 +154,49 @@
         if (clearLink) clearLink.style.display = 'none';
     }
 
+    document.addEventListener('DOMContentLoaded', () => {
+        // Other init...
+
+        // Async IP Geo Loader
+        const badges = document.querySelectorAll('.ip-geo-badge');
+        if (badges.length > 0) {
+            const ips = Array.from(badges).map(b => b.dataset.ip).filter(ip => ip && ip !== '127.0.0.1');
+            const uniqueIps = [...new Set(ips)];
+
+            if (uniqueIps.length > 0) {
+                // Show badges as loading
+                badges.forEach(b => b.style.display = 'inline-block');
+
+                const csrfInput = document.querySelector('input[name="csrf_token"]');
+                const token = csrfInput ? csrfInput.value : '';
+
+                fetch('/admin/api/ip_geo', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': token
+                    },
+                    body: JSON.stringify({ ips: uniqueIps })
+                })
+                    .then(res => res.json())
+                    .then(data => {
+                        badges.forEach(b => {
+                            const ip = b.dataset.ip;
+                            if (data[ip]) {
+                                b.textContent = `📍 ${data[ip]}`;
+                            } else {
+                                b.style.display = 'none'; // Hide if no data
+                            }
+                        });
+                    })
+                    .catch(err => {
+                        console.warn("Geo IP Load Failed", err);
+                        badges.forEach(b => b.style.display = 'none');
+                    });
+            }
+        }
+    });
+
     // Search Loading UX - Event Delegation
     document.addEventListener('submit', function (e) {
         if (e.target && e.target.id === 'searchForm') {

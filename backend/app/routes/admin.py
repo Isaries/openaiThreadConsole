@@ -93,9 +93,14 @@ def index():
     # Sort tags? (Optional, maybe specific order)
         
     audit_logs = []
+    audit_logs = []
+    audit_logs_pagination = None
+    
     if session.get('role') == 'admin':
-        # Load Audit Logs from DB
-        logs = AuditLog.query.order_by(AuditLog.timestamp.desc()).limit(100).all()
+        # Load Audit Logs from DB (Paginated)
+        logs_page = request.args.get('logs_page', 1, type=int)
+        audit_logs_pagination = AuditLog.query.order_by(AuditLog.timestamp.desc()).paginate(page=logs_page, per_page=50, error_out=False)
+        
         audit_logs = [{
             'time': utils.unix_to_utc8(l.timestamp.timestamp()),
             'user': l.user_name,
@@ -105,7 +110,7 @@ def index():
             'details': l.details,
             'ip': l.ip_address,
             'created_at': int(l.timestamp.timestamp())
-        } for l in logs]
+        } for l in audit_logs_pagination.items]
         
 
         
@@ -158,9 +163,8 @@ def index():
             if ip == '127.0.0.1': continue # Skip local noise if desired
             
             if ip not in ip_activity:
-                # Get Geo Info
-                geo = utils.get_ip_info(ip).get('desc', 'Unknown')
-                ip_activity[ip] = {'logs': [], 'user': '訪客', 'last_seen': 0, 'geo': geo}
+                # Async Load: Set placebo here, let Frontend fetch it
+                ip_activity[ip] = {'logs': [], 'user': '訪客', 'last_seen': 0, 'geo': None}
             
             # Identity Refinement
             display_user = log['user']
@@ -235,6 +239,7 @@ def index():
                          ip_activity=ip_activity,
                          banned_ips=bans_pagination, 
                          bans_pagination=bans_pagination,
+                         audit_logs_pagination=audit_logs_pagination,
                          all_tags=all_tags, 
                          user_map=user_map,
                          masked_key=masked_key,
@@ -1171,3 +1176,18 @@ def performance_dashboard():
                            current=current_snapshot,
                            mem_total=current_mem_total)
 
+
+@admin_bp.route('/api/ip_geo', methods=['POST'])
+@security.login_required
+@limiter.limit("60 per minute")
+def api_ip_geo():
+    data = request.get_json()
+    ips = data.get('ips', [])
+    
+    results = {}
+    for ip in ips:
+        # cache logic is in utils
+        info = utils.get_ip_info(ip)
+        results[ip] = info.get('desc', 'Unknown')
+        
+    return jsonify(results)
