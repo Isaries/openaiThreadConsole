@@ -173,8 +173,8 @@ def index():
         elif decrypted:
             masked_key = "******" # Short keys
 
-    # Fetch all tags for autocomplete
-    all_tags = [t.name for t in Tag.query.with_entities(Tag.name).distinct()]
+    # Fetch all tags for autocomplete (Only showing active tags)
+    all_tags = [t.name for t in Tag.query.filter(Tag.projects.any()).with_entities(Tag.name).distinct()]
     
     # --- Server-Side Pagination for Threads ---
     threads_pagination = None
@@ -399,15 +399,11 @@ def add_one_thread():
     group_id = request.form.get('group_id')
     thread_id = request.form.get('thread_id', '').strip()
     
-    # Robustness: Try to extract thread_ ID if not verbatim
-    if not thread_id.startswith('thread_'):
-        import re
-        match = re.search(r'(thread_[A-Za-z0-9]+)', thread_id)
-        if match:
-            thread_id = match.group(1)
-            
-    if not thread_id:
-        flash('Thread ID format error (must start with thread_)', 'error')
+    # Robustness: Strict Format Check
+    import re
+    # Enforce exact match: starts with thread_, followed by alphanumeric, no whitespace/special chars
+    if not re.fullmatch(r'thread_[A-Za-z0-9]+', thread_id):
+        flash('Thread ID 格式錯誤 (必須以 thread_ 開頭，且僅包含英數字元)', 'error')
         return redirect(url_for('admin.index', group_id=group_id))
         
     project = Project.query.get(group_id)
