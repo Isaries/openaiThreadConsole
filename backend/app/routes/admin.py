@@ -1177,9 +1177,11 @@ def performance_dashboard():
 
 
 @admin_bp.route('/api/ip_geo', methods=['POST'])
-@security.login_required
 @limiter.limit("60 per minute")
 def api_ip_geo():
+    if not session.get('user_id'):
+        return jsonify({'error': 'Unauthorized'}), 401
+        
     data = request.get_json()
     ips = data.get('ips', [])
     
