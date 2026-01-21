@@ -7,7 +7,7 @@
 {% else %}
 {% for thread in results %}
 <div class="thread-card expanded" id="thread-{{ thread.thread_id }}">
-    <div class="thread-header" onclick="toggleThread(this)">
+    <div class="thread-header" onclick="toggleThread(this)" style="flex-wrap: wrap;">
         <h3>對話 #{{ loop.index + (page_index * 10) }}</h3>
         <div class="thread-center-action">
             <span class="toggle-icon">▼</span>
@@ -15,17 +15,17 @@
         <div class="thread-meta">
             <span class="thread-time">📅 {{ thread.time }}</span>
             <span class="thread-id" style="margin-bottom: 5px;">ID: {{ thread.thread_id }}</span>
-            {% if thread.remark %}
-            <div class="thread-remark"
-                style="margin-bottom: 5px; color: var(--text-secondary); font-size: 0.9em; word-break: break-all;">
-                📝 {{ thread.remark }}
-            </div>
-            {% endif %}
             <a href="/download/pdf/{{ thread.thread_id }}" onclick="event.stopPropagation()"
                 class="btn-pdf btn-thread-pdf">
                 📄 PDF
             </a>
         </div>
+        {% if thread.remark %}
+        <div class="thread-remark"
+            style="flex-basis: 100%; margin-top: 8px; padding-top: 8px; border-top: 1px dashed #eee; color: var(--text-secondary); font-size: 0.9em; word-break: break-all;">
+            📝 {{ thread.remark }}
+        </div>
+        {% endif %}
     </div>
     <div class="thread-body">
         <div class="messages">
