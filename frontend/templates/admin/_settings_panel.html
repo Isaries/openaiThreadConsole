@@ -47,7 +47,7 @@
 
                         <div style="margin-left: auto;">
                             <p class="text-xs text-secondary mb-1">上次執行: {{ auto_refresh_settings.get('last_run', '無紀錄')
-                                }}</p>
+                                | string | truncate(19, True, '') | replace('T', ' ') }}</p>
                             <button type="button" class="btn btn-primary btn-sm" onclick="saveRefreshSettings()">
                                 儲存設定
                             </button>
