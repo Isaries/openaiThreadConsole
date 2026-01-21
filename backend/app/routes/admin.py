@@ -191,8 +191,8 @@ def index():
         if search_query:
             # Server-Side Search: ID or Remark
             query = query.filter(
-                (Thread.thread_id.contains(search_query)) | 
-                (Thread.remark.contains(search_query))
+                (Thread.thread_id.ilike(f"%{search_query}%")) | 
+                (Thread.remark.ilike(f"%{search_query}%"))
             )
 
         threads_pagination = query.paginate(page=t_page, per_page=50, error_out=False)
