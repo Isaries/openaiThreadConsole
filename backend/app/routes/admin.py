@@ -315,7 +315,17 @@ def delete_group():
         return redirect(url_for('admin.index'))
     
     group_name = project.name
+    
+    # Track tags before deletion to check for orphans later
+    affected_tags = list(project.tags)
+    
     db.session.delete(project)
+    db.session.commit()
+    
+    # Cleanup Orphan Tags
+    for t in affected_tags:
+        if not t.projects:
+            db.session.delete(t)
     db.session.commit()
     
     return redirect(url_for('admin.index'))
@@ -550,6 +560,11 @@ def remove_project_tag():
         project.tags.remove(tag)
         db.session.commit()
         
+        # Cleanup Orphan Tag
+        if not tag.projects:
+             db.session.delete(tag)
+             db.session.commit()
+        
     return {'status': 'success', 'tags': [t.name for t in project.tags]}
 
 @admin_bp.route('/threads/update_remark', methods=['POST'])
@@ -659,27 +674,40 @@ def view_thread(thread_id):
     # Fetch Data
     api_key = security.get_decrypted_key(project.api_key) if project.api_key else None
     
-    # 1. Force Sync to DB (Admin Requirement: Always Fresh)
-    success, msg = logic.sync_thread_to_db(thread_id, api_key, project.id)
-    if not success:
-        flash(f'同步失敗: {msg}', 'error')
-        # We might still try to show cached data if exist?
-        # But user insists on "Complete Refresh". If refresh fails, we should probably warn.
-        # Let's fallback to cache if available, but warn.
-    
-    # 2. Load from DB
+    # 1. Load from DB First (Cache)
     thread_obj = Thread.query.filter_by(thread_id=thread_id).first()
-    if not thread_obj:
-         flash('Thread 不存在或同步失敗', 'error')
-         return redirect(url_for('admin.index', group_id=project.id))
-         
-    # Process from DB
-    result = logic.process_thread_from_db(thread_obj, target_name="", start_date=None, end_date=None)
     
+    is_syncing = False
+    result = None
+    
+    if thread_obj:
+        # CASE 1: Data Exists - Show Cache + Trigger Async Update
+        # Fire-and-forget task
+        try:
+             tasks.refresh_specific_threads.schedule(args=(project.id, [thread_id]), delay=0)
+             if not request.args.get('nomsg'): # Avoid spamming flash on auto-refresh
+                 flash('正在後台更新數據，頁面顯示為快取資料。', 'info')
+        except Exception as e:
+             current_app.logger.warning(f"Failed to trigger async task: {e}")
+        
+        # Process from DB
+        result = logic.process_thread_from_db(thread_obj, target_name="", start_date=None, end_date=None)
+    
+    else:
+        # CASE 2: No Data (First Load) - Trigger Async Update + Show Loading State
+        try:
+             tasks.refresh_specific_threads.schedule(args=(project.id, [thread_id]), delay=0)
+             is_syncing = True
+             result = {'data': {'thread_id': thread_id}, 'remark': '', 'messages': []} # Empty stub
+        except Exception as e:
+             flash(f'無法啟動同步任務: {e}', 'error')
+             return redirect(url_for('admin.index', group_id=project.id))
+
     return render_template('admin_thread_view.html', 
         result=result, 
         project=project,
-        active_group={'group_id': project.id, 'name': project.name}
+        active_group={'group_id': project.id, 'name': project.name},
+        is_syncing=is_syncing
     )
 
 @admin_bp.route('/threads/refresh', methods=['POST'])

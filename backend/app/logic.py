@@ -260,33 +260,41 @@ def sync_thread_to_db(thread_id_str, api_key=None, project_id=None):
     """
     Sets up the DB state for a thread. 
     Can be called by "Refresh" button or scheduled task.
+    Minimizes Transaction Scope to prevent SQLite locking issues.
     """
     try:
-        # 1. Fetch from API
+        # 1. Fetch from API (Heavy Network I/O - OUTSIDE Transaction)
         api_response = fetch_thread_messages(thread_id_str, api_key)
         if not api_response or 'data' not in api_response:
-            return False, 'API Error'
+             # Check if it was because of empty? 
+             # If fetch returns None, it's error.
+             return False, 'API Error'
         
         messages_data = api_response['data']
         
-        # 2. Find Thread in DB
-        thread = Thread.query.filter_by(thread_id=thread_id_str).first()
+        # 2. Prepare Data Objects
+        new_msgs = []
+        # We need thread foreign key `thread.id` (Integer PK), not string ID.
+        # But we don't have it yet if thread doesn't exist.
+        # So we might need a small transaction to get/create Thread first.
         
+        thread_pk = None
+        
+        # --- Transaction A: Get/Create Thread ---
+        # This is fast.
+        thread = Thread.query.filter_by(thread_id=thread_id_str).first()
         if not thread:
             if not project_id:
-                # If project_id is missing, we try to guess or fail?
-                # Usually tasks.py will pass project_id.
                 return False, 'Thread valid but project_id missing for initial sync'
             
             thread = Thread(thread_id=thread_id_str, project_id=project_id)
             db.session.add(thread)
-            db.session.flush() # Get ID
-        
-        # 3. Clear old messages (simpler than syncing diffs for now)
-        Message.query.filter_by(thread_id=thread.id).delete()
-        
-        # 4. Insert new
-        new_msgs = []
+            db.session.commit() # Commit to get ID
+            thread_pk = thread.id
+        else:
+            thread_pk = thread.id
+            
+        # 3. Process Data (CPU Bound - OUTSIDE Transaction)
         for msg in messages_data:
             role = msg.get('role', 'unknown')
             created_at = msg.get('created_at', 0)
@@ -299,21 +307,36 @@ def sync_thread_to_db(thread_id_str, api_key=None, project_id=None):
                     elif part.get('type') == 'image_file':
                          file_id = part.get('image_file', {}).get('file_id')
                          if file_id:
-                             gid_param = f"?group_id={thread.project_id}" 
+                             # We assume project_id is available or we use thread's project_id
+                             # We can use Thread object if accessible or pass explicit
+                             # Here we construct the string efficiently
+                             gid_param = f"?group_id={project_id}" if project_id else ""
                              content_value += f"![User Image](/file/{file_id}{gid_param})"
             
             new_msgs.append(Message(
-                thread_id=thread.id,
+                thread_id=thread_pk, # Use the Int PK we got
                 role=role,
                 content=content_value,
                 created_at=int(created_at)
             ))
-            
-        db.session.bulk_save_objects(new_msgs)
+
+        # 4. Atomic Write (Deletion + Insertion - INSIDE Transaction)
+        # This is where we lock. Keep it fast.
         
-        # 5. Metadata
-        thread.last_synced_at = int(time.time())
-        thread.message_count = len(new_msgs)
+        # Delete old
+        Message.query.filter_by(thread_id=thread_pk).delete()
+        
+        # Insert New
+        if new_msgs:
+            db.session.bulk_save_objects(new_msgs)
+        
+        # Update Meta
+        # We need to re-fetch thread object attached to this session or use update query
+        # Using update query is faster/cleaner
+        Thread.query.filter_by(id=thread_pk).update({
+            'last_synced_at': int(time.time()),
+            'message_count': len(new_msgs)
+        })
         
         db.session.commit()
         return True, f'Synced {len(new_msgs)} messages'

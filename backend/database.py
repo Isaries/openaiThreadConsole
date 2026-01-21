@@ -148,17 +148,64 @@ SETTINGS_FILE = 'settings.json'
 def load_settings():
     import json
     import os
+    
+    # Try DB First
+    try:
+        from app.models import SystemSetting
+        # We need app context. This function is usually called within context.
+        # But if not, we might fail.
+        # Check has_request_context or manually push?
+        # Simpler: Just try query if db is bound.
+        setting = db.session.get(SystemSetting, 'auto_refresh')
+        if setting and setting.value:
+            return {'auto_refresh': json.loads(setting.value)}
+            
+    except Exception as e:
+        # DB might not be ready or context missing
+        # logging.warning(f"DB Settings Load Failed: {e}")
+        pass
+
+    # Fallback to File (Migration or Safety)
     if not os.path.exists(SETTINGS_FILE):
         return {}
     try:
         with open(SETTINGS_FILE, 'r', encoding='utf-8') as f:
-            return json.load(f)
+            data = json.load(f)
+            return data
     except:
         return {}
 
 def save_settings(settings):
     import json
-    with open(SETTINGS_FILE, 'w', encoding='utf-8') as f:
-        json.dump(settings, f, indent=4, ensure_ascii=False)
+    
+    # 1. Save to DB (Primary)
+    try:
+        from app.models import SystemSetting
+        
+        # We handle 'auto_refresh' key specifically for now as per schema design (key-value)
+        # Flatten structure: key='auto_refresh', value=json_str
+        if 'auto_refresh' in settings:
+             # Upsert logic
+             val_str = json.dumps(settings['auto_refresh'], ensure_ascii=False)
+             
+             # Check if exists
+             existing = db.session.get(SystemSetting, 'auto_refresh')
+             if existing:
+                 existing.value = val_str
+                 existing.updated_at = datetime.now()
+             else:
+                 new_setting = SystemSetting(key='auto_refresh', value=val_str)
+                 db.session.add(new_setting)
+                 
+             db.session.commit()
+    except Exception as e:
+        logging.error(f"DB Settings Save Failed: {e}")
+        db.session.rollback()
+
+    # 2. Sync to File (Legacy/Backup)
+    try:
+        with open(SETTINGS_FILE, 'w', encoding='utf-8') as f:
+            json.dump(settings, f, indent=4, ensure_ascii=False)
+    except: pass
 
 

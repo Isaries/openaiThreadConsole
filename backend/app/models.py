@@ -132,3 +132,9 @@ class RefreshHistory(db.Model):
     
     log_json = db.Column(db.Text) # JSON string for error details (Limited size)
 
+class SystemSetting(db.Model):
+    __tablename__ = 'system_settings'
+    key = db.Column(db.String(50), primary_key=True)
+    value = db.Column(db.Text, nullable=True) # JSON content
+    updated_at = db.Column(db.DateTime, default=datetime.now, onupdate=datetime.now)
+
