@@ -93,7 +93,6 @@ def index():
     # Sort tags? (Optional, maybe specific order)
         
     audit_logs = []
-    audit_logs = []
     audit_logs_pagination = None
     
     if session.get('role') == 'admin':
