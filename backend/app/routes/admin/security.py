@@ -3,8 +3,8 @@ from . import admin_bp
 from ...models import AuditLog, SearchHistory, IPBan
 from ... import utils
 from ...extensions import db, limiter
-from ... import database
-from ... import security as core_security
+import database
+import security as core_security
 import json
 
 def log_audit(action, target, details=None, status='Success'):

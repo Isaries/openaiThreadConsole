@@ -3,7 +3,7 @@ from . import admin_bp
 from ...models import User
 from ...extensions import db
 from ...extensions import db
-from ... import security as core_security
+import security as core_security
 from datetime import datetime
 import uuid
 # We need to import log_audit from local security module

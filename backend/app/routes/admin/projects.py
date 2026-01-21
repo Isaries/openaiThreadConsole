@@ -3,7 +3,7 @@ from . import admin_bp
 from ...models import Project, Tag
 from ...extensions import db
 from .security import log_audit
-from ... import security as core_security
+import security as core_security
 import uuid
 
 @admin_bp.route('/group/create', methods=['POST'])

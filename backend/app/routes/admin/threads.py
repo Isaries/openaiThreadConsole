@@ -4,7 +4,7 @@ from ...models import Thread, Project, Message
 from ... import logic
 from ... import tasks
 from ...extensions import db, limiter
-from ... import security as core_security
+import security as core_security
 from .security import log_audit
 import re
 

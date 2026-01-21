@@ -97,7 +97,7 @@ def index():
         project_total_count = Thread.query.filter_by(project_id=active_group['group_id']).count()
 
     # --- Key Masking ---
-    from ... import security as core_security
+    import security as core_security
     masked_key = "No Group Selected"
     if active_group:
          decrypted = core_security.get_decrypted_key(active_group['api_key'])
@@ -112,7 +112,7 @@ def index():
     from .security import get_dashboard_security_data
     from .system import get_dashboard_system_data
     from .users import get_dashboard_user_data
-    from ... import database
+    import database
     
     security_data = get_dashboard_security_data()
     system_data = get_dashboard_system_data()

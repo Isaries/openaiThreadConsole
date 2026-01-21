@@ -2,9 +2,9 @@ from flask import render_template, flash, session, redirect, url_for, request, j
 from . import admin_bp
 from ...models import SystemMetric, Tag
 from ...extensions import db
-from ... import database
+import database
 from .security import log_audit
-from ... import security as core_security
+import security as core_security
 import psutil
 import time
 import json
