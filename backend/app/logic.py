@@ -469,29 +469,10 @@ def search_threads_sql(project_id, target_name, start_date, end_date):
         filters = []
         
         if target_name:
-            # Case insensitive search
-            # SQLite 'ilike' equivalent is via explicit call or just ilike if supported by alchemy dialect
-            # Flask-SQLAlchemy usually supports ilike
-            filters.append(Message.content.ilike(f'%{target_name}%'))
-            # Also check if target_name matches Thread ID
-            # Or Thread Remark?
-            # Existing logic: if target_name in t_id or remark or content.
-            # SQL: (Message.content LIKE %..%) OR (Thread.thread_id LIKE %..%) OR (Thread.remark LIKE %..%)
-            # But Thread fields don't need Join Message?
-            # If we Join Message, we get duplicates. Distinct needed.
+            # Logic: Match keyword in Message Content OR Thread ID OR Remark
             
             t_filter = (Message.content.ilike(f'%{target_name}%'))
-            # Combined filter for Thread fields
             t_meta_filter = (Thread.thread_id.ilike(f'%{target_name}%')) | (Thread.remark.ilike(f'%{target_name}%'))
-            
-            # The query logic: Threads where (Any Message matches) OR (Thread ID/Remark matches)
-            # Careful: If we filter by Date, does it apply to the Message or the Thread?
-            # Existing logic: Filter by Last Message Date.
-            # SQL Logic: Filter by *Message* date?
-            
-            # Let's simplify:
-            # 1. Filter by Keyword (Content OR Meta)
-            # 2. Filter by Date (Message Time)
             
             kw_condition = t_filter | t_meta_filter
             filters.append(kw_condition)
