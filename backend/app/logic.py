@@ -365,6 +365,9 @@ def sync_thread_to_db(thread_id_str, api_key=None, project_id=None):
                 created_at=int(created_at)
             ))
 
+        # 3.5 Calculate latest message timestamp for smart refresh
+        latest_msg_ts = max((msg.get('created_at', 0) for msg in messages_data), default=0)
+
         # 4. Atomic Write (Deletion + Insertion - INSIDE Transaction)
         # This is where we lock. Keep it fast.
         
@@ -378,10 +381,35 @@ def sync_thread_to_db(thread_id_str, api_key=None, project_id=None):
         # Update Meta
         # We need to re-fetch thread object attached to this session or use update query
         # Using update query is faster/cleaner
+        
+        # Smart Refresh: Check if content changed
+        old_thread = Thread.query.filter_by(id=thread_pk).first()
+        old_last_msg_ts = old_thread.last_message_timestamp if old_thread else 0
+        
+        has_change = (latest_msg_ts > old_last_msg_ts) if old_last_msg_ts else True
+        
         update_payload = {
             'last_synced_at': int(time.time()),
-            'message_count': len(new_msgs)
+            'message_count': len(new_msgs),
+            'last_message_timestamp': latest_msg_ts
         }
+        
+        if has_change:
+            # Content changed - reset staleness
+            update_payload['stale_refresh_count'] = 0
+            update_payload['refresh_priority'] = 'normal'
+        else:
+            # No change - increment staleness
+            new_stale_count = (old_thread.stale_refresh_count or 0) + 1
+            update_payload['stale_refresh_count'] = new_stale_count
+            
+            # Update priority based on staleness
+            if new_stale_count >= 5:
+                update_payload['refresh_priority'] = 'frozen'
+            elif new_stale_count >= 3:
+                update_payload['refresh_priority'] = 'low'
+            else:
+                update_payload['refresh_priority'] = 'normal'
         
         if total_tokens is not None:
             update_payload['total_tokens'] = total_tokens

@@ -18,10 +18,11 @@ except ImportError:
 logger = logging.getLogger('huey')
 
 @huey.task(context=True)
-def search_task(project_id, target_name, start_date, end_date, api_key, group_id, group_name, mode='quick', task=None):
+def search_task(project_id, target_name, start_date, end_date, api_key, group_id, group_name, mode='quick', bypass_priority_filter=False, task=None):
     """
     Background task to process search request.
     mode: 'quick' (DB only) or 'fresh' (Sync API then DB)
+    bypass_priority_filter: If True, ignore refresh_priority (for admin manual refresh)
     """
     logger.info(f"Starting {mode} search task for project: {group_name}. Task ID: {task.id if task else 'Unknown'}")
     
@@ -40,12 +41,32 @@ def search_task(project_id, target_name, start_date, end_date, api_key, group_id
         debug_log = []
         startTime = time.time()
         
+        # Smart Refresh Statistics
+        skipped_frozen = 0
+        skipped_low = 0
+        refreshed_count = 0
+        
         if mode == 'fresh':
             # 1. Sync Phase (Iterate all threads in project to update cache)
             # This is slow but required for "Fresh".
+            import random
             for t in threads:
                 try:
-                     logic.sync_thread_to_db(t.thread_id, api_key, project_id)
+                    # Smart Refresh: Check priority unless bypassed
+                    if not bypass_priority_filter:
+                        if t.refresh_priority == 'frozen':
+                            skipped_frozen += 1
+                            logger.info(f"Skipped frozen thread: {t.thread_id}")
+                            continue
+                        elif t.refresh_priority == 'low':
+                            # 80% chance to skip
+                            if random.random() < 0.8:
+                                skipped_low += 1
+                                logger.info(f"Skipped low priority thread: {t.thread_id}")
+                                continue
+                    
+                    logic.sync_thread_to_db(t.thread_id, api_key, project_id)
+                    refreshed_count += 1
                 except Exception as e:
                      logger.error(f"Sync failed for {t.thread_id}: {e}")
 
@@ -131,7 +152,12 @@ def search_task(project_id, target_name, start_date, end_date, api_key, group_id
             'debug_log': debug_log,
             'duration': duration,
             'target_name': target_name,
-            'date_range': date_range_str
+            'date_range': date_range_str,
+            # Smart refresh stats
+            'refreshed_count': refreshed_count,
+            'skipped_frozen': skipped_frozen,
+            'skipped_low': skipped_low,
+            'total_skipped': skipped_frozen + skipped_low
         }
 
 # --- Scheduled Tasks ---

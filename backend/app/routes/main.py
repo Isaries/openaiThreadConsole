@@ -208,7 +208,13 @@ def search_result(task_id):
         
         # Permissions
         is_admin=is_admin,
-        writable_projects=writable_projects
+        writable_projects=writable_projects,
+        
+        # Smart Refresh Statistics
+        refreshed_count=task_meta.get('refreshed_count', 0),
+        skipped_frozen=task_meta.get('skipped_frozen', 0),
+        skipped_low=task_meta.get('skipped_low', 0),
+        total_skipped=task_meta.get('total_skipped', 0)
     )
 
 @main_bp.route('/captcha')

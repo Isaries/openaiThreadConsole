@@ -62,6 +62,11 @@ class Thread(db.Model):
     message_count = db.Column(db.Integer, default=0)
     total_tokens = db.Column(db.Integer, default=0)
     
+    # Smart refresh fields
+    last_message_timestamp = db.Column(db.Integer, nullable=True)  # Latest message timestamp
+    stale_refresh_count = db.Column(db.Integer, default=0)         # Consecutive no-change refreshes
+    refresh_priority = db.Column(db.String(20), default='normal')  # normal / low / frozen
+    
     messages = db.relationship('Message', backref='thread', lazy=True, cascade="all, delete-orphan")
 
 class Message(db.Model):

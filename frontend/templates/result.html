@@ -44,6 +44,24 @@
             </div>
         </div>
 
+        <!-- Smart Refresh Statistics (only show if fresh mode was used) -->
+        {% if refreshed_count is defined and total_skipped is defined and total_skipped > 0 %}
+        <div class="alert"
+            style="background: #e8f5e9; border: 1px solid #4caf50; border-radius: 8px; padding: 1rem; margin-bottom: 1.5rem;">
+            <div style="font-weight: 600; color: #2e7d32; margin-bottom: 0.5rem;">✅ 刷新完成</div>
+            <div style="font-size: 0.9rem; color: #1b5e20; line-height: 1.6;">
+                - 已刷新：<strong>{{ refreshed_count }}</strong> 個 Thread<br>
+                {% if skipped_frozen > 0 %}
+                - 已跳過（凍結）：<strong>{{ skipped_frozen }}</strong> 個<br>
+                {% endif %}
+                {% if skipped_low > 0 %}
+                - 已跳過（低優先級）：<strong>{{ skipped_low }}</strong> 個<br>
+                {% endif %}
+                - 💰 節省 API 請求：<strong>{{ total_skipped }}</strong> 次
+            </div>
+        </div>
+        {% endif %}
+
         <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 
         <!-- Removed Form Wrapper -->

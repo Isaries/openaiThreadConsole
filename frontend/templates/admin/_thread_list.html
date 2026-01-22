@@ -124,6 +124,7 @@
                     </th>
                     <th>Thread ID</th>
                     <th>備註</th>
+                    <th style="width: 90px;" title="刷新優先級：🟢活躍 🟡低優先 🔴凍結">狀態</th>
                     <th style="width: 80px;">操作</th>
                 </tr>
             </thead>
@@ -136,6 +137,15 @@
                     <td data-label="備註" class="editable-remark" data-thread-id="{{ thread.thread_id }}"
                         data-group-id="{{ active_group.group_id }}" style="cursor: pointer;" title="點擊編輯">
                         {{ thread.remark or '✏️' }}
+                    </td>
+                    <td data-label="狀態" style="text-align: center;">
+                        {% if thread.refresh_priority == 'frozen' %}
+                        <span title="已凍結：連續 {{ thread.stale_refresh_count }} 次無變化">🔴</span>
+                        {% elif thread.refresh_priority == 'low' %}
+                        <span title="低優先級：連續 {{ thread.stale_refresh_count }} 次無變化">🟡</span>
+                        {% else %}
+                        <span title="活躍中">🟢</span>
+                        {% endif %}
                     </td>
                     <td data-label="操作">
                         <a href="/admin/threads/view/{{ thread.thread_id }}?group_id={{ active_group.group_id }}"
