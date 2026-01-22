@@ -385,7 +385,7 @@ def cleanup_temp_files_task():
     logger.info(f"Cleanup Complete. Deleted {count} files.")
 
 # --- System Monitoring ---
-@huey.periodic_task(crontab(minute=0, hour='*/3'))
+@huey.periodic_task(crontab(minute=0))  # Every hour at :00
 def collect_system_metrics_task():
     logger.info("Starting System Metric Collection")
     try:
