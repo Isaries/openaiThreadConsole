@@ -9,7 +9,22 @@ import io
 import math
 import zipfile
 
+from ..extensions import limiter
+
 files_bp = Blueprint('files', __name__)
+
+def get_pdf_limit():
+    """
+    Dynamic Rate Limit Policy
+    - Admin: 200/hour
+    - User (Teacher): 100/hour
+    - Guest: 3/hour
+    """
+    if session.get('role') == 'admin':
+        return "200 per hour"
+    if session.get('user_id'):
+        return "100 per hour"
+    return "3 per hour"
 
 @files_bp.route('/print-view', methods=['POST'])
 def print_view():
@@ -20,6 +35,7 @@ def print_view():
     return "Batch print deprecated. Please download threads individually.", 400
 
 @files_bp.route('/download/pdf/<thread_id>')
+@limiter.limit(get_pdf_limit)
 def download_pdf(thread_id):
     # 1. Fetch Group Context
     groups = database.load_groups()
