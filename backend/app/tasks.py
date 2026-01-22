@@ -368,6 +368,11 @@ def collect_system_metrics_task():
         # cpu_percent with interval blocks for 1 sec to get accurate reading
         cpu = psutil.cpu_percent(interval=1) 
         mem = psutil.virtual_memory()
+
+        # 1.5 Calculate Total Managed Tokens
+        from .models import Thread
+        from sqlalchemy import func
+        total_tokens = db.session.query(func.sum(Thread.total_tokens)).scalar() or 0
         
         app = create_app()
         with app.app_context():
@@ -377,7 +382,8 @@ def collect_system_metrics_task():
                 cpu_percent=cpu,
                 memory_percent=mem.percent,
                 memory_used=round(mem.used / (1024**3), 2), # GB
-                memory_total=round(mem.total / (1024**3), 2) # GB
+                memory_total=round(mem.total / (1024**3), 2), # GB
+                total_managed_tokens=total_tokens
             )
             db.session.add(new_metric)
             
@@ -392,7 +398,7 @@ def collect_system_metrics_task():
                 
             db.session.commit()
         
-        logger.info(f"Metrics Saved: CPU={cpu}%, MEM={mem.percent}%")
+        logger.info(f"Metrics Saved: CPU={cpu}%, MEM={mem.percent}%, Tokens={total_tokens}")
     except Exception as e:
         logger.error(f"System Metric Collection Failed: {e}")
 

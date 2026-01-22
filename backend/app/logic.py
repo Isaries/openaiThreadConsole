@@ -108,6 +108,45 @@ def fetch_thread_messages(thread_id, api_key=None):
         logging.getLogger().error(f"Fetch error {thread_id}: {e}")
         return None
 
+def fetch_thread_runs_usage(thread_id, api_key=None):
+    """
+    Fetches all runs for the thread and sums up usage.total_tokens.
+    """
+    if not thread_id: return 0
+    
+    # Run List URL
+    base_url = f"{config.OPENAI_BASE_URL}/threads/{thread_id}/runs"
+    headers = get_headers(api_key)
+    params = {"limit": 100}
+    
+    total_tokens = 0
+    session = _get_retry_session()
+    
+    try:
+        while True:
+            response = session.get(base_url, headers=headers, params=params, timeout=30)
+            if response.status_code != 200:
+                logging.getLogger().warning(f"Run fetch failed {thread_id}: {response.status_code}")
+                break
+                
+            data = response.json()
+            runs = data.get('data', [])
+            
+            for run in runs:
+                usage = run.get('usage')
+                if usage:
+                    total_tokens += usage.get('total_tokens', 0)
+            
+            if data.get('has_more') and runs:
+                params['after'] = runs[-1]['id']
+            else:
+                break
+                
+        return total_tokens
+    except Exception as e:
+        logging.getLogger().warning(f"Run fetch error {thread_id}: {e}")
+        return None
+
 def process_thread(thread_data, target_name, start_date, end_date, api_key=None, group_id=None):
     t_id = thread_data.get('thread_id')
     
@@ -273,6 +312,11 @@ def sync_thread_to_db(thread_id_str, api_key=None, project_id=None):
         
         messages_data = api_response['data']
         
+        # 1.5 Fetch Run Usage (Network I/O)
+        # We do this before transaction to keep it short
+        # Returns None if failed, so we don't overwrite with 0
+        total_tokens = fetch_thread_runs_usage(thread_id_str, api_key)
+        
         # 2. Prepare Data Objects
         new_msgs = []
         # We need thread foreign key `thread.id` (Integer PK), not string ID.
@@ -334,10 +378,15 @@ def sync_thread_to_db(thread_id_str, api_key=None, project_id=None):
         # Update Meta
         # We need to re-fetch thread object attached to this session or use update query
         # Using update query is faster/cleaner
-        Thread.query.filter_by(id=thread_pk).update({
+        update_payload = {
             'last_synced_at': int(time.time()),
             'message_count': len(new_msgs)
-        })
+        }
+        
+        if total_tokens is not None:
+            update_payload['total_tokens'] = total_tokens
+            
+        Thread.query.filter_by(id=thread_pk).update(update_payload)
         
         db.session.commit()
         return True, f'Synced {len(new_msgs)} messages'

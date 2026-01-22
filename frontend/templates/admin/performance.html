@@ -67,6 +67,14 @@
             </div>
             <div class="text-xs text-secondary">{{ current.mem_gb }} GB / {{ mem_total }} GB</div>
         </div>
+
+        <div class="kpi-card">
+            <div class="kpi-label">已管理總 Token 數</div>
+            <div class="kpi-value text-blue">
+                {{ "{:,}".format(current.tokens) }}
+            </div>
+            <div class="text-xs text-secondary">所有已同步 Thread 的總和</div>
+        </div>
     </div>
 
     <!-- CPU Chart -->
@@ -80,6 +88,12 @@
         <h3>記憶體 歷史趨勢</h3>
         <canvas id="memChart"></canvas>
     </div>
+
+    <!-- Token Chart -->
+    <div class="chart-container">
+        <h3>管理 Token 總量趨勢</h3>
+        <canvas id="tokenChart"></canvas>
+    </div>
 </div>
 
 <script id="perf-data" type="application/json">
@@ -91,6 +105,7 @@
     const labels = rawData.map(d => d.time);
     const cpuData = rawData.map(d => d.cpu);
     const memData = rawData.map(d => d.mem_gb);
+    const tokenData = rawData.map(d => d.tokens || 0);
 
     // Common Chart Options
     const commonOptions = {
@@ -173,6 +188,36 @@
                 y: {
                     min: 0,
                     // Suggested Max slightly above total ram usually, but dynamic is fine
+                }
+            }
+        }
+    });
+
+    // Token Chart
+    new Chart(document.getElementById('tokenChart'), {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Total Managed Tokens',
+                data: tokenData,
+                borderColor: 'rgb(54, 162, 235)',
+                backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                tension: 0.2,
+                fill: true,
+                pointRadius: (ctx) => {
+                    return ctx.dataIndex === rawData.length - 1 ? 6 : 3;
+                },
+                pointBackgroundColor: (ctx) => {
+                    return ctx.dataIndex === rawData.length - 1 ? 'red' : 'rgb(54, 162, 235)';
+                }
+            }]
+        },
+        options: {
+            ...commonOptions,
+            scales: {
+                y: {
+                    min: 0,
                 }
             }
         }

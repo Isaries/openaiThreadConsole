@@ -94,10 +94,15 @@ def performance_dashboard():
         'timestamp': m.timestamp,
         'cpu': m.cpu_percent,
         'mem_pct': m.memory_percent,
-        'mem_gb': m.memory_used
+        'mem_gb': m.memory_used,
+        'tokens': m.total_managed_tokens
     } for m in metrics]
     
     # 2. Real-time Snapshot
+    # Get current token count
+    from ...models import Thread
+    from sqlalchemy import func
+    current_tokens = db.session.query(func.sum(Thread.total_tokens)).scalar() or 0
     try:
         current_cpu = psutil.cpu_percent(interval=0.5)
         mem = psutil.virtual_memory()
@@ -110,7 +115,9 @@ def performance_dashboard():
             'timestamp': int(time.time()),
             'cpu': current_cpu,
             'mem_pct': current_mem_pct,
-            'mem_gb': current_mem_gb
+            'mem_pct': current_mem_pct,
+            'mem_gb': current_mem_gb,
+            'tokens': current_tokens
         }
         chart_data.append(current_snapshot)
         
@@ -120,7 +127,8 @@ def performance_dashboard():
         current_mem_total = 0
     except Exception as e:
         flash(f'讀取系統數據失敗: {str(e)}', 'error')
-        current_snapshot = {'time': 'Error', 'cpu': 0, 'mem_pct': 0, 'mem_gb': 0}
+        flash(f'讀取系統數據失敗: {str(e)}', 'error')
+        current_snapshot = {'time': 'Error', 'cpu': 0, 'mem_pct': 0, 'mem_gb': 0, 'tokens': 0}
         current_mem_total = 0
     
     return render_template('admin/performance.html', 

@@ -60,6 +60,7 @@ class Thread(db.Model):
     # Cache fields
     last_synced_at = db.Column(db.Integer, nullable=True) # unix timestamp
     message_count = db.Column(db.Integer, default=0)
+    total_tokens = db.Column(db.Integer, default=0)
     
     messages = db.relationship('Message', backref='thread', lazy=True, cascade="all, delete-orphan")
 
@@ -118,6 +119,7 @@ class SystemMetric(db.Model):
     memory_percent = db.Column(db.Float)
     memory_used = db.Column(db.Float) # GB
     memory_total = db.Column(db.Float) # GB
+    total_managed_tokens = db.Column(db.Integer, default=0) # System-wide total
 
 class RefreshHistory(db.Model):
     __tablename__ = 'refresh_history'
