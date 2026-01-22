@@ -112,7 +112,7 @@ def fetch_thread_runs_usage(thread_id, api_key=None):
     """
     Fetches all runs for the thread and sums up usage.total_tokens.
     """
-    if not thread_id: return 0
+    if not thread_id: return None  # Return None to indicate error, not 0
     
     # Run List URL
     base_url = f"{config.OPENAI_BASE_URL}/threads/{thread_id}/runs"
