@@ -384,9 +384,15 @@ def sync_thread_to_db(thread_id_str, api_key=None, project_id=None):
         
         # Smart Refresh: Check if content changed
         old_thread = Thread.query.filter_by(id=thread_pk).first()
-        old_last_msg_ts = old_thread.last_message_timestamp if old_thread else 0
+        old_last_msg_ts = old_thread.last_message_timestamp if old_thread else None
         
-        has_change = (latest_msg_ts > old_last_msg_ts) if old_last_msg_ts else True
+        # Determine if content changed
+        # - If old_last_msg_ts is None, this is first sync -> always consider as change
+        # - Otherwise, compare timestamps
+        if old_last_msg_ts is None:
+            has_change = True  # First sync
+        else:
+            has_change = (latest_msg_ts > old_last_msg_ts)
         
         update_payload = {
             'last_synced_at': int(time.time()),

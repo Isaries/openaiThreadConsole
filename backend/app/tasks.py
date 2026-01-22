@@ -145,20 +145,26 @@ def search_task(project_id, target_name, start_date, end_date, api_key, group_id
         }
         database.save_log(log_entry)
     
-        return {
+        result = {
             'status': 'done',
             'count': total_count,
             'total_pages': page_index + (1 if current_batch else 0),
             'debug_log': debug_log,
             'duration': duration,
             'target_name': target_name,
-            'date_range': date_range_str,
-            # Smart refresh stats
-            'refreshed_count': refreshed_count,
-            'skipped_frozen': skipped_frozen,
-            'skipped_low': skipped_low,
-            'total_skipped': skipped_frozen + skipped_low
+            'date_range': date_range_str
         }
+        
+        # Add smart refresh stats only if fresh mode was used
+        if mode == 'fresh':
+            result.update({
+                'refreshed_count': refreshed_count,
+                'skipped_frozen': skipped_frozen,
+                'skipped_low': skipped_low,
+                'total_skipped': skipped_frozen + skipped_low
+            })
+        
+        return result
 
 # --- Scheduled Tasks ---
 
