@@ -206,6 +206,9 @@ def scheduled_refresh_task():
             day_seconds = 86400
             interval = frequency_days * day_seconds 
             
+            # Batch Commit Counter
+            pending_updates = 0
+
             for p in projects:
                 for t in p.threads:
                     total_scanned += 1
@@ -219,13 +222,23 @@ def scheduled_refresh_task():
                         s, m = logic.sync_thread_to_db(t.thread_id, p.api_key, p.id)
                         if s: 
                             updated_count += 1
+                            pending_updates += 1
                         else: 
                             error_count += 1
                             logger.warning(f"Failed to refresh {t.thread_id}: {m}")
                             if len(error_logs) < 10: # Limit log size
                                 error_logs.append(f"{t.thread_id}: {m}")
+                        
+                        # Batch Commit (Every 50 updates) to prevent long transactions
+                        if pending_updates >= 50:
+                            db.session.commit()
+                            pending_updates = 0
                                 
                         time.sleep(0.5) # Rate Limit Protection
+            
+            # Final Commit for remaining
+            if pending_updates > 0:
+                db.session.commit()
             
             # --- Save History ---
             duration = time.time() - start_ts

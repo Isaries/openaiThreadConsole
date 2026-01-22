@@ -170,6 +170,26 @@ def fetch_image_local_path(src, headers=None):
             
         if not url: return src, None
 
+        # SSRF Protection: Validate URL host
+        try:
+             from urllib.parse import urlparse
+             import socket
+             parsed = urlparse(url)
+             hostname = parsed.hostname
+             if hostname:
+                 # Block localhost
+                 if hostname.lower() in ('localhost', '127.0.0.1', '0.0.0.0'):
+                     current_app.logger.warning(f"SSRF Blocked: {url}")
+                     return src, None
+                 # Resolve IP to check private ranges (Basic Check)
+                 ip = socket.gethostbyname(hostname)
+                 if ip.startswith(('127.', '10.', '192.168.', '172.16.', '0.')):
+                      current_app.logger.warning(f"SSRF Blocked (Private IP): {url} -> {ip}")
+                      return src, None
+        except Exception as e:
+             current_app.logger.warning(f"URL Validation Failed: {e}")
+             return src, None
+
         # Perform Fetch using Retry Session
         session = _get_retry_session()
         resp = session.get(url, headers=request_headers, timeout=50)
@@ -216,6 +236,12 @@ def preprocess_html_for_pdf(html_content, group_id, get_headers_func):
     
     # Target ALL images for parallel pre-fetching 
     target_images = [img for img in images if img.get('src')]
+    
+    # DoS Protection: Limit maximum number of images to fetch
+    MAX_IMAGES = 50
+    if len(target_images) > MAX_IMAGES:
+        current_app.logger.warning(f"PDF Gen: Image count {len(target_images)} exceeds limit {MAX_IMAGES}. Truncating.")
+        target_images = target_images[:MAX_IMAGES]
     
     if not target_images:
         return html_content, []

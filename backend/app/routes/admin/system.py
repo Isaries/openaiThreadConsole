@@ -33,9 +33,12 @@ def update_settings():
     if openai_key:
         settings['openai_api_key'] = core_security.encrypt_data(openai_key)
         
-    database.save_settings(settings)
-    log_audit('Update Global Settings', 'OpenAI Key')
-    return jsonify({'success': True})
+    try:
+        database.save_settings(settings)
+        log_audit('Update Global Settings', 'OpenAI Key')
+        return jsonify({'success': True})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 @admin_bp.route('/settings/refresh_schedule', methods=['POST'])
 def update_refresh_schedule():
