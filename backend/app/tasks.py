@@ -400,14 +400,14 @@ def collect_system_metrics_task():
         # cpu_percent with interval blocks for 1 sec to get accurate reading
         cpu = psutil.cpu_percent(interval=1) 
         mem = psutil.virtual_memory()
-
-        # 1.5 Calculate Total Managed Tokens
-        from .models import Thread
-        from sqlalchemy import func
-        total_tokens = db.session.query(func.sum(Thread.total_tokens)).scalar() or 0
         
         app = create_app()
         with app.app_context():
+            # 1.5 Calculate Total Managed Tokens (must be inside app context)
+            from .models import Thread
+            from sqlalchemy import func
+            total_tokens = db.session.query(func.sum(Thread.total_tokens)).scalar() or 0
+            
             # 2. Save to DB
             new_metric = SystemMetric(
                 timestamp=int(time.time()),

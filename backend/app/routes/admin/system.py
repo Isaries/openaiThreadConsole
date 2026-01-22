@@ -115,7 +115,6 @@ def performance_dashboard():
             'timestamp': int(time.time()),
             'cpu': current_cpu,
             'mem_pct': current_mem_pct,
-            'mem_pct': current_mem_pct,
             'mem_gb': current_mem_gb,
             'tokens': current_tokens
         }
@@ -123,10 +122,9 @@ def performance_dashboard():
         
     except ImportError:
         flash('錯誤: 尚未安裝 psutil 套件', 'error')
-        current_snapshot = {'time': 'N/A', 'cpu': 0, 'mem_pct': 0, 'mem_gb': 0}
+        current_snapshot = {'time': 'N/A', 'cpu': 0, 'mem_pct': 0, 'mem_gb': 0, 'tokens': 0}
         current_mem_total = 0
     except Exception as e:
-        flash(f'讀取系統數據失敗: {str(e)}', 'error')
         flash(f'讀取系統數據失敗: {str(e)}', 'error')
         current_snapshot = {'time': 'Error', 'cpu': 0, 'mem_pct': 0, 'mem_gb': 0, 'tokens': 0}
         current_mem_total = 0
