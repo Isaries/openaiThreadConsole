@@ -242,6 +242,7 @@ def process_thread(thread_data, target_name, start_date, end_date, api_key=None,
     if keep_thread:
         result['data'] = {
             'thread_id': t_id,
+            'project_id': group_id, # Added project_id
             'remark': thread_remark, # Added remark
             'time': thread_time,
             'timestamp': thread_timestamp,
@@ -435,6 +436,7 @@ def process_thread_from_db(thread_db_obj, target_name, start_date, end_date):
     if keep_thread:
         result['data'] = {
             'thread_id': t_id,
+            'project_id': thread_db_obj.project_id, # Added project_id
             'remark': thread_remark, # Added remark
             'messages': processed_messages,
             'time': processed_messages[-1]['time'] if processed_messages else 'Unknown', # Ensure time is present

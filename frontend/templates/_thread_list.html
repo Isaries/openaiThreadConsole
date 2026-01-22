@@ -20,10 +20,17 @@
                 📄 PDF
             </a>
         </div>
-        {% if thread.remark %}
+        {% if thread.remark or is_admin or thread.project_id in writable_projects %}
         <div class="thread-remark"
             style="flex-basis: 100%; margin-top: 8px; padding-top: 8px; border-top: 1px dashed #eee; color: var(--text-secondary); font-size: 0.9em; word-break: break-all;">
-            📝 {{ thread.remark }}
+            📝 <span>{{ thread.remark or '' }}</span>
+            {% if is_admin or thread.project_id in writable_projects %}
+            <button class="btn-edit-remark" title="修改備註" data-thread-id="{{ thread.thread_id }}"
+                data-project-id="{{ thread.project_id }}" data-remark="{{ thread.remark or '' }}"
+                onclick="event.stopPropagation(); editRemark(this.dataset.threadId, this.dataset.projectId, this.dataset.remark)">
+                ✏️
+            </button>
+            {% endif %}
         </div>
         {% endif %}
     </div>

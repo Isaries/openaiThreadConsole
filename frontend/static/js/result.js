@@ -283,3 +283,44 @@ document.addEventListener('DOMContentLoaded', () => {
     // Initial attachment
     window.attachPdfListeners();
 });
+
+async function editRemark(threadId, projectId, oldRemark) {
+    const newRemark = prompt('請輸入新的備註：', oldRemark || '');
+    
+    if (newRemark === null) return; // Cancelled
+    if (newRemark === oldRemark) return; // No change
+    
+    try {
+        const csrfToken = document.querySelector('input[name="csrf_token"]').value;
+        const response = await fetch('/admin/threads/update_remark', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken
+            },
+            body: JSON.stringify({
+                group_id: projectId,
+                thread_id: threadId,
+                remark: newRemark
+            })
+        });
+        
+        if (response.ok) {
+            // Update UI directly
+            
+            const selector = '#thread-' + threadId + ' .thread-remark > span';
+            const remarkSpan = document.querySelector(selector);
+            if (remarkSpan) {
+                remarkSpan.innerText = newRemark;
+            } else {
+                 location.reload(); 
+            }
+        } else {
+            const err = await response.json();
+            alert('更新失敗: ' + (err.error || 'Unknown Error'));
+        }
+    } catch (e) {
+        console.error(e);
+        alert('網路錯誤，請稍後再試');
+    }
+}

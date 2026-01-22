@@ -178,6 +178,19 @@ def search_result(task_id):
         )
     
     # Full Page Render (First load or Refresh or Polling completion)
+    
+    # Permission Context for Template
+    is_admin = False
+    writable_projects = []
+    
+    user_id = session.get('user_id')
+    if user_id:
+        from ..models import User
+        user = User.query.get(user_id)
+        if user:
+            is_admin = user.is_admin
+            writable_projects = [p.id for p in user.owned_projects]
+
     return render_template('result.html', 
         results=results, 
         target_name=task_meta['target_name'], 
@@ -191,7 +204,11 @@ def search_result(task_id):
         task_id=task_id,
         total_pages=task_meta.get('total_pages', 1),
         current_page=page,
-        page_index=page
+        page_index=page,
+        
+        # Permissions
+        is_admin=is_admin,
+        writable_projects=writable_projects
     )
 
 @main_bp.route('/captcha')
