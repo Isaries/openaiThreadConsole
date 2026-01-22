@@ -284,12 +284,12 @@ document.addEventListener('DOMContentLoaded', () => {
     window.attachPdfListeners();
 });
 
-async function editRemark(threadId, projectId, oldRemark) {
+window.editRemark = async function (threadId, projectId, oldRemark) {
     const newRemark = prompt('請輸入新的備註：', oldRemark || '');
-    
+
     if (newRemark === null) return; // Cancelled
     if (newRemark === oldRemark) return; // No change
-    
+
     try {
         const csrfToken = document.querySelector('input[name="csrf_token"]').value;
         const response = await fetch('/admin/threads/update_remark', {
@@ -304,16 +304,16 @@ async function editRemark(threadId, projectId, oldRemark) {
                 remark: newRemark
             })
         });
-        
+
         if (response.ok) {
             // Update UI directly
-            
+
             const selector = '#thread-' + threadId + ' .thread-remark > span';
             const remarkSpan = document.querySelector(selector);
             if (remarkSpan) {
                 remarkSpan.innerText = newRemark;
             } else {
-                 location.reload(); 
+                location.reload();
             }
         } else {
             const err = await response.json();
