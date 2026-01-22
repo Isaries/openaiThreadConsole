@@ -16,6 +16,14 @@ from app.extensions import db
 from app.models import Thread, Message
 import time
 
+# Optional: tiktoken for precise token counting
+try:
+    import tiktoken
+    TIKTOKEN_AVAILABLE = True
+except ImportError:
+    TIKTOKEN_AVAILABLE = False
+    # Warning will be logged on first use to ensure logger is initialized
+
 def get_headers(custom_key=None):
     # Support Group Key override
     api_key = custom_key
@@ -108,44 +116,71 @@ def fetch_thread_messages(thread_id, api_key=None):
         logging.getLogger().error(f"Fetch error {thread_id}: {e}")
         return None
 
-def fetch_thread_runs_usage(thread_id, api_key=None):
+
+def calculate_messages_tokens(messages_data):
     """
-    Fetches all runs for the thread and sums up usage.total_tokens.
-    """
-    if not thread_id: return None  # Return None to indicate error, not 0
+    Calculates the total tokens for reading thread messages.
+    This represents the cost of fetching/reading messages, not the cost of running the assistant.
     
-    # Run List URL
-    base_url = f"{config.OPENAI_BASE_URL}/threads/{thread_id}/runs"
-    headers = get_headers(api_key)
-    params = {"limit": 100}
+    Args:
+        messages_data: List of message objects from OpenAI API
+        
+    Returns:
+        int: Total token count for all messages, or None if calculation fails
+    """
+    if not messages_data:
+        return 0
     
     total_tokens = 0
-    session = _get_retry_session()
     
     try:
-        while True:
-            response = session.get(base_url, headers=headers, params=params, timeout=30)
-            if response.status_code != 200:
-                logging.getLogger().warning(f"Run fetch failed {thread_id}: {response.status_code}")
-                break
-                
-            data = response.json()
-            runs = data.get('data', [])
+        if TIKTOKEN_AVAILABLE:
+            # Use tiktoken for precise token counting
+            # Using cl100k_base encoding (used by gpt-4, gpt-3.5-turbo)
+            encoding = tiktoken.get_encoding("cl100k_base")
             
-            for run in runs:
-                usage = run.get('usage')
-                if usage:
-                    total_tokens += usage.get('total_tokens', 0)
-            
-            if data.get('has_more') and runs:
-                params['after'] = runs[-1]['id']
-            else:
-                break
+            for msg in messages_data:
+                # Count tokens in message content
+                if msg.get('content'):
+                    for part in msg['content']:
+                        if part.get('type') == 'text':
+                            text_value = part.get('text', {}).get('value', '')
+                            if text_value:
+                                total_tokens += len(encoding.encode(text_value))
+                        elif part.get('type') == 'image_file':
+                            # Images don't consume tokens in message retrieval
+                            # (they consume tokens when processed by vision models)
+                            pass
                 
+                # Add overhead for message metadata (role, timestamp, etc.)
+                # Approximate: ~10 tokens per message for metadata
+                total_tokens += 10
+        else:
+            # Fallback: Character-based estimation
+            # Log warning only once
+            if not hasattr(calculate_messages_tokens, '_warned'):
+                logging.getLogger().warning("tiktoken not available, using character-based token estimation")
+                calculate_messages_tokens._warned = True
+            
+            # Rough estimate: 1 token ≈ 4 characters for English, ≈ 1.5 for Chinese
+            for msg in messages_data:
+                char_count = 0
+                if msg.get('content'):
+                    for part in msg['content']:
+                        if part.get('type') == 'text':
+                            text_value = part.get('text', {}).get('value', '')
+                            char_count += len(text_value)
+                
+                # Estimate tokens (conservative: assume mixed language)
+                # Use 2.5 chars per token as middle ground
+                total_tokens += int(char_count / 2.5) + 10  # +10 for metadata
+        
         return total_tokens
+        
     except Exception as e:
-        logging.getLogger().warning(f"Run fetch error {thread_id}: {e}")
+        logging.getLogger().error(f"Token calculation error: {e}")
         return None
+
 
 def process_thread(thread_data, target_name, start_date, end_date, api_key=None, group_id=None):
     t_id = thread_data.get('thread_id')
@@ -312,10 +347,9 @@ def sync_thread_to_db(thread_id_str, api_key=None, project_id=None):
         
         messages_data = api_response['data']
         
-        # 1.5 Fetch Run Usage (Network I/O)
-        # We do this before transaction to keep it short
-        # Returns None if failed, so we don't overwrite with 0
-        total_tokens = fetch_thread_runs_usage(thread_id_str, api_key)
+        # 1.5 Calculate Message Tokens (based on message content)
+        # This represents the cost of reading/fetching messages, not running the assistant
+        total_tokens = calculate_messages_tokens(messages_data)
         
         # 2. Prepare Data Objects
         new_msgs = []
