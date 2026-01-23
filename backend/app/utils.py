@@ -3,6 +3,7 @@ from datetime import datetime, timezone, timedelta
 from markupsafe import escape, Markup
 import requests
 import markdown
+import logging
 from collections import OrderedDict
 
 # In-Memory Cache for IP Info (LRU with max size to prevent memory leaks)
