@@ -142,8 +142,15 @@ def search_task(project_id, target_name, start_date, end_date, api_key, group_id
                         }
                     })
                     db.session.commit()
-            except:
+                    logger.info(f"Task {task.id}: Progress updated to SEARCHING ({processed_threads}/{total_threads})")
+            except Exception as e:
+                logger.debug(f"Task {task.id}: Search phase progress update failed: {e}")
                 pass
+        
+        # Chunking Logic
+        # ... (rest of search processing) ...
+        matching_count = len(matching_threads)
+        processed_matches = 0
         
         # Chunking Logic
         BATCH_SIZE = 10
@@ -168,32 +175,41 @@ def search_task(project_id, target_name, start_date, end_date, api_key, group_id
                 
                 # Flush Batch
                 if len(current_batch) >= BATCH_SIZE:
-                    chunk = SearchResultChunk(
-                        task_id=task.id, # Accessing Huey task ID from context
-                        page_index=page_index,
-                        data_json=json.dumps(current_batch)
-                    )
-                    db.session.add(chunk)
-                    db.session.commit()
                     try:
                         chunk = SearchResultChunk(
-                            task_id=task.id, # Accessing Huey task ID from context
+                            task_id=task.id,
                             page_index=page_index,
                             data_json=json.dumps(current_batch, ensure_ascii=False),
                             created_at=int(time.time())
                         )
                         db.session.add(chunk)
                         db.session.commit()
+                        page_index += 1
+                        current_batch = []
                     except Exception as e:
-                        logger.error(f"Failed to save search result chunk for task {task.id}, page {page_index}: {e}")
+                        logger.error(f"Task {task.id}: Chunk write failed: {e}")
                         db.session.rollback()
-                    
-                    current_batch = []
-                    page_index += 1
-                    time.sleep(0.2) # Throttling
-    
-        # Flush Final Batch
-        if current_batch:
+            
+            # Update matching progress every 10 threads
+            processed_matches += 1
+            if task and task.id and processed_matches % 10 == 0:
+                try:
+                    p_chunk = SearchResultChunk.query.filter_by(task_id=task.id, page_index=-1).first()
+                    if p_chunk:
+                        p_chunk.progress_data = json.dumps({
+                            'progress': {
+                                'current': processed_matches,
+                                'total': matching_count,
+                                'percentage': round((processed_matches / matching_count) * 100, 1) if matching_count > 0 else 0,
+                                'phase': 'processing'
+                            }
+                        })
+                        db.session.commit()
+                except:
+                    pass
+
+        # Final Flush for any remaining results
+        if current_batch and task and task.id:
             try:
                 chunk = SearchResultChunk(
                     task_id=task.id,
@@ -204,53 +220,40 @@ def search_task(project_id, target_name, start_date, end_date, api_key, group_id
                 db.session.add(chunk)
                 db.session.commit()
             except Exception as e:
-                logger.error(f"Failed to save search result chunk for task {task.id}, page {page_index}: {e}")
+                logger.error(f"Task {task.id}: Final chunk write failed: {e}")
                 db.session.rollback()
         
-        endTime = time.time()
-        duration = endTime - startTime
+        duration = time.time() - startTime
         
-        # Save Search History Log (simplified)
+        # Save Search History Log
         utc8 = timezone(timedelta(hours=8))
         log_time = datetime.now(utc8)
-        
-        date_range_str = None
-        if start_date or end_date:
-            d_start = start_date if start_date else 'Any'
-            d_end = end_date if end_date else 'Any'
-            date_range_str = f"{d_start} ~ {d_end}"
+        date_range_str = f"{start_date} ~ {end_date}" if start_date and end_date else "All Time"
             
         log_entry = {
-                'timestamp': int(log_time.timestamp()),
-                'time': log_time.strftime('%Y-%m-%d %H:%M:%S'),
-                'group': group_name,
-                'target': target_name,
-                'date_range': date_range_str,
-                'matches': total_count,
-                'total': len(matching_threads),
-                'api_results': debug_log
+            'timestamp': int(log_time.timestamp()),
+            'time': log_time.strftime('%Y-%m-%d %H:%M:%S'),
+            'group': group_name,
+            'target': target_name,
+            'date_range': date_range_str,
+            'matches': total_count,
+            'total': len(matching_threads),
+            'api_results': debug_log
         }
         database.save_log(log_entry)
-    
+        
         result = {
             'status': 'done',
             'count': total_count,
-            'total_pages': page_index + (1 if current_batch else 0),
-            'debug_log': debug_log,
             'duration': duration,
             'target_name': target_name,
-            'date_range': date_range_str
+            'date_range': date_range_str,
+            'refreshed_count': refreshed_count,
+            'skipped_frozen': skipped_frozen,
+            'skipped_low': skipped_low
         }
         
-        # Add smart refresh stats only if fresh mode was used
-        if mode == 'fresh':
-            result.update({
-                'refreshed_count': refreshed_count,
-                'skipped_frozen': skipped_frozen,
-                'skipped_low': skipped_low,
-                'total_skipped': skipped_frozen + skipped_low
-            })
-        
+        logger.info(f"Task {task.id} finished. Matches: {total_count}. Duration: {duration:.2f}s")
         return result
 
 # --- Scheduled Tasks ---
