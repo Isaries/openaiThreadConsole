@@ -89,27 +89,21 @@ def get_ip_info(ip):
         
     # 1. Skip Local/Private IPs (Basic Check)
     if ip == '127.0.0.1' or ip.startswith('192.168.') or ip.startswith('10.'):
-        return {'desc': 'Local / Private'}
+        return 'Local / Private'
         
     try:
-        # 2. Request API
-                    'city': city,
-                    'isp': isp,
-                    'desc': f"{country} {city}, {isp}"
-                }
-                
-                # Cache it with LRU eviction
-                IP_CACHE[ip] = info
-                
-                # Evict oldest if cache is too large
-                if len(IP_CACHE) > IP_CACHE_MAX_SIZE:
-                    IP_CACHE.popitem(last=False)  # Remove oldest (FIFO)
-                
-                return info
+        response = requests.get(f'http://ip-api.com/json/{ip}', timeout=3)
+        if response.status_code == 200:
+            data = response.json()
+            info = f"{data.get('city', 'Unknown')}, {data.get('country', 'Unknown')}"
+            IP_CACHE[ip] = info
+            if len(IP_CACHE) > IP_CACHE_MAX_SIZE:
+                IP_CACHE.popitem(last=False)
+            return info
     except Exception as e:
-        print(f"IP Lookup Failed for {ip}: {e}")
-        
-    return {'desc': 'Unknown'}
+        logging.getLogger().debug(f"Failed to fetch IP info for {ip}: {e}")
+    
+    return 'Unknown'
 
 # --- Date/Time Helpers ---
 def unix_to_utc8(unix_timestamp):
