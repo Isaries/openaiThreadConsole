@@ -151,3 +151,14 @@ def performance_dashboard():
                            chart_data=chart_data, 
                            current=current_snapshot,
                            mem_total=current_mem_total)
+
+@admin_bp.route('/performance/recalculate', methods=['POST'])
+def recalculate_tokens_trigger():
+    if not session.get('user_id') or session.get('role') != 'admin':
+        return jsonify({'error': 'Unauthorized'}), 403
+        
+    from ... import tasks
+    tasks.recalculate_tokens_task()
+    
+    return jsonify({'success': True, 'message': 'Token recalculation started in background.'})
+

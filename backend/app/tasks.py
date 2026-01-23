@@ -14,6 +14,56 @@ try:
 except ImportError:
     psutil = None
 
+def run_recalculation_logic():
+    """
+    Helper to run the recalculation logic (shared with task)
+    """
+    from . import create_app, logic
+    from .models import Thread, Message
+    
+    app = create_app()
+    with app.app_context():
+        threads = Thread.query.all()
+        updated_count = 0
+        error_count = 0
+        
+        for t in threads:
+            try:
+                # Optimized: Accessing messages via relationship
+                messages = t.messages 
+                messages_data = []
+                for msg in messages:
+                    messages_data.append({
+                        'role': msg.role,
+                        'content': [{'type': 'text', 'text': {'value': msg.content or ''}}]
+                    })
+                
+                token_count = logic.calculate_messages_tokens(messages_data)
+                
+                if token_count is not None:
+                     if t.total_tokens != token_count:
+                        t.total_tokens = token_count
+                        updated_count += 1
+                else:
+                    error_count += 1
+            except Exception:
+                error_count += 1
+                
+        if updated_count > 0:
+            db.session.commit()
+            
+        return updated_count, error_count
+
+@huey.task()
+def recalculate_tokens_task():
+    logger.info("Starting Token Recalculation Task")
+    try:
+        updated, errors = run_recalculation_logic()
+        logger.info(f"Token Recalculation Finished. Updated: {updated}, Errors: {errors}")
+    except Exception as e:
+        logger.error(f"Token Recalculation Failed: {e}")
+
+
 # Ensure logger is configured for the worker
 logger = logging.getLogger('huey')
 

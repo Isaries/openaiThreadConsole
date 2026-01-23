@@ -46,6 +46,8 @@
         <h1>📊 系統效能監控</h1>
         <div class="text-secondary text-sm">
             最近更新: {{ current.time }}
+            <button onclick="triggerRecalculate()" class="btn btn-sm btn-outline-secondary ml-2"
+                title="重新計算所有資料的 Token (修復 0 Token 問題)">🛠️ 修復 Token</button>
             <a href="/admin/performance" class="btn btn-sm btn-secondary ml-2">🔄 立即刷新</a>
         </div>
     </div>
@@ -245,7 +247,6 @@
         }
     });
 
-    // Token Delta Chart (Bar)
     new Chart(document.getElementById('tokenDeltaChart'), {
         type: 'bar',
         data: {
@@ -278,5 +279,26 @@
             }
         }
     });
+
+    function triggerRecalculate() {
+        if (!confirm('確定要重新計算所有資料的 Token 嗎？這可能需要幾分鐘時間。')) return;
+
+        fetch('/admin/performance/recalculate', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': "{{ csrf_token() }}"
+            }
+        })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    alert('已啟動重新計算任務，請稍後刷新頁面查看結果。');
+                } else {
+                    alert('Error: ' + data.error);
+                }
+            })
+            .catch(e => alert('Connection Error'));
+    }
 </script>
 {% endblock %}
