@@ -79,7 +79,7 @@ def search_task(project_id, target_name, start_date, end_date, api_key, group_id
                     if task and task.id and processed_threads % 10 == 0:
                         try:
                             from .models import SearchResultChunk
-                            chunk = SearchResultChunk.query.filter_by(task_id=task.id).first()
+                            chunk = SearchResultChunk.query.filter_by(task_id=task.id, page_index=-1).first()
                             if chunk:
                                 chunk.progress_data = json.dumps({
                                     'progress': {
