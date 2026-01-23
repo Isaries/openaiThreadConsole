@@ -113,7 +113,8 @@ def delete_user():
         # Reassign orphans check
         for project in user.owned_projects:
             if len(project.owners) <= 1:
-                admin_user = User.query.filter_by(id='admin').first() or User.query.filter_by(username='Administrator').first()
+                # Find any admin user to reassign orphaned projects
+                admin_user = User.query.filter_by(is_admin=True).first()
                 if admin_user and admin_user.id != user.id:
                     if admin_user not in project.owners:
                         project.owners.append(admin_user)

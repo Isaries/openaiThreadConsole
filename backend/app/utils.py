@@ -93,21 +93,6 @@ def get_ip_info(ip):
         
     try:
         # 2. Request API
-        # ip-api.com/json/{ip}?fields=status,message,country,city,isp,as
-        resp = requests.get(f"http://ip-api.com/json/{ip}?fields=status,country,city,isp,as,org", timeout=2)
-        if resp.status_code == 200:
-            data = resp.json()
-            if data.get('status') == 'success':
-                # Format: "🇹🇼 Taipei, Chunghwa Telecom"
-                # Add flag emoji logic if desired, or just text
-                
-                # Simple Flag Mapper (Partial)
-                country = data.get('country', '')
-                city = data.get('city', '')
-                isp = data.get('isp', '')
-                
-                info = {
-                    'country': country,
                     'city': city,
                     'isp': isp,
                     'desc': f"{country} {city}, {isp}"
@@ -132,7 +117,7 @@ def unix_to_utc8(unix_timestamp):
         return 'Unknown Time'
     try:
         ts = int(unix_timestamp)
-    except:
+    except (ValueError, TypeError):
         return 'Invalid Time'
         
     utc8 = timezone(timedelta(hours=8))

@@ -118,6 +118,18 @@ def search_task(project_id, target_name, start_date, end_date, api_key, group_id
                     )
                     db.session.add(chunk)
                     db.session.commit()
+                    try:
+                        chunk = SearchResultChunk(
+                            task_id=task.id, # Accessing Huey task ID from context
+                            page_index=page_index,
+                            data_json=json.dumps(current_batch, ensure_ascii=False),
+                            created_at=int(time.time())
+                        )
+                        db.session.add(chunk)
+                        db.session.commit()
+                    except Exception as e:
+                        logger.error(f"Failed to save search result chunk for task {task.id}, page {page_index}: {e}")
+                        db.session.rollback()
                     
                     current_batch = []
                     page_index += 1
@@ -125,13 +137,18 @@ def search_task(project_id, target_name, start_date, end_date, api_key, group_id
     
         # Flush Final Batch
         if current_batch:
-            chunk = SearchResultChunk(
-                task_id=task.id,
-                page_index=page_index,
-                data_json=json.dumps(current_batch)
-            )
-            db.session.add(chunk)
-            db.session.commit()
+            try:
+                chunk = SearchResultChunk(
+                    task_id=task.id,
+                    page_index=page_index,
+                    data_json=json.dumps(current_batch, ensure_ascii=False),
+                    created_at=int(time.time())
+                )
+                db.session.add(chunk)
+                db.session.commit()
+            except Exception as e:
+                logger.error(f"Failed to save search result chunk for task {task.id}, page {page_index}: {e}")
+                db.session.rollback()
         
         endTime = time.time()
         duration = endTime - startTime
@@ -337,8 +354,8 @@ def scheduled_refresh_task():
                 )
                 db.session.add(history)
                 db.session.commit()
-        except:
-            pass
+        except Exception as e:
+            logger.error(f"Failed to save refresh history: {e}")
                     
 
 @huey.task()

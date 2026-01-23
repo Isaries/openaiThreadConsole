@@ -215,7 +215,8 @@ def process_thread(thread_data, target_name, start_date, end_date, api_key=None,
             created_at = msg.get('created_at')
             try:
                 msg_ts = int(created_at)
-            except:
+            except (ValueError, TypeError) as e:
+                logging.getLogger().debug(f"Invalid timestamp for message: {e}")
                 msg_ts = 0
                 
             time_str = utils.unix_to_utc8(msg_ts)
@@ -257,7 +258,9 @@ def process_thread(thread_data, target_name, start_date, end_date, api_key=None,
                 'content': content_value,
                 'date_str': date_str
             })
-        except: continue
+        except Exception as e:
+            logging.getLogger().warning(f"Failed to process message in thread {thread_data.get('thread_id', 'unknown')}: {e}")
+            continue
 
     processed_messages.sort(key=lambda x: x['timestamp'])
     result['messages'] = processed_messages # Store for debug
@@ -519,7 +522,9 @@ def process_thread_from_db(thread_db_obj, target_name, start_date, end_date):
                 'content': content_value,
                 'date_str': date_str
             })
-        except: continue
+        except Exception as e:
+            logging.getLogger().warning(f"Failed to process message in thread_from_db {thread_db_obj.thread_id}: {e}")
+            continue
 
     result['messages'] = processed_messages
     

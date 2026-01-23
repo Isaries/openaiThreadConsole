@@ -170,7 +170,8 @@ def load_settings():
         with open(SETTINGS_FILE, 'r', encoding='utf-8') as f:
             data = json.load(f)
             return data
-    except:
+    except Exception as e:
+        logging.warning(f"Failed to load settings from file: {e}")
         return {}
 
 def save_settings(settings):
@@ -204,6 +205,7 @@ def save_settings(settings):
     try:
         with open(SETTINGS_FILE, 'w', encoding='utf-8') as f:
             json.dump(settings, f, indent=4, ensure_ascii=False)
-    except: pass
+    except Exception as e:
+        logging.warning(f"Failed to save settings to file: {e}")
 
 

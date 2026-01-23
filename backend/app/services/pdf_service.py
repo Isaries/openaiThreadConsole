@@ -157,7 +157,8 @@ def fetch_image_local_path(src, headers=None):
                 if file_id.startswith('file-'):
                     url = f"https://api.openai.com/v1/files/{file_id}/content"
                     request_headers = headers # Auth headers passed from caller
-            except:
+            except Exception as e:
+                current_app.logger.debug(f"Failed to parse file ID from {src}: {e}")
                 pass # Fallback to original src if parsing fails
         
         # Scenario 2: External URL (Assistant Images)
