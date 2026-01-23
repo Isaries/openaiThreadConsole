@@ -1,4 +1,4 @@
-from flask import Blueprint, redirect, url_for, request, session, render_template, current_app
+from flask import Blueprint, redirect, url_for, request, session, render_template, current_app, jsonify
 from ..extensions import limiter
 from .. import utils
 from .. import logic 
