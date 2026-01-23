@@ -115,7 +115,7 @@ def search():
     
     # Trigger Async Task
     from .. import tasks
-    task = tasks.search_task(group_id, target_name, date_from, date_to, api_key, group['name'], mode=mode)
+    task = tasks.search_task(group_id, target_name, date_from, date_to, api_key, group_id, group['name'], mode=mode)
     
     # Return Task ID for polling
     # Return Task ID for polling, and Total Threads for progress
