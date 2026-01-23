@@ -81,7 +81,7 @@ def search_task(project_id, target_name, start_date, end_date, api_key, group_id
                             from .models import SearchResultChunk
                             chunk = SearchResultChunk.query.filter_by(task_id=task.id).first()
                             if chunk:
-                                chunk.metadata = json.dumps({
+                                chunk.progress_data = json.dumps({
                                     'progress': {
                                         'current': processed_threads,
                                         'total': total_threads,
@@ -124,7 +124,7 @@ def search_task(project_id, target_name, start_date, end_date, api_key, group_id
                     task_id=task.id,
                     page_index=-1,  # Special index for progress tracking
                     data_json='[]',
-                    metadata=json.dumps({
+                    progress_data=json.dumps({
                         'progress': {
                             'current': 0,
                             'total': total_threads,

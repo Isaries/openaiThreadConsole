@@ -154,10 +154,10 @@ def search_result(task_id):
                 page_index=-1
             ).first()
             
-            if progress_chunk and progress_chunk.metadata:
+            if progress_chunk and progress_chunk.progress_data:
                 import json
-                metadata = json.loads(progress_chunk.metadata)
-                progress = metadata.get('progress', {})
+                progress_metadata = json.loads(progress_chunk.progress_data)
+                progress = progress_metadata.get('progress', {})
                 return jsonify({
                     'status': 'processing',
                     'progress': progress
