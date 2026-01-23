@@ -14,7 +14,8 @@ from ... import utils
 
 def get_dashboard_system_data():
     masked_key = f"sk-{'*' * 20}"
-    all_tags = [t.name for t in Tag.query.all()]
+    # Only show tags that are currently in use (have at least one project)
+    all_tags = [t.name for t in Tag.query.all() if len(t.projects) > 0]
     return {
         'masked_key': masked_key,
         'all_tags': all_tags,
