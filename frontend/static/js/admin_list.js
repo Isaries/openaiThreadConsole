@@ -235,4 +235,50 @@
         }
     });
 
+    // Bookmark Logic
+    window.toggleBookmark = function (element, threadId) {
+        // Prevent row click if any
+        if (window.event) window.event.stopPropagation();
+
+        const starSpan = element.querySelector('.star-icon');
+        const isCurrentlyActive = starSpan.innerText.trim() === '★';
+
+        // Optimistic UI Update
+        starSpan.innerText = isCurrentlyActive ? '☆' : '★';
+        starSpan.style.color = isCurrentlyActive ? '#ccc' : '#f59e0b';
+        starSpan.style.transform = 'scale(1.2)';
+        setTimeout(() => starSpan.style.transform = 'scale(1)', 150);
+
+        const csrfInput = document.querySelector('input[name="csrf_token"]');
+        const token = csrfInput ? csrfInput.value : '';
+
+        fetch('/admin/threads/bookmark/toggle', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': token
+            },
+            body: JSON.stringify({ thread_id: threadId })
+        })
+            .then(r => r.json())
+            .then(data => {
+                if (!data.success) {
+                    // Revert
+                    starSpan.innerText = isCurrentlyActive ? '★' : '☆';
+                    starSpan.style.color = isCurrentlyActive ? '#f59e0b' : '#ccc';
+                    alert('操作失敗: ' + (data.error || 'Unknown'));
+                } else {
+                    console.log('Bookmark toggled:', data.action);
+                    // Optional: Reload page to update Sidebar safely? 
+                    // Or just let it be. User will see sidebar update on next refresh.
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                // Revert
+                starSpan.innerText = isCurrentlyActive ? '★' : '☆';
+                starSpan.style.color = isCurrentlyActive ? '#f59e0b' : '#ccc';
+            });
+    }
+
 })();

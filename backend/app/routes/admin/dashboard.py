@@ -1,6 +1,6 @@
 from flask import render_template, session, redirect, url_for, request
 from . import admin_bp
-from ...models import User, Project, Thread
+from ...models import User, Project, Thread, user_bookmarks
 from ...extensions import db
 from sqlalchemy.orm import subqueryload
 from sqlalchemy import func
@@ -125,6 +125,16 @@ def index():
     security_data = get_dashboard_security_data()
     system_data = get_dashboard_system_data()
     user_data = get_dashboard_user_data()
+
+    # --- Bookmarks ---
+    bookmarked_ids = set()
+    my_bookmarks = []
+    if session.get('user_id'):
+         curr_user = User.query.get(session['user_id'])
+         if curr_user:
+             # Sort by created_at desc
+             my_bookmarks = curr_user.bookmarked_threads.order_by(user_bookmarks.c.created_at.desc()).all()
+             bookmarked_ids = {t.thread_id for t in my_bookmarks}
     
     # Merge context (New context construction)
     context = {
@@ -146,6 +156,8 @@ def index():
         'auto_refresh_settings': database.load_settings().get('auto_refresh', {}),
         'username': session.get('username'),
         'current_role': session.get('role'),
+        'my_bookmarks': my_bookmarks,
+        'bookmarked_ids': bookmarked_ids,
     }
 
     return render_template('admin.html', **context)

@@ -431,3 +431,30 @@ def upload_file():
         flash(f'檔案處理失敗: {str(e)}', 'error')
 
     return redirect(url_for('admin.index', group_id=group_id))
+
+
+@admin_bp.route('/threads/bookmark/toggle', methods=['POST'])
+def toggle_bookmark():
+    if not session.get('user_id'):
+        return {'error': 'Unauthorized'}, 401
+    
+    data = request.json
+    thread_id = data.get('thread_id')
+    
+    user = User.query.get(session['user_id'])
+    thread = Thread.query.filter_by(thread_id=thread_id).first()
+    
+    if not thread:
+        return {'error': 'Thread not found'}, 404
+    
+    is_bookmarked = user.bookmarked_threads.filter_by(id=thread.id).first() is not None
+    
+    if is_bookmarked:
+        user.bookmarked_threads.remove(thread)
+        action = 'removed'
+    else:
+        user.bookmarked_threads.append(thread)
+        action = 'added'
+        
+    db.session.commit()
+    return {'success': True, 'action': action}

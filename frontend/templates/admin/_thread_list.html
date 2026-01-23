@@ -150,9 +150,9 @@
         <table class="thread-list-table">
             <thead>
                 <tr>
-                    <th style="width: 40px;"><input type="checkbox" id="masterCheckbox"
-                            onclick="toggleThreadListSelection(this)">
+                    onclick="toggleThreadListSelection(this)">
                     </th>
+                    <th style="width: 40px; text-align: center;">⭐</th>
                     <th>Thread ID</th>
                     <th>備註</th>
                     <th style="width: 100px;">
@@ -166,6 +166,16 @@
                 <tr>
                     <td><input type="checkbox" form="deleteMultiForm" name="selected_ids" value="{{ thread.thread_id }}"
                             class="thread-checkbox" onclick="checkSelectionState()"></td>
+
+                    <!-- Star Toggle -->
+                    <td style="text-align: center; cursor: pointer;"
+                        onclick="toggleBookmark(this, '{{ thread.thread_id }}')">
+                        <span class="star-icon"
+                            style="font-size: 1.2rem; line-height: 1; color: {% if thread.thread_id in bookmarked_ids %}#f59e0b{% else %}#ccc{% endif %}; transition: transform 0.1s;">
+                            {% if thread.thread_id in bookmarked_ids %}★{% else %}☆{% endif %}
+                        </span>
+                    </td>
+
                     <td data-label="Thread ID" class="font-medium text-main">{{ thread.thread_id }}</td>
                     <td data-label="備註" class="editable-remark" data-thread-id="{{ thread.thread_id }}"
                         data-group-id="{{ active_group.group_id }}" style="cursor: pointer;" title="點擊編輯">

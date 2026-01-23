@@ -16,6 +16,13 @@ project_tags = db.Table('project_tags',
     db.Column('tag_id', db.Integer, db.ForeignKey('tags.id'), primary_key=True)
 )
 
+# Association Table for User Bookmarks
+user_bookmarks = db.Table('user_bookmarks',
+    db.Column('user_id', db.String(36), db.ForeignKey('users.id'), primary_key=True),
+    db.Column('thread_id', db.Integer, db.ForeignKey('threads.id'), primary_key=True),
+    db.Column('created_at', db.Integer, default=lambda: int(datetime.now().timestamp()))
+)
+
 class User(db.Model):
     __tablename__ = 'users'
     id = db.Column(db.String(36), primary_key=True)
@@ -28,6 +35,7 @@ class User(db.Model):
     
     # Relationships
     owned_projects = db.relationship('Project', secondary=project_owners, back_populates='owners')
+    bookmarked_threads = db.relationship('Thread', secondary=user_bookmarks, backref=db.backref('bookmarked_by', lazy='dynamic'), lazy='dynamic')
 
 class Tag(db.Model):
     __tablename__ = 'tags'

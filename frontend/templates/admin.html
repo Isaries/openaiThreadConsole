@@ -6,103 +6,132 @@
 <div class="admin-wrapper">
     <!-- Sidebar -->
     <div class="sidebar" id="sidebar">
-        <div
-            style="margin-bottom: 1.5rem; font-size: 0.75rem; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em;">
-            Project 列表
-        </div>
+        <div Project 列表 </div>
 
-        <div class="flex flex-col gap-2">
-            <div class="flex flex-col gap-2">
-                <!-- Iterate Sorted Keys -->
-                {% for tag in grouped_projects | sort %}
-                <details open style="margin-top: 1rem;">
-                    <summary
-                        style="font-size: 0.7rem; font-weight: 600; color: var(--primary); text-transform: uppercase; cursor: pointer; outline: none; margin-bottom: 0.5rem; list-style-position: inside;">
-                        {{ tag }}
-                    </summary>
+            <!-- Bookmarks Section -->
+            <div class="mb-4" style="margin-bottom: 1.5rem;">
+                <div
+                    style="font-size: 0.7rem; font-weight: 600; color: #f59e0b; text-transform: uppercase; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 4px;">
+                    <span>⭐ 我的收藏</span>
+                    <span class="text-xs" style="opacity: 0.7; font-weight: normal;">({{ my_bookmarks|length }})</span>
+                </div>
 
-                    {% for g in grouped_projects[tag] %}
-                    <a href="{{ url_for('admin.index', group_id=g.group_id) }}"
-                        class="btn btn-block sidebar-item {{ 'active' if active_group.group_id == g.group_id else '' }}"
-                        style="display: flex; flex-direction: column; align-items: flex-start; gap: 0.25rem; height: auto; padding: 0.75rem;">
-                        <div style="font-weight: 500;">📁 {{ g.name }}</div>
-                        {% if current_role == 'admin' and g.owners %}
-                        <div
-                            style="font-size: 0.75rem; opacity: 0.8; padding-left: 1.25rem; display: flex; flex-direction: column; gap: 2px;">
-                            {% for owner_id in g.owners %}
-                            <div>👤 {{ user_map.get(owner_id, 'Unknown') }}</div>
-                            {% endfor %}
+                {% if my_bookmarks %}
+                <div class="flex flex-col gap-1">
+                    {% for b in my_bookmarks %}
+                    <a href="/admin/threads/view/{{ b.thread_id }}?group_id={{ b.project_id }}"
+                        class="btn btn-block sidebar-item"
+                        style="display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem; font-size: 0.85rem; border-left: 2px solid transparent;">
+                        <span style="color: #f59e0b;">★</span>
+                        <div style="text-overflow: ellipsis; overflow: hidden; white-space: nowrap; max-width: 140px;">
+                            {{ b.thread_id }}
                         </div>
-                        {% endif %}
                     </a>
                     {% endfor %}
-                </details>
-                {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-xs text-secondary" style="padding: 0.5rem 0; font-style: italic;">
+                    尚無收藏項目
+                </div>
+                {% endif %}
             </div>
+
+            <hr style="margin: 1rem 0; border: 0; border-top: 1px solid var(--surface-border);">
+
+
+            <div class="flex flex-col gap-2">
+                <div class="flex flex-col gap-2">
+                    <!-- Iterate Sorted Keys -->
+                    {% for tag in grouped_projects | sort %}
+                    <details open style="margin-top: 1rem;">
+                        <summary
+                            style="font-size: 0.7rem; font-weight: 600; color: var(--primary); text-transform: uppercase; cursor: pointer; outline: none; margin-bottom: 0.5rem; list-style-position: inside;">
+                            {{ tag }}
+                        </summary>
+
+                        {% for g in grouped_projects[tag] %}
+                        <a href="{{ url_for('admin.index', group_id=g.group_id) }}"
+                            class="btn btn-block sidebar-item {{ 'active' if active_group.group_id == g.group_id else '' }}"
+                            style="display: flex; flex-direction: column; align-items: flex-start; gap: 0.25rem; height: auto; padding: 0.75rem;">
+                            <div style="font-weight: 500;">📁 {{ g.name }}</div>
+                            {% if current_role == 'admin' and g.owners %}
+                            <div
+                                style="font-size: 0.75rem; opacity: 0.8; padding-left: 1.25rem; display: flex; flex-direction: column; gap: 2px;">
+                                {% for owner_id in g.owners %}
+                                <div>👤 {{ user_map.get(owner_id, 'Unknown') }}</div>
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                        </a>
+                        {% endfor %}
+                    </details>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <hr style="margin: 1.5rem 0; border: 0; border-top: 1px solid var(--surface-border);">
+
+            <button onclick="document.getElementById('createGroupForm').style.display = 'block'"
+                class="btn btn-secondary btn-block">
+                + 新增 Project
+            </button>
+
+            <form id="createGroupForm" action="/admin/group/create" method="POST" class="card"
+                style="display:none; margin-top: 1rem; padding: 1rem; border: 1px solid var(--surface-border);">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                <div class="form-group">
+                    <label class="text-xs">Project 名稱</label>
+                    <input type="text" name="name" required class="input" style="padding: 0.4rem;">
+                </div>
+                <div class="form-group">
+                    <label class="text-xs">API Key</label>
+                    <input type="text" name="api_key" placeholder="sk-..." required class="input"
+                        style="padding: 0.4rem;">
+                </div>
+
+                <div class="flex gap-2">
+                    <button type="submit" class="btn btn-primary btn-sm" style="flex:1">建立</button>
+                    <button type="button" onclick="this.form.style.display='none'"
+                        class="btn btn-secondary btn-sm">取消</button>
+                </div>
+            </form>
         </div>
 
-        <hr style="margin: 1.5rem 0; border: 0; border-top: 1px solid var(--surface-border);">
+        <!-- Main Content -->
+        <div class="main-content">
 
-        <button onclick="document.getElementById('createGroupForm').style.display = 'block'"
-            class="btn btn-secondary btn-block">
-            + 新增 Project
-        </button>
-
-        <form id="createGroupForm" action="/admin/group/create" method="POST" class="card"
-            style="display:none; margin-top: 1rem; padding: 1rem; border: 1px solid var(--surface-border);">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-
-            <div class="form-group">
-                <label class="text-xs">Project 名稱</label>
-                <input type="text" name="name" required class="input" style="padding: 0.4rem;">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+            {% for category, message in messages %}
+            <div class="alert alert-{{ category }}">
+                {{ message }}
             </div>
-            <div class="form-group">
-                <label class="text-xs">API Key</label>
-                <input type="text" name="api_key" placeholder="sk-..." required class="input" style="padding: 0.4rem;">
-            </div>
+            {% endfor %}
+            {% endif %}
+            {% endwith %}
 
-            <div class="flex gap-2">
-                <button type="submit" class="btn btn-primary btn-sm" style="flex:1">建立</button>
-                <button type="button" onclick="this.form.style.display='none'"
-                    class="btn btn-secondary btn-sm">取消</button>
+            {% if not active_group %}
+            <div class="card" style="text-align: center; padding: 4rem 2rem;">
+                <div style="font-size: 3rem; margin-bottom: 1rem;">📂</div>
+                <h3>目前沒有選擇 Project</h3>
+                <p class="text-secondary">請從左側選單選擇或建立一個 Project。</p>
             </div>
-        </form>
+            {% else %}
+
+            {% include "admin/_settings_panel.html" %}
+            {% include "admin/_stats.html" %}
+            {% include "admin/_tools_upload.html" %}
+            {% include "admin/_thread_list.html" %}
+            {% endif %}
+
+            {% include "admin/_search_logs.html" %}
+            {% include "admin/_user_management_panel.html" %}
+            {% include "admin/_ip_monitor_panel.html" %}
+
+        </div>
     </div>
 
-    <!-- Main Content -->
-    <div class="main-content">
-
-        {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-        {% for category, message in messages %}
-        <div class="alert alert-{{ category }}">
-            {{ message }}
-        </div>
-        {% endfor %}
-        {% endif %}
-        {% endwith %}
-
-        {% if not active_group %}
-        <div class="card" style="text-align: center; padding: 4rem 2rem;">
-            <div style="font-size: 3rem; margin-bottom: 1rem;">📂</div>
-            <h3>目前沒有選擇 Project</h3>
-            <p class="text-secondary">請從左側選單選擇或建立一個 Project。</p>
-        </div>
-        {% else %}
-
-        {% include "admin/_settings_panel.html" %}
-        {% include "admin/_stats.html" %}
-        {% include "admin/_tools_upload.html" %}
-        {% include "admin/_thread_list.html" %}
-        {% endif %}
-
-        {% include "admin/_search_logs.html" %}
-        {% include "admin/_user_management_panel.html" %}
-        {% include "admin/_ip_monitor_panel.html" %}
-
-    </div>
-</div>
-
-{% include "admin/_modals.html" %}
-<script src="{{ url_for('static', filename='js/admin_list.js') }}?v=1.1"></script>
-{% endblock %}
+    {% include "admin/_modals.html" %}
+    <script src="{{ url_for('static', filename='js/admin_list.js') }}?v=1.1"></script>
+    {% endblock %}
