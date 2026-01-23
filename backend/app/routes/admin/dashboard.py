@@ -153,6 +153,7 @@ def index():
         'grouped_projects': grouped_projects,
         'active_group': active_group,
         'user_map': user_map,
+        'users': users_obj,  # Add users list for owner assignment UI
         'threads': threads_list,
         'threads_pagination': threads_pagination,
         'total_threads_count': total_threads_count,
