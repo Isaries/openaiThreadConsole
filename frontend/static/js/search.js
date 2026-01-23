@@ -231,7 +231,21 @@ document.addEventListener('DOMContentLoaded', () => {
                 let elapsed = 0;
                 let retryCount = 0; // Network Errors
                 const MAX_RETRIES = 5;
-                const MAX_TIMEOUT_SEC = 300; // 5 Minutes
+
+                // Dynamic Timeout Calculation based on thread count
+                const totalThreads = total || 100;
+                let dynamicTimeout = 600; // base 10 minutes
+                if (totalThreads <= 100) {
+                    dynamicTimeout += totalThreads * 2;
+                } else if (totalThreads <= 500) {
+                    dynamicTimeout += 100 * 2 + (totalThreads - 100) * 1;
+                } else {
+                    dynamicTimeout += 100 * 2 + 400 * 1 + (totalThreads - 500) * 0.5;
+                }
+                dynamicTimeout = Math.min(dynamicTimeout * 1.2, 3600); // +20% buffer, cap at 60 min
+                const MAX_TIMEOUT_SEC = Math.floor(dynamicTimeout);
+
+                console.log(`Dynamic timeout set to ${MAX_TIMEOUT_SEC}s (${Math.floor(MAX_TIMEOUT_SEC / 60)} min) for ${totalThreads} threads`);
 
                 let pollDelay = 1000; // Start with 1s
                 const MAX_POLL_DELAY = 10000; // Cap at 10s
@@ -242,8 +256,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 const pollFunction = async () => {
                     // Check Timeout
                     if (elapsed >= MAX_TIMEOUT_SEC) {
+                        const timeoutMinutes = Math.floor(MAX_TIMEOUT_SEC / 60);
                         statusDiv.className = 'mt-3 alert alert-danger';
-                        statusDiv.textContent = '搜尋請求超時 (5分鐘)，請稍後再試或縮小搜尋範圍。';
+                        statusDiv.textContent = `搜尋請求超時 (${timeoutMinutes}分鐘)，請稍後再試或縮小搜尋範圍。`;
                         btn.disabled = false;
                         btn.innerText = '開始搜尋';
                         loading.style.display = 'none';
@@ -264,10 +279,57 @@ document.addEventListener('DOMContentLoaded', () => {
                         else if (res.status === 202) {
                             retryCount = 0;
 
+                            // Try to get progress data
+                            try {
+                                const data = await res.json();
+                                if (data.progress) {
+                                    const { current, total, percentage, phase } = data.progress;
+                                    const phaseText = phase === 'syncing' ? '同步中' : '搜尋中';
+                                    statusDiv.className = 'mt-3 alert alert-info';
+                                    statusDiv.innerHTML = `
+                                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 10px;">
+                                            <span>🔍 ${phaseText}... ${current}/${total} (${percentage}%)</span>
+                                            <button id="cancelSearchBtn" class="btn btn-sm btn-danger" style="padding: 4px 12px; font-size: 0.85rem;">取消</button>
+                                        </div>
+                                        <div class="progress" style="height: 24px;">
+                                            <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                                                 role="progressbar" 
+                                                 style="width: ${percentage}%"
+                                                 aria-valuenow="${percentage}" 
+                                                 aria-valuemin="0" 
+                                                 aria-valuemax="100">
+                                                ${percentage}%
+                                            </div>
+                                        </div>
+                                        <small class="text-muted d-block mt-2">已執行 ${Math.floor(elapsed)}秒 / 最多 ${Math.floor(MAX_TIMEOUT_SEC / 60)} 分鐘</small>
+                                    `;
+
+                                    // Re-bind cancel button
+                                    const newCancelBtn = document.getElementById('cancelSearchBtn');
+                                    if (newCancelBtn) {
+                                        newCancelBtn.onclick = async () => {
+                                            if (pollTimer) clearTimeout(pollTimer);
+                                            await fetch(`/search/cancel/${taskId}`, { method: 'POST' });
+                                            statusDiv.className = 'mt-3 alert alert-warning';
+                                            statusDiv.textContent = '搜尋已取消';
+                                            btn.disabled = false;
+                                            btn.innerText = '開始搜尋';
+                                            loading.style.display = 'none';
+                                        };
+                                    }
+                                } else {
+                                    // No progress data, show basic message
+                                    const timer = document.getElementById('timer');
+                                    if (timer) timer.textContent = `(${Math.floor(elapsed)}s)`;
+                                }
+                            } catch (e) {
+                                // Fallback if JSON parsing fails
+                                const timer = document.getElementById('timer');
+                                if (timer) timer.textContent = `(${Math.floor(elapsed)}s)`;
+                            }
+
                             // Exponential Backoff Logic
                             elapsed += (pollDelay / 1000);
-                            const timer = document.getElementById('timer');
-                            if (timer) timer.textContent = `(${Math.floor(elapsed)}s)`;
 
                             // Increase delay by 50%, capped at 10s
                             pollDelay = Math.min(pollDelay * 1.5, MAX_POLL_DELAY);

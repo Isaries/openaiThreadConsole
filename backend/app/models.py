@@ -115,6 +115,7 @@ class SearchResultChunk(db.Model):
     task_id = db.Column(db.String(100), index=True) 
     page_index = db.Column(db.Integer)
     data_json = db.Column(db.Text) # JSON list of 50 threads
+    metadata = db.Column(db.Text) # JSON metadata for progress tracking
     created_at = db.Column(db.Integer, default=lambda: int(datetime.now().timestamp()))
 
 class SystemMetric(db.Model):

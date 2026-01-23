@@ -145,7 +145,27 @@ def search_result(task_id):
         return {'status': 'error', 'message': str(e)}, 500
 
     if task_meta is None:
-        return {'status': 'processing'}, 202
+        # Task still processing - check for progress data
+        from ..models import SearchResultChunk
+        try:
+            # Look for progress chunk (page_index = -1)
+            progress_chunk = SearchResultChunk.query.filter_by(
+                task_id=task_id, 
+                page_index=-1
+            ).first()
+            
+            if progress_chunk and progress_chunk.metadata:
+                import json
+                metadata = json.loads(progress_chunk.metadata)
+                progress = metadata.get('progress', {})
+                return jsonify({
+                    'status': 'processing',
+                    'progress': progress
+                }), 202
+        except Exception as e:
+            current_app.logger.debug(f"Progress fetch error: {e}")
+        
+        return jsonify({'status': 'processing'}), 202
         
     if 'error' in task_meta:
         return f"Error: {task_meta['error']}", 500

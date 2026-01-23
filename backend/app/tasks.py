@@ -46,6 +46,10 @@ def search_task(project_id, target_name, start_date, end_date, api_key, group_id
         skipped_low = 0
         refreshed_count = 0
         
+        # Progress Tracking
+        total_threads = len(threads)
+        processed_threads = 0
+        
         if mode == 'fresh':
             # 1. Sync Phase (Iterate all threads in project to update cache)
             # This is slow but required for "Fresh".
@@ -56,19 +60,41 @@ def search_task(project_id, target_name, start_date, end_date, api_key, group_id
                     if not bypass_priority_filter:
                         if t.refresh_priority == 'frozen':
                             skipped_frozen += 1
+                            processed_threads += 1  # Count skipped threads
                             logger.info(f"Skipped frozen thread: {t.thread_id}")
                             continue
                         elif t.refresh_priority == 'low':
                             # 80% chance to skip
                             if random.random() < 0.8:
                                 skipped_low += 1
+                                processed_threads += 1  # Count skipped threads
                                 logger.info(f"Skipped low priority thread: {t.thread_id}")
                                 continue
                     
                     logic.sync_thread_to_db(t.thread_id, api_key, project_id)
                     refreshed_count += 1
+                    processed_threads += 1
+                    
+                    # Update progress every 10 threads
+                    if task and task.id and processed_threads % 10 == 0:
+                        try:
+                            from .models import SearchResultChunk
+                            chunk = SearchResultChunk.query.filter_by(task_id=task.id).first()
+                            if chunk:
+                                chunk.metadata = json.dumps({
+                                    'progress': {
+                                        'current': processed_threads,
+                                        'total': total_threads,
+                                        'percentage': round((processed_threads / total_threads) * 100, 1) if total_threads > 0 else 0,
+                                        'phase': 'syncing'
+                                    }
+                                })
+                                db.session.commit()
+                        except Exception as prog_err:
+                            logger.debug(f"Progress update failed: {prog_err}")
                 except Exception as e:
                      logger.error(f"Sync failed for {t.thread_id}: {e}")
+                     processed_threads += 1
 
         # Chunking Logic
         BATCH_SIZE = 10
@@ -90,6 +116,27 @@ def search_task(project_id, target_name, start_date, end_date, api_key, group_id
             except Exception as e:
                 logger.warning(f"Failed to cleanup old chunks: {e}")
                 db.session.rollback()
+        
+        # Create initial progress chunk
+        if task and task.id:
+            try:
+                initial_chunk = SearchResultChunk(
+                    task_id=task.id,
+                    page_index=-1,  # Special index for progress tracking
+                    data_json='[]',
+                    metadata=json.dumps({
+                        'progress': {
+                            'current': 0,
+                            'total': total_threads,
+                            'percentage': 0,
+                            'phase': 'starting'
+                        }
+                    })
+                )
+                db.session.add(initial_chunk)
+                db.session.commit()
+            except Exception as e:
+                logger.warning(f"Failed to create initial progress chunk: {e}")
         
         # 2. Search Phase
         matching_threads = logic.search_threads_sql(project_id, target_name, start_date, end_date)
