@@ -49,3 +49,15 @@ h3 {
 .text-danger {
     color: var(--danger);
 }
+
+.text-red {
+    color: var(--danger);
+}
+
+.text-green {
+    color: var(--success);
+}
+
+.text-blue {
+    color: var(--info);
+}

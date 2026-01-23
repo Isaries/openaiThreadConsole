@@ -1,7 +1,7 @@
 /* --- Specific Thread List Mobile Optimization --- */
 @media (max-width: 768px) {
 
-    /* Toolbar Layout */
+    /* --- Toolbar Layout (Flex Column) --- */
     .thread-toolbar {
         flex-direction: column;
         align-items: stretch;
@@ -24,18 +24,12 @@
         width: 100%;
         margin-right: 0 !important;
         height: 40px !important;
-        /* Larger touch target */
     }
 
     .thread-toolbar .search-input {
         width: 100% !important;
         font-size: 16px !important;
         /* Prevent iOS zoom */
-    }
-
-    /* Prevent bottom sheet from covering content */
-    body {
-        padding-bottom: 80px;
     }
 
     .thread-toolbar .btn-group {
@@ -50,17 +44,27 @@
         padding: 0.6rem;
     }
 
-    /* Optimized Card View for Thread Table */
+    /* --- Optimized Card View for Thread Table --- */
+
+    /* 1. Reset standard table overrides from tables.css */
+    .thread-list-table td::before {
+        content: none !important;
+        /* Disable auto-labels */
+    }
+
     .thread-list-table thead {
         display: none;
     }
 
+    /* Grid Layout */
     .thread-list-table tr {
         display: grid;
         grid-template-columns: auto 1fr auto;
+        /* Checkbox | Content | Space */
         gap: 0.5rem;
         padding: 1rem;
         position: relative;
+        border-bottom: 1px solid var(--surface-border);
     }
 
     .thread-list-table td {
@@ -69,41 +73,87 @@
         border: none !important;
     }
 
-    /* Title Row */
+    /* Col 1: Checkbox */
+    .thread-list-table td:nth-child(1) {
+        grid-column: 1;
+        grid-row: 1 / span 3;
+        /* Spans height of card roughly */
+        display: flex;
+        align-items: center;
+    }
+
+    /* Col 2: Thread ID (Title) */
     .thread-list-table td:nth-child(2) {
-        grid-column: 1 / -1;
+        grid-column: 2;
+        grid-row: 1;
         font-weight: 600;
         font-size: 1rem;
         margin-bottom: 0.25rem;
+        padding-right: 2rem;
+        /* Space for status badge */
     }
 
-    /* ID Row (Small text) */
-    .thread-list-table td:nth-child(1) {
-        font-size: 0.8rem;
-        color: var(--text-secondary);
-    }
-
-    /* Status Badge */
+    /* Col 3: Remark (Body Text) - Previously mis-targeted */
     .thread-list-table td:nth-child(3) {
+        grid-column: 2 / -1;
+        grid-row: 2;
+        font-size: 0.85rem;
+        color: var(--text-secondary);
+        min-height: 1.2em;
+    }
+
+    /* Col 4: Status (Badge) - Previously mis-targeted as nth-child(3) */
+    .thread-list-table td:nth-child(4) {
         position: absolute;
         top: 1rem;
         right: 1rem;
     }
 
-    /* Info Row */
-    .thread-list-table td:nth-child(4),
-    .thread-list-table td:nth-child(5) {
-        font-size: 0.85rem;
-        color: var(--text-secondary);
-        display: inline-block;
-        margin-right: 1rem;
-    }
-
-    /* Action (Hidden or transformed) */
+    /* Col 5: Actions (Footer) */
     .thread-list-table td:last-child {
+        grid-column: 1 / -1;
+        grid-row: 3;
         display: flex;
         gap: 0.5rem;
-        margin-top: 0.5rem;
-        grid-column: 1 / -1;
+        margin-top: 0.75rem;
+        padding-top: 0.75rem;
+        border-top: 1px dashed var(--surface-border) !important;
+    }
+
+    /* --- Bottom Action Sheet (Restored) --- */
+    .bottom-action-sheet {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background: white;
+        padding: 1rem;
+        box-shadow: 0 -4px 6px -1px rgba(0, 0, 0, 0.1);
+        z-index: 50;
+        transform: translateY(100%);
+        transition: transform 0.3s ease-in-out;
+        display: none;
+        /* JS toggles active class */
+    }
+
+    .bottom-action-sheet.active {
+        display: block;
+        transform: translateY(0);
+    }
+
+    .sheet-content {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .sheet-actions {
+        display: flex;
+        gap: 0.5rem;
+    }
+
+    /* Prevent bottom sheet from covering content */
+    body {
+        padding-bottom: 80px;
     }
 }
