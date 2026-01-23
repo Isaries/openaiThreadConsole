@@ -1,0 +1,122 @@
+/* --- Admin Layout --- */
+.admin-wrapper {
+    display: flex;
+    min-height: 100vh;
+}
+
+/* Sidebar */
+.sidebar {
+    width: 260px;
+    background: white;
+    border-right: 1px solid var(--surface-border);
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    overflow-y: auto;
+    padding: var(--spacing-md);
+    flex-shrink: 0;
+    transition: transform var(--transition-normal);
+}
+
+.sidebar-item {
+    justify-content: flex-start;
+    text-align: left;
+    border: none;
+    background: transparent;
+    color: var(--text-main);
+    width: 100%;
+}
+
+.sidebar-item.active {
+    background: var(--primary-light);
+    color: var(--primary);
+}
+
+.main-content {
+    flex: 1;
+    min-width: 0;
+    padding: var(--spacing-lg);
+    background: var(--surface-bg);
+}
+
+/* Mobile Utilities */
+.mobile-menu-toggle {
+    display: none;
+}
+
+.mobile-overlay {
+    display: none;
+}
+
+.desktop-only {
+    display: none;
+}
+
+.mobile-only {
+    display: none;
+}
+
+@media (min-width: 768px) {
+    .desktop-only {
+        display: block;
+    }
+}
+
+@media (max-width: 768px) {
+    .mobile-only {
+        display: inline-flex;
+    }
+}
+
+/* Responsive Media Queries */
+@media (max-width: 768px) {
+    .admin-wrapper {
+        flex-direction: column;
+    }
+
+    .sidebar {
+        position: fixed;
+        left: 0;
+        top: 0;
+        z-index: var(--z-modal);
+        transform: translateX(-100%);
+        width: 80%;
+        max-width: 300px;
+        box-shadow: var(--shadow-xl);
+    }
+
+    .sidebar.active {
+        transform: translateX(0);
+    }
+
+    .mobile-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: var(--z-overlay);
+        display: none;
+        backdrop-filter: blur(2px);
+    }
+
+    .mobile-overlay.active {
+        display: block;
+    }
+
+    .mobile-menu-toggle {
+        display: inline-flex;
+        padding: 0.5rem;
+        margin-right: 0.5rem;
+        background: white;
+        border: 1px solid var(--surface-border);
+        border-radius: var(--radius-sm);
+    }
+
+    .main-content {
+        padding: var(--spacing-md);
+    }
+
+    /* Responsive Grid for Stats */
+    .admin-stats-grid {
+        grid-template-columns: 1fr;
+    }
+}

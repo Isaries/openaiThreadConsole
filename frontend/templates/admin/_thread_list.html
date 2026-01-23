@@ -124,7 +124,26 @@
                     </th>
                     <th>Thread ID</th>
                     <th>備註</th>
-                    <th style="width: 90px;" title="刷新優先級：🟢活躍 🟡低優先 🔴凍結">狀態</th>
+                    <th style="width: 100px;">
+                        <div class="status-legend-wrapper">
+                            狀態
+                            <span class="status-legend-icon">❓</span>
+                            <div class="status-legend-tooltip">
+                                <div class="status-legend-item">
+                                    <strong>🟢 活躍 Active</strong>
+                                    <span>正常更新，系統會定期檢查新內容。</span>
+                                </div>
+                                <div class="status-legend-item">
+                                    <strong>🟡 低優先 Low Priority</strong>
+                                    <span>長時間無變化，系統將降低檢查頻率。</span>
+                                </div>
+                                <div class="status-legend-item">
+                                    <strong>🔴 凍結 Frozen</strong>
+                                    <span>已停止自動更新，若需恢復請手動更新一次。</span>
+                                </div>
+                            </div>
+                        </div>
+                    </th>
                     <th style="width: 80px;">操作</th>
                 </tr>
             </thead>

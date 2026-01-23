@@ -1,0 +1,54 @@
+:root {
+    /* Color Palette - HSL for easy variations */
+    --primary-h: 236;
+    --primary-s: 72%;
+    --primary-l: 66%;
+    --primary: hsl(var(--primary-h), var(--primary-s), var(--primary-l));
+    --primary-dark: hsl(var(--primary-h), var(--primary-s), 56%);
+    --primary-light: hsl(var(--primary-h), var(--primary-s), 96%);
+
+    --accent-h: 270;
+    --accent: hsl(var(--accent-h), 60%, 60%);
+
+    --surface-bg: #f8fafc;
+    --surface-card: #ffffff;
+    --surface-border: #e2e8f0;
+
+    --text-main: #1e293b;
+    --text-secondary: #64748b;
+    --text-light: #94a3b8;
+
+    --success: #10b981;
+    --warning: #f59e0b;
+    --danger: #ef4444;
+    --info: #3b82f6;
+
+    /* Spacing */
+    --spacing-xs: 0.25rem;
+    --spacing-sm: 0.5rem;
+    --spacing-md: 1rem;
+    --spacing-lg: 1.5rem;
+    --spacing-xl: 2rem;
+    --spacing-2xl: 3rem;
+
+    /* Radius */
+    --radius-sm: 0.375rem;
+    --radius-md: 0.5rem;
+    --radius-lg: 0.75rem;
+    --radius-full: 9999px;
+
+    /* Shadows */
+    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+    --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+
+    /* Transitions */
+    --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-normal: 300ms cubic-bezier(0.4, 0, 0.2, 1);
+
+    /* Z-Index */
+    --z-nav: 50;
+    --z-modal: 100;
+    --z-overlay: 90;
+}

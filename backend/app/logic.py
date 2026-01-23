@@ -334,11 +334,13 @@ def process_thread(thread_data, target_name, start_date, end_date, api_key=None,
 
 # --- Cache Optimization Logic ---
 
-def sync_thread_to_db(thread_id_str, api_key=None, project_id=None):
+def sync_thread_to_db(thread_id_str, api_key=None, project_id=None, force_active=False):
     """
     Sets up the DB state for a thread. 
     Can be called by "Refresh" button or scheduled task.
     Minimizes Transaction Scope to prevent SQLite locking issues.
+    
+    force_active: If True, resets stale count and priority to 'normal' (Unfreezes thread).
     """
     try:
         # 1. Fetch from API (Heavy Network I/O - OUTSIDE Transaction)
@@ -437,7 +439,11 @@ def sync_thread_to_db(thread_id_str, api_key=None, project_id=None):
             'last_message_timestamp': latest_msg_ts
         }
         
-        if has_change:
+        if force_active:
+             # Manual override: Unfreeze and reset
+             update_payload['stale_refresh_count'] = 0
+             update_payload['refresh_priority'] = 'normal'
+        elif has_change:
             # Content changed - reset staleness
             update_payload['stale_refresh_count'] = 0
             update_payload['refresh_priority'] = 'normal'

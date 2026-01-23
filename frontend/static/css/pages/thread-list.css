@@ -1,0 +1,109 @@
+/* --- Specific Thread List Mobile Optimization --- */
+@media (max-width: 768px) {
+
+    /* Toolbar Layout */
+    .thread-toolbar {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 1rem;
+    }
+
+    .thread-toolbar .toolbar-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .thread-toolbar .toolbar-actions {
+        flex-direction: column;
+        width: 100%;
+        gap: 0.75rem;
+    }
+
+    .thread-toolbar .search-group {
+        width: 100%;
+        margin-right: 0 !important;
+        height: 40px !important;
+        /* Larger touch target */
+    }
+
+    .thread-toolbar .search-input {
+        width: 100% !important;
+        font-size: 16px !important;
+        /* Prevent iOS zoom */
+    }
+
+    /* Prevent bottom sheet from covering content */
+    body {
+        padding-bottom: 80px;
+    }
+
+    .thread-toolbar .btn-group {
+        display: flex;
+        width: 100%;
+        gap: 0.5rem;
+    }
+
+    .thread-toolbar .btn-group .btn {
+        flex: 1;
+        justify-content: center;
+        padding: 0.6rem;
+    }
+
+    /* Optimized Card View for Thread Table */
+    .thread-list-table thead {
+        display: none;
+    }
+
+    .thread-list-table tr {
+        display: grid;
+        grid-template-columns: auto 1fr auto;
+        gap: 0.5rem;
+        padding: 1rem;
+        position: relative;
+    }
+
+    .thread-list-table td {
+        display: block;
+        padding: 0;
+        border: none !important;
+    }
+
+    /* Title Row */
+    .thread-list-table td:nth-child(2) {
+        grid-column: 1 / -1;
+        font-weight: 600;
+        font-size: 1rem;
+        margin-bottom: 0.25rem;
+    }
+
+    /* ID Row (Small text) */
+    .thread-list-table td:nth-child(1) {
+        font-size: 0.8rem;
+        color: var(--text-secondary);
+    }
+
+    /* Status Badge */
+    .thread-list-table td:nth-child(3) {
+        position: absolute;
+        top: 1rem;
+        right: 1rem;
+    }
+
+    /* Info Row */
+    .thread-list-table td:nth-child(4),
+    .thread-list-table td:nth-child(5) {
+        font-size: 0.85rem;
+        color: var(--text-secondary);
+        display: inline-block;
+        margin-right: 1rem;
+    }
+
+    /* Action (Hidden or transformed) */
+    .thread-list-table td:last-child {
+        display: flex;
+        gap: 0.5rem;
+        margin-top: 0.5rem;
+        grid-column: 1 / -1;
+    }
+}

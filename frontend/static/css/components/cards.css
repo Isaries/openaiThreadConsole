@@ -1,0 +1,39 @@
+/* --- Cards --- */
+.card {
+    background: var(--surface-card);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--surface-border);
+    box-shadow: var(--shadow-sm);
+    padding: var(--spacing-lg);
+    margin-bottom: var(--spacing-md);
+}
+
+/* --- Utility: Key-Value Grid (Often inside cards) --- */
+.kv-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 1rem;
+}
+
+.kv-item {
+    background: #f8fafc;
+    padding: 0.75rem;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--surface-border);
+}
+
+.kv-label {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+    letter-spacing: 0.05em;
+    margin-bottom: 0.25rem;
+    display: block;
+}
+
+.kv-value {
+    font-size: 1rem;
+    font-weight: 500;
+    color: var(--text-main);
+    word-break: break-all;
+}

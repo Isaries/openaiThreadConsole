@@ -1,0 +1,86 @@
+/* --- Tables --- */
+.table-responsive {
+    overflow-x: auto;
+    border: 1px solid var(--surface-border);
+    border-radius: var(--radius-md);
+    background: white;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.875rem;
+}
+
+th,
+td {
+    padding: 0.75rem 1rem;
+    text-align: left;
+    border-bottom: 1px solid var(--surface-border);
+}
+
+th {
+    background: var(--surface-bg);
+    font-weight: 600;
+    color: var(--text-secondary);
+    white-space: nowrap;
+}
+
+tr:hover {
+    background: #f8fafc;
+}
+
+/* Card View for Tables on Mobile */
+@media (max-width: 768px) {
+
+    .table-responsive table,
+    .table-responsive thead,
+    .table-responsive tbody,
+    .table-responsive th,
+    .table-responsive td,
+    .table-responsive tr {
+        display: block;
+    }
+
+    .table-responsive thead tr {
+        position: absolute;
+        top: -9999px;
+        left: -9999px;
+    }
+
+    .table-responsive tr {
+        border: 1px solid var(--surface-border);
+        margin-bottom: 1rem;
+        border-radius: var(--radius-md);
+        background: white;
+        padding: 0.5rem;
+    }
+
+    .table-responsive td {
+        border: none;
+        position: relative;
+        padding-left: 40%;
+        padding-top: 0.5rem;
+        padding-bottom: 0.5rem;
+        display: flex;
+        align-items: center;
+
+        /* Auto-wrap long text */
+        white-space: normal;
+        word-break: break-word;
+        overflow-wrap: anywhere;
+    }
+
+    /* Simulate headers */
+    .table-responsive td::before {
+        position: absolute;
+        left: 0.75rem;
+        width: 35%;
+        padding-right: 10px;
+        white-space: nowrap;
+        font-weight: 600;
+        color: var(--text-secondary);
+        font-size: 0.75rem;
+        content: attr(data-label);
+    }
+}

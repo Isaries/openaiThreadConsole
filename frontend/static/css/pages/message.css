@@ -1,0 +1,76 @@
+/* --- Message Content Output --- */
+.message-content {
+    font-size: 0.95rem;
+    line-height: 1.6;
+    color: #334155;
+    background: white;
+    padding: 1.5rem;
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--surface-border);
+    margin-top: 1rem;
+    max-height: 600px;
+    overflow-y: auto;
+}
+
+.message-content ul,
+.message-content ol {
+    padding-left: 1.5rem;
+    margin: 1rem 0;
+}
+
+.message-content li {
+    margin-bottom: 0.25rem;
+}
+
+.message-content h1,
+.message-content h2,
+.message-content h3 {
+    margin-top: 1.5rem;
+    margin-bottom: 1rem;
+    color: #1e293b;
+}
+
+.message-content p {
+    margin-bottom: 1rem;
+}
+
+.message-content table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1rem 0;
+}
+
+.message-content th,
+.message-content td {
+    border: 1px solid #e2e8f0;
+    padding: 0.5rem;
+}
+
+.message-content th {
+    background: #f8fafc;
+    font-weight: 600;
+}
+
+.message-content pre {
+    background: #f1f5f9;
+    padding: 1rem;
+    border-radius: var(--radius-md);
+    overflow-x: auto;
+    margin: 1rem 0;
+    font-family: monospace;
+}
+
+.message-content code {
+    background: #f1f5f9;
+    padding: 0.2rem 0.4rem;
+    border-radius: var(--radius-sm);
+    font-family: monospace;
+    font-size: 0.9em;
+}
+
+.message-content blockquote {
+    border-left: 4px solid var(--primary-light);
+    margin: 1rem 0;
+    padding-left: 1rem;
+    color: var(--text-secondary);
+}

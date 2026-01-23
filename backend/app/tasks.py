@@ -438,7 +438,12 @@ def refresh_specific_threads(project_id, thread_ids, group_name=""):
         # So passing encrypted key is fine!
         
         for tid in thread_ids:
-            s, m = logic.sync_thread_to_db(tid, project.api_key, project_id)
+            s, m = logic.sync_thread_to_db(
+                tid, 
+                project.api_key, 
+                project_id, 
+                force_active=True # Force unfreeze on manual refresh
+            )
             if s: success_count += 1
             # Gentle rate limit
             time.sleep(0.5)

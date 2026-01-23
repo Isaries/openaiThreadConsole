@@ -1,0 +1,58 @@
+/* --- Buttons --- */
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.5rem 1rem;
+    border-radius: var(--radius-md);
+    font-weight: 500;
+    font-size: 0.875rem;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    border: 1px solid transparent;
+    gap: 0.5rem;
+}
+
+.btn:active {
+    transform: translateY(1px);
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, var(--primary) 0%, hsl(var(--accent-h), 60%, 55%) 100%);
+    color: white;
+    box-shadow: var(--shadow-sm);
+}
+
+.btn-primary:hover {
+    box-shadow: var(--shadow-md);
+    filter: brightness(110%);
+}
+
+.btn-secondary {
+    background: white;
+    border-color: var(--surface-border);
+    color: var(--text-main);
+}
+
+.btn-secondary:hover {
+    background: var(--surface-bg);
+    border-color: #cbd5e1;
+}
+
+.btn-danger {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.btn-danger:hover {
+    background: #fecaca;
+}
+
+.btn-block {
+    width: 100%;
+}
+
+.btn-sm {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.75rem;
+}
