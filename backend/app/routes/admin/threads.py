@@ -341,8 +341,6 @@ def upload_file():
         return redirect(url_for('admin.index', group_id=group_id))
     file.seek(0)
 
-    # filename = secure_filename(file.filename)  # Unused
-
     project = Project.query.get(group_id)
     if not project:
         return redirect(url_for('admin.index'))

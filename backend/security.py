@@ -105,6 +105,15 @@ def record_login_attempt(ip, success):
         if record['count'] >= LOCKOUT_THRESHOLD:
             record['lockout_until'] = time.time() + LOCKOUT_DURATION
         LOGIN_ATTEMPTS[ip] = record
+    
+    # Cleanup expired records to prevent memory leak
+    # Only run cleanup occasionally (when dict size > 100)
+    if len(LOGIN_ATTEMPTS) > 100:
+        current_time = time.time()
+        expired_ips = [ip for ip, rec in LOGIN_ATTEMPTS.items() 
+                      if rec.get('lockout_until', 0) > 0 and current_time > rec['lockout_until']]
+        for ip in expired_ips:
+            del LOGIN_ATTEMPTS[ip]
 
 # --- IP Banning System ---
 import database

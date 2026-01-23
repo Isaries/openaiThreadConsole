@@ -78,6 +78,19 @@ def search_task(project_id, target_name, start_date, end_date, api_key, group_id
         
         from .models import SearchResultChunk
         
+        # CLEANUP: Delete old search results for this task_id before creating new ones
+        # This prevents memory leaks from accumulating search results
+        # Wrap in try-except to ensure atomicity
+        if task and task.id:
+            try:
+                deleted = SearchResultChunk.query.filter_by(task_id=task.id).delete()
+                if deleted > 0:
+                    logger.info(f"Cleaned up {deleted} old search result chunks for task {task.id}")
+                db.session.commit()
+            except Exception as e:
+                logger.warning(f"Failed to cleanup old chunks: {e}")
+                db.session.rollback()
+        
         # 2. Search Phase
         matching_threads = logic.search_threads_sql(project_id, target_name, start_date, end_date)
         
@@ -434,3 +447,36 @@ def collect_system_metrics_task():
     except Exception as e:
         logger.error(f"System Metric Collection Failed: {e}")
 
+# --- Memory Leak Prevention: Cleanup Old Search Results ---
+@huey.periodic_task(crontab(minute='*/30'))  # Every 30 minutes
+def cleanup_old_search_results():
+    """
+    Cleanup search result chunks older than 1 hour to prevent memory leaks.
+    Search results are temporary and only needed while user is viewing them.
+    """
+    logger.info("Starting Search Result Cleanup")
+    try:
+        from .models import SearchResultChunk
+        from . import create_app
+        
+        app = create_app()
+        with app.app_context():
+            # Delete chunks older than 1 hour
+            cutoff = int(time.time()) - 3600  # 1 hour ago
+            
+            deleted = SearchResultChunk.query.filter(
+                SearchResultChunk.created_at < cutoff
+            ).delete()
+            
+            if deleted > 0:
+                db.session.commit()
+                logger.info(f"Cleaned up {deleted} old search result chunks")
+            else:
+                logger.info("No old search results to cleanup")
+                
+    except Exception as e:
+        logger.error(f"Search Result Cleanup Failed: {e}")
+        try:
+            db.session.rollback()
+        except:
+            pass

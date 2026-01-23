@@ -298,7 +298,9 @@ document.addEventListener('DOMContentLoaded', () => {
                         }
 
                     } catch (err) {
-                        console.error("Polling error", err);
+                        if (window.location.hostname === 'localhost') {
+                            console.error("Polling error", err);
+                        }
                         retryCount++;
                         if (retryCount > MAX_RETRIES) {
                             statusDiv.className = 'mt-3 alert alert-danger';
@@ -329,7 +331,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     try {
                         cancelBtn.disabled = true;
                         cancelBtn.textContent = '取消中...';
-                        const csrfToken = document.querySelector('input[name="csrf_token"]').value;
+                        const csrfToken = document.querySelector('input[name="csrf_token"]')?.value;
+
+                        if (!csrfToken) {
+                            alert('CSRF token 遺失，請重新整理頁面');
+                            return;
+                        }
+
                         await fetch(`/search/cancel/${taskId}`, {
                             method: 'POST',
                             headers: { 'X-CSRFToken': csrfToken }
@@ -345,7 +353,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 };
 
             } catch (error) {
-                console.error('Search failed:', error);
+                if (window.location.hostname === 'localhost') {
+                    console.error('Search failed:', error);
+                }
                 statusDiv.className = 'mt-3 alert alert-danger';
                 statusDiv.textContent = '啟動搜尋失敗: ' + error.message;
                 btn.disabled = false;

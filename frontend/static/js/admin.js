@@ -196,6 +196,10 @@ function addTag(groupId) {
             } else {
                 alert(data.message || '新增失敗');
             }
+        })
+        .catch(err => {
+            console.error('Tag add error:', err);
+            alert('操作失敗，請檢查網路連線');
         });
 }
 

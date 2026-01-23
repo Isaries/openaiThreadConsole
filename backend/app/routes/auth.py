@@ -3,7 +3,7 @@ from ..extensions import db, limiter
 from ..models import User
 import security
 from .. import utils
-from .. import utils
+
 
 auth_bp = Blueprint('auth', __name__)
 

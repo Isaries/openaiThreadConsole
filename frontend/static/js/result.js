@@ -100,7 +100,9 @@ async function loadPage(pageIndex) {
         if (window.attachPdfListeners) window.attachPdfListeners();
 
     } catch (err) {
-        console.error(err);
+        if (window.location.hostname === 'localhost') {
+            console.error(err);
+        }
         if (container) {
             container.innerHTML = `
                 <div class="no-result" style="text-align:center; padding: 40px;">
@@ -209,8 +211,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     })();
 
-    // 3. Debug Log Console Output
-    if (config.debugLog) {
+    // 3. Debug Log Console Output (only in development)
+    if (config.debugLog && window.location.hostname === 'localhost') {
         console.group("🚀 Thread Search Debug Console");
         console.log("📊 Search Summary (Scanned Threads):", config.debugLog);
         console.groupEnd();
@@ -267,9 +269,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 } catch (err) {
                     if (err.name === 'AbortError') {
-                        console.log('Download cancelled by user');
+                        if (window.location.hostname === 'localhost') {
+                            console.log('Download cancelled by user');
+                        }
                     } else {
-                        console.error(err);
+                        if (window.location.hostname === 'localhost') {
+                            console.error(err);
+                        }
                         alert('下載失敗: ' + (err.message || '未知錯誤'));
                     }
                 } finally {
@@ -311,7 +317,7 @@ window.editRemark = async function (threadId, projectId, oldRemark) {
             const selector = '#thread-' + threadId + ' .thread-remark > span';
             const remarkSpan = document.querySelector(selector);
             if (remarkSpan) {
-                remarkSpan.innerText = newRemark;
+                remarkSpan.textContent = newRemark;
             } else {
                 location.reload();
             }
@@ -320,7 +326,9 @@ window.editRemark = async function (threadId, projectId, oldRemark) {
             alert('更新失敗: ' + (err.error || 'Unknown Error'));
         }
     } catch (e) {
-        console.error(e);
+        if (window.location.hostname === 'localhost') {
+            console.error(e);
+        }
         alert('網路錯誤，請稍後再試');
     }
 }

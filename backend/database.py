@@ -140,8 +140,6 @@ def load_audit_logs():
     } for l in logs]
 
 
-logging.Formatter.converter = utc8_converter
-
 # --- Settings ---
 SETTINGS_FILE = 'settings.json'
 

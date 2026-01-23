@@ -42,6 +42,7 @@ class Project(db.Model):
     api_key_hash = db.Column(db.String(64), index=True, nullable=True)
     is_visible = db.Column(db.Boolean, default=True)
     version = db.Column(db.Integer, default=1)
+    created_at = db.Column(db.Integer, nullable=True)  # Unix timestamp
     
     # Relationships
     threads = db.relationship('Thread', backref='project', lazy=True, cascade="all, delete-orphan")

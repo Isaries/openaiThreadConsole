@@ -1,6 +1,7 @@
 from flask import request, redirect, url_for, flash, session
+from datetime import datetime
 from . import admin_bp
-from ...models import Project, Tag
+from ...models import Project, Tag, User
 from ...extensions import db
 from .security import log_audit
 import security as core_security
@@ -46,15 +47,13 @@ def create_group():
     user_id = session.get('user_id')
     from ...models import User
     creator = User.query.get(user_id)
-    
-    from datetime import datetime
          
     new_project = Project(
         id=str(uuid.uuid4()),
         name=name,
         api_key=core_security.encrypt_data(api_key_input.strip()),
         api_key_hash=core_security.hash_api_key(api_key_input.strip()),
-        created_at=int(datetime.now().timestamp()), # Fix: using datetime.now() needs import
+        created_at=int(datetime.now().timestamp()),
         version=1
     )
     
@@ -204,7 +203,12 @@ def update_group():
         return redirect(url_for('admin.index', group_id=group_id))
         
     # Update logic
-    if name: project.name = name
+    if name and name.strip() and len(name.strip()) <= 100:
+        project.name = name.strip()
+    elif name:
+        flash('專案名稱格式不正確 (需為 1-100 字元)', 'error')
+        return redirect(url_for('admin.index', group_id=group_id))
+        
     project.is_visible = is_visible
 
     from ...models import User # Local import if not at top

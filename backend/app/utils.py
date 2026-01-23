@@ -3,9 +3,11 @@ from datetime import datetime, timezone, timedelta
 from markupsafe import escape, Markup
 import requests
 import markdown
+from collections import OrderedDict
 
-# In-Memory Cache for IP Info
-IP_CACHE = {}
+# In-Memory Cache for IP Info (LRU with max size to prevent memory leaks)
+IP_CACHE = OrderedDict()
+IP_CACHE_MAX_SIZE = 1000  # Limit cache to 1000 IPs
 
 def log_access(user, action):
     from flask import current_app
@@ -77,10 +79,12 @@ def get_client_ip():
 def get_ip_info(ip):
     """
     Fetches ASN and Location info from ip-api.com.
-    Uses simple in-memory caching.
+    Uses LRU cache with size limit to prevent memory leaks.
     """
     # 0. Check Cache
     if ip in IP_CACHE:
+        # Move to end (mark as recently used)
+        IP_CACHE.move_to_end(ip)
         return IP_CACHE[ip]
         
     # 1. Skip Local/Private IPs (Basic Check)
@@ -109,8 +113,13 @@ def get_ip_info(ip):
                     'desc': f"{country} {city}, {isp}"
                 }
                 
-                # Cache it (Permanent for runtime)
+                # Cache it with LRU eviction
                 IP_CACHE[ip] = info
+                
+                # Evict oldest if cache is too large
+                if len(IP_CACHE) > IP_CACHE_MAX_SIZE:
+                    IP_CACHE.popitem(last=False)  # Remove oldest (FIFO)
+                
                 return info
     except Exception as e:
         print(f"IP Lookup Failed for {ip}: {e}")

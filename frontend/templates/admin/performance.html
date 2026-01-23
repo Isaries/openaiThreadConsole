@@ -69,11 +69,11 @@
         </div>
 
         <div class="kpi-card">
-            <div class="kpi-label">已管理總 Token 數</div>
+            <div class="kpi-label">已管理資料量</div>
             <div class="kpi-value text-blue">
                 {{ "{:,}".format(current.tokens) }}
             </div>
-            <div class="text-xs text-secondary">所有已同步 Thread 的總和</div>
+            <div class="text-xs text-secondary">Token 數 (資料量指標，非 API 費用)</div>
         </div>
     </div>
 
@@ -91,7 +91,7 @@
 
     <!-- Token Chart -->
     <div class="chart-container">
-        <h3>管理 Token 總量趨勢</h3>
+        <h3>資料量趨勢 (Token 計數)</h3>
         <canvas id="tokenChart"></canvas>
     </div>
 </div>
@@ -199,7 +199,7 @@
         data: {
             labels: labels,
             datasets: [{
-                label: 'Total Managed Tokens',
+                label: 'Data Volume (Tokens)',
                 data: tokenData,
                 borderColor: 'rgb(54, 162, 235)',
                 backgroundColor: 'rgba(54, 162, 235, 0.2)',

@@ -70,6 +70,7 @@ def search_api():
         )
         db.session.add(log)
         db.session.commit()
-    except: pass
+    except Exception as e:
+        current_app.logger.error(f"Failed to log search history: {e}")
     
     return jsonify(response_data)
