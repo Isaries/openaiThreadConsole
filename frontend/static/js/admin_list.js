@@ -297,6 +297,19 @@
                                 bookmarkContainer.innerHTML = '<div class="text-xs text-secondary" style="padding: 0.5rem 0; font-style: italic;">尚無收藏項目</div>';
                             }
                         }
+
+                        // Also update the star in the table if visible
+                        const tableRows = document.querySelectorAll('tr');
+                        tableRows.forEach(row => {
+                            const threadIdCell = row.querySelector('[data-label="Thread ID"]');
+                            if (threadIdCell && threadIdCell.innerText.trim() === threadId) {
+                                const starCell = row.querySelector('.star-icon');
+                                if (starCell) {
+                                    starCell.classList.remove('active');
+                                    starCell.innerText = '☆';
+                                }
+                            }
+                        });
                     } else if (data.action === 'added') {
                         // Add to sidebar (need remark info)
                         // Try to get from table row first (when clicking from list)
