@@ -313,4 +313,55 @@
         }
     }
 
+    // Expose editRemark globally so it can be used by admin_thread_view.html too
+    window.editRemark = function (threadId, groupId, currentRemark) {
+        const newRemark = prompt("請輸入新的備註:", currentRemark);
+        if (newRemark === null) return; // Cancelled
+
+        const csrfInput = document.querySelector('input[name="csrf_token"]');
+        const token = csrfInput ? csrfInput.value : '';
+
+        // Use the existing update endpoint
+        fetch('/admin/threads/update_remark', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': token
+            },
+            body: JSON.stringify({
+                thread_id: threadId,
+                group_id: groupId,
+                remark: newRemark
+            })
+        })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    // Update UI in all places
+                    // 1. Thread List Rows
+                    const rows = document.querySelectorAll(`.editable-remark[data-thread-id="${threadId}"]`);
+                    rows.forEach(el => {
+                        el.innerText = newRemark || '✏️';
+                        el.dataset.remark = newRemark;
+                    });
+
+                    // 2. Thread View Header
+                    const viewHeader = document.querySelector('.thread-remark.editable-remark');
+                    if (viewHeader && viewHeader.dataset.threadId === threadId) {
+                        viewHeader.innerText = '備註: ' + (newRemark || '-');
+                        viewHeader.dataset.remark = newRemark;
+                    }
+
+                    // 3. Sidebar (if bookmarked)
+                    const sidebarItem = document.querySelector(`.sidebar-item div[title="${threadId}"]`);
+                    if (sidebarItem) {
+                        sidebarItem.innerText = newRemark || threadId;
+                    }
+                } else {
+                    alert('更新失敗: ' + (data.error || 'Unknown'));
+                }
+            })
+            .catch(err => console.error(err));
+    };
+
 })();

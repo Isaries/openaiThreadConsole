@@ -38,7 +38,13 @@
                                 📄 PDF
                             </a>
                         </div>
-                        <div class="thread-remark">備註: {{ result.remark or request.args.get('remark', '-') }}</div>
+                        <div class="thread-remark editable-remark" data-thread-id="{{ thread.thread_id }}"
+                            data-project-id="{{ project.id }}" data-remark="{{ result.remark or '' }}"
+                            onclick="editRemark(this.dataset.threadId, this.dataset.projectId, this.dataset.remark)"
+                            style="cursor: pointer; border-bottom: 1px dashed #ccc; padding-bottom: 2px;"
+                            title="點擊編輯備註">
+                            備註: {{ result.remark or request.args.get('remark', '-') }}
+                        </div>
                     </div>
                 </div>
             </div>
@@ -93,9 +99,13 @@
         </div>
     </div>
 
+    <!-- CSRF Token for JS -->
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <script src="{{ url_for('static', filename='js/admin_thread_view.js') }}"></script>
-
+    <!-- Include admin_list.js for editRemark and others -->
+    <script src="{{ url_for('static', filename='js/admin_list.js') }}?v=1.2"></script>
 </body>
 
 </html>

@@ -24,8 +24,19 @@
                 {% for b in my_bookmarks %}
                 <a href="/admin/threads/view/{{ b.thread_id }}?group_id={{ b.project_id }}"
                     class="btn btn-block sidebar-item"
-                    style="display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem; font-size: 0.85rem; border-left: 2px solid transparent;">
-                    <span style="color: #f59e0b;">★</span>
+                    style="display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem; font-size: 0.85rem; border-left: 2px solid transparent; justify-content: space-between;">
+                    <div style="display: flex; align-items: center; gap: 0.5rem; overflow: hidden;">
+                        <span style="color: #f59e0b; font-size: 1rem;">★</span>
+                        <div style="text-overflow: ellipsis; overflow: hidden; white-space: nowrap; max-width: 120px;"
+                            title="{{ b.thread_id }}">
+                            {{ b.remark if b.remark else b.thread_id }}
+                        </div>
+                    </div>
+                    <!-- Delete Button (Stop Propagation) -->
+                    <span
+                        onclick="event.preventDefault(); toggleBookmark(this.parentElement, '{{ b.thread_id }}', event)"
+                        class="sidebar-unbookmark-btn" title="移除收藏"
+                        style="cursor: pointer; opacity: 0.5; font-size: 0.9rem; padding: 2px;">✖</span>
                     <div style="text-overflow: ellipsis; overflow: hidden; white-space: nowrap; max-width: 140px;">
                         {{ b.thread_id }}
                     </div>
