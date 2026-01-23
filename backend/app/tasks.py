@@ -50,6 +50,35 @@ def search_task(project_id, target_name, start_date, end_date, api_key, group_id
         total_threads = len(threads)
         processed_threads = 0
         
+        # 1. Cleanup & Initialization Phase
+        # CLEANUP: Delete old search results for this task_id before creating new ones
+        if task and task.id:
+            try:
+                from .models import SearchResultChunk
+                deleted = SearchResultChunk.query.filter_by(task_id=task.id).delete()
+                if deleted > 0:
+                    logger.info(f"Cleaned up {deleted} old search result chunks for task {task.id}")
+                
+                # Create initial progress chunk (page_index = -1)
+                initial_chunk = SearchResultChunk(
+                    task_id=task.id,
+                    page_index=-1,
+                    data_json='[]',
+                    progress_data=json.dumps({
+                        'progress': {
+                            'current': 0,
+                            'total': total_threads,
+                            'percentage': 0,
+                            'phase': 'syncing' if mode == 'fresh' else 'searching'
+                        }
+                    })
+                )
+                db.session.add(initial_chunk)
+                db.session.commit()
+            except Exception as e:
+                logger.warning(f"Failed to cleanup or initialize progress: {e}")
+                db.session.rollback()
+
         if mode == 'fresh':
             # 1. Sync Phase (Iterate all threads in project to update cache)
             # This is slow but required for "Fresh".
@@ -96,50 +125,31 @@ def search_task(project_id, target_name, start_date, end_date, api_key, group_id
                      logger.error(f"Sync failed for {t.thread_id}: {e}")
                      processed_threads += 1
 
+        # 2. Search Phase
+        matching_threads = logic.search_threads_sql(project_id, target_name, start_date, end_date)
+        
+        # Update progress to "searching" phase
+        if task and task.id:
+            try:
+                chunk = SearchResultChunk.query.filter_by(task_id=task.id, page_index=-1).first()
+                if chunk:
+                    chunk.progress_data = json.dumps({
+                        'progress': {
+                            'current': processed_threads,
+                            'total': total_threads,
+                            'percentage': round((processed_threads / total_threads) * 100, 1) if total_threads > 0 else 0,
+                            'phase': 'searching'
+                        }
+                    })
+                    db.session.commit()
+            except:
+                pass
+        
         # Chunking Logic
         BATCH_SIZE = 10
         current_batch = []
         page_index = 0
         total_count = 0
-        
-        from .models import SearchResultChunk
-        
-        # CLEANUP: Delete old search results for this task_id before creating new ones
-        # This prevents memory leaks from accumulating search results
-        # Wrap in try-except to ensure atomicity
-        if task and task.id:
-            try:
-                deleted = SearchResultChunk.query.filter_by(task_id=task.id).delete()
-                if deleted > 0:
-                    logger.info(f"Cleaned up {deleted} old search result chunks for task {task.id}")
-                db.session.commit()
-            except Exception as e:
-                logger.warning(f"Failed to cleanup old chunks: {e}")
-                db.session.rollback()
-        
-        # Create initial progress chunk
-        if task and task.id:
-            try:
-                initial_chunk = SearchResultChunk(
-                    task_id=task.id,
-                    page_index=-1,  # Special index for progress tracking
-                    data_json='[]',
-                    progress_data=json.dumps({
-                        'progress': {
-                            'current': 0,
-                            'total': total_threads,
-                            'percentage': 0,
-                            'phase': 'starting'
-                        }
-                    })
-                )
-                db.session.add(initial_chunk)
-                db.session.commit()
-            except Exception as e:
-                logger.warning(f"Failed to create initial progress chunk: {e}")
-        
-        # 2. Search Phase
-        matching_threads = logic.search_threads_sql(project_id, target_name, start_date, end_date)
         
         # 3. Processing & Chunk Writing
         for t in matching_threads:
