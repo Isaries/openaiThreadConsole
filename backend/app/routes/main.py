@@ -102,9 +102,9 @@ def search():
             session['captcha_store'] = captcha_store
             session.modified = True
         
-        if not correct_answer:
-            return {'error': '驗證碼無效或已過期，請重新整理'}, 400
-            
+        if not user_captcha or len(user_captcha.strip()) == 0:
+            return {'error': '请输入验证码'}, 400
+
         # Case Insensitive Check
         if user_captcha.lower() != str(correct_answer).lower():
             return {'error': '驗證碼錯誤，請再試一次'}, 400
@@ -115,7 +115,7 @@ def search():
     
     # Trigger Async Task
     from .. import tasks
-    task = tasks.search_task(group_id, target_name, date_from, date_to, api_key, group_id, group['name'], mode=mode)
+    task = tasks.search_task(group_id, target_name, date_from, date_to, api_key, group['name'], mode=mode)
     
     # Return Task ID for polling
     # Return Task ID for polling, and Total Threads for progress
