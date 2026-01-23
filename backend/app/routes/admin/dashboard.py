@@ -82,6 +82,7 @@ def index():
     if active_group:
         t_page = request.args.get('t_page', 1, type=int)
         search_query = request.args.get('q', '').strip()
+        status_filter = request.args.get('status_filter', '').strip()
         
         query = Thread.query.filter_by(project_id=active_group['group_id'])
         
@@ -90,6 +91,9 @@ def index():
                 (Thread.thread_id.ilike(f"%{search_query}%")) | 
                 (Thread.remark.ilike(f"%{search_query}%"))
             )
+            
+        if status_filter and status_filter != 'all':
+            query = query.filter_by(refresh_priority=status_filter)
 
         threads_pagination = query.paginate(page=t_page, per_page=50, error_out=False)
         threads_list = threads_pagination.items
@@ -118,33 +122,7 @@ def index():
     system_data = get_dashboard_system_data()
     user_data = get_dashboard_user_data()
     
-    # Merge context
-    context = {
-        'groups_data': groups_data,
-        'grouped_projects': grouped_projects,
-        'active_group': active_group,
-        'user_map': user_map,
-        'threads': threads_list,
-        'threads_pagination': threads_pagination,
-        'total_threads_count': total_threads_count,
-        'project_total_count': project_total_count,
-        'search_query': search_query,
-        'masked_key': masked_key,
-        'auto_refresh_settings': database.load_settings().get('auto_refresh', {}),
-        'username': session.get('username'),
-        'current_role': session.get('role'),
-        'active_group_id': active_group['group_id'] if active_group else None,
-        **security_data,
-        **system_data, # Note: system_data might overwrite masked_key if we are not careful. System data provided global settings.
-        **user_data
-    }
-    
-    # System data returns 'masked_key' as well (from my stub earlier).
-    # I should check system.py get_dashboard_system_data.
-    # It returns 'masked_key': "sk-***". 
-    # I should prefer the Project Masked Key.
-    # So I put system_data FIRST in merge, then overwrite with local params.
-    
+    # Merge context (New context construction)
     context = {
         **security_data,
         **system_data,
@@ -153,15 +131,16 @@ def index():
         'grouped_projects': grouped_projects,
         'active_group': active_group,
         'user_map': user_map,
-        'users': users_obj,  # Add users list for owner assignment UI
+        'users': users_obj,  
         'threads': threads_list,
         'threads_pagination': threads_pagination,
         'total_threads_count': total_threads_count,
         'project_total_count': project_total_count,
         'search_query': search_query,
-        'masked_key': masked_key, # Overwrites system default
+        'status_filter': status_filter if active_group else 'all', # Pass filter to template
+        'masked_key': masked_key,
         'auto_refresh_settings': database.load_settings().get('auto_refresh', {}),
-         'username': session.get('username'),
+        'username': session.get('username'),
         'current_role': session.get('role'),
     }
 

@@ -12,6 +12,7 @@
         <!-- Hidden input to toggle 'Select All Across Pages' mode -->
         <input type="hidden" name="select_all_pages" id="selectAllPagesInput" value="false">
         <input type="hidden" name="search_q" value="{{ search_query }}">
+        <input type="hidden" name="status_filter" value="{{ status_filter }}">
     </form>
 
     <!-- Independent Search Form -->
@@ -21,7 +22,27 @@
     <div class="thread-toolbar flex items-center justify-between mb-4" style="margin-bottom: 1rem;">
         <div class="toolbar-header">
             <h3>資料列表 <span class="text-secondary text-sm" style="font-weight: normal; font-size: 0.8rem;">(共
-                    {{ total_threads_count }} 筆)</span></h3>
+                    {{ total_threads_count }} 筆)</span>
+
+                <!-- Moved Status Legend -->
+                <div class="status-legend-wrapper" style="margin-left: 0.5rem; vertical-align: middle;">
+                    <span class="status-legend-icon" style="cursor: help; opacity: 0.7;">ℹ️ 狀態說明</span>
+                    <div class="status-legend-tooltip" style="width: 300px; bottom: auto; top: 100%; margin-top: 10px;">
+                        <div class="status-legend-item">
+                            <strong>🟢 活躍 Active</strong>
+                            <span>正常更新，系統會定期檢查新內容。</span>
+                        </div>
+                        <div class="status-legend-item">
+                            <strong>🟡 低優先 Low Priority</strong>
+                            <span>長時間無變化，系統將降低檢查頻率。</span>
+                        </div>
+                        <div class="status-legend-item">
+                            <strong>🔴 凍結 Frozen</strong>
+                            <span>已停止自動更新，若需恢復請手動更新一次。</span>
+                        </div>
+                    </div>
+                </div>
+            </h3>
         </div>
 
         <div class="toolbar-actions flex gap-2 items-center">
@@ -29,6 +50,16 @@
             <!-- Search Form Input Group -->
             <div class="search-group"
                 style="display: flex; gap: 0; align-items: center; background: white; border: 1px solid var(--surface-border); border-radius: 6px; overflow: hidden; margin-right: 0.5rem; height: 32px;">
+
+                <!-- Status Filter Dropdown -->
+                <select form="searchForm" name="status_filter" onchange="this.form.submit()"
+                    style="border: none; border-right: 1px solid #eee; background: #f8f9fa; padding: 0 0.5rem; height: 100%; font-size: 0.875rem; color: var(--text-main); cursor: pointer; outline: none;">
+                    <option value="all" {% if status_filter=='all' %}selected{% endif %}>全部狀態</option>
+                    <option value="active" {% if status_filter=='active' %}selected{% endif %}>🟢 活躍</option>
+                    <option value="low" {% if status_filter=='low' %}selected{% endif %}>🟡 低優先</option>
+                    <option value="frozen" {% if status_filter=='frozen' %}selected{% endif %}>🔴 凍結</option>
+                </select>
+
                 <input form="searchForm" type="text" name="q" placeholder="🔍 搜尋 ID 或備註..." class="search-input"
                     style="border: none; padding: 0 0.5rem; width: 180px; font-size: 0.875rem; outline: none; height: 100%;"
                     autocomplete="off" value="{{ search_query }}">
@@ -125,24 +156,7 @@
                     <th>Thread ID</th>
                     <th>備註</th>
                     <th style="width: 100px;">
-                        <div class="status-legend-wrapper">
-                            狀態
-                            <span class="status-legend-icon">❓</span>
-                            <div class="status-legend-tooltip">
-                                <div class="status-legend-item">
-                                    <strong>🟢 活躍 Active</strong>
-                                    <span>正常更新，系統會定期檢查新內容。</span>
-                                </div>
-                                <div class="status-legend-item">
-                                    <strong>🟡 低優先 Low Priority</strong>
-                                    <span>長時間無變化，系統將降低檢查頻率。</span>
-                                </div>
-                                <div class="status-legend-item">
-                                    <strong>🔴 凍結 Frozen</strong>
-                                    <span>已停止自動更新，若需恢復請手動更新一次。</span>
-                                </div>
-                            </div>
-                        </div>
+                        狀態
                     </th>
                     <th style="width: 80px;">操作</th>
                 </tr>

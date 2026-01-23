@@ -9,6 +9,8 @@ import uuid
 
 @admin_bp.route('/group/create', methods=['POST'])
 def create_group():
+    from ...models import User
+
     if not session.get('user_id'): return redirect(url_for('auth.login'))
     
     # 1. Gather Inputs
@@ -45,7 +47,7 @@ def create_group():
          return redirect(url_for('admin.index'))
          
     user_id = session.get('user_id')
-    from ...models import User
+
     creator = User.query.get(user_id)
          
     new_project = Project(
@@ -186,6 +188,8 @@ def delete_group():
 
 @admin_bp.route('/group/update', methods=['POST'])
 def update_group():
+    from ...models import User
+
     if not session.get('user_id'): return redirect(url_for('auth.login'))
     
     user_id = session.get('user_id')
@@ -228,7 +232,7 @@ def update_group():
         
     project.is_visible = is_visible
 
-    from ...models import User # Local import if not at top
+
 
     if role == 'admin':
         owner_ids = request.form.getlist('owner_ids')

@@ -152,12 +152,17 @@ def delete_multi():
     try:
         if select_all_pages:
             search_q = request.form.get('search_q', '').strip()
+            status_filter = request.form.get('status_filter', '').strip()
+            
             base_query = db.session.query(Thread.id).filter_by(project_id=project.id)
             if search_q:
                 base_query = base_query.filter(
                     (Thread.thread_id.contains(search_q)) |
                     (Thread.remark.contains(search_q))
                 )
+            if status_filter and status_filter != 'all':
+                base_query = base_query.filter_by(refresh_priority=status_filter)
+                
             threads_subquery = base_query.subquery()
             Message.query.filter(
                 Message.thread_id.in_(threads_subquery)
@@ -265,6 +270,11 @@ def refresh_threads_cache():
                 (Thread.thread_id.contains(search_q)) |
                 (Thread.remark.contains(search_q))
             )
+            
+        status_filter = request.form.get('status_filter', '').strip()
+        if status_filter and status_filter != 'all':
+            query = query.filter_by(refresh_priority=status_filter)
+            
         thread_ids = [t.thread_id for t in query.all()]
     else:
         thread_ids = request.form.getlist('selected_ids')
@@ -315,6 +325,7 @@ def export_excel():
             project.name,
             filtered_ids=filtered_ids,
             search_q=search_q if select_all_pages else None,
+            status_filter=request.form.get('status_filter') if select_all_pages else None,
         )
     except Exception as e:
         flash(f'Export Failed: {e}', 'error')
