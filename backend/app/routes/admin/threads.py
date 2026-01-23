@@ -17,7 +17,7 @@ from flask import (
 import bleach
 
 from . import admin_bp
-from ...models import Thread, Project, Message
+from ...models import Thread, Project, Message, User
 from ... import logic, tasks
 from ...extensions import db, limiter
 from .security import log_audit
