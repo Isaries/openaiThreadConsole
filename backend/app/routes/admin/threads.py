@@ -161,7 +161,10 @@ def delete_multi():
                     (Thread.remark.contains(search_q))
                 )
             if status_filter and status_filter != 'all':
-                base_query = base_query.filter_by(refresh_priority=status_filter)
+                if status_filter == 'active':
+                    base_query = base_query.filter(Thread.refresh_priority.notin_(['low', 'frozen']))
+                else:
+                    base_query = base_query.filter_by(refresh_priority=status_filter)
                 
             threads_subquery = base_query.subquery()
             Message.query.filter(
@@ -271,9 +274,11 @@ def refresh_threads_cache():
                 (Thread.remark.contains(search_q))
             )
             
-        status_filter = request.form.get('status_filter', '').strip()
         if status_filter and status_filter != 'all':
-            query = query.filter_by(refresh_priority=status_filter)
+            if status_filter == 'active':
+                query = query.filter(Thread.refresh_priority.notin_(['low', 'frozen']))
+            else:
+                query = query.filter_by(refresh_priority=status_filter)
             
         thread_ids = [t.thread_id for t in query.all()]
     else:

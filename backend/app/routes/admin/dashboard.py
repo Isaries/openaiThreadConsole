@@ -93,7 +93,11 @@ def index():
             )
             
         if status_filter and status_filter != 'all':
-            query = query.filter_by(refresh_priority=status_filter)
+            if status_filter == 'active':
+                # Active is strictly defined as NOT low or frozen (matches UI logic)
+                query = query.filter(Thread.refresh_priority.notin_(['low', 'frozen']))
+            else:
+                query = query.filter_by(refresh_priority=status_filter)
 
         threads_pagination = query.paginate(page=t_page, per_page=50, error_out=False)
         threads_list = threads_pagination.items

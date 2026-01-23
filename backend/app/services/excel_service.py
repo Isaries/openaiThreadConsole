@@ -160,7 +160,10 @@ def generate_excel_export(project_id, project_name, filtered_ids=None, search_q=
                     (Thread.remark.contains(search_q))
                  )
              if status_filter and status_filter != 'all':
-                 query = query.filter_by(refresh_priority=status_filter)
+                 if status_filter == 'active':
+                     query = query.filter(Thread.refresh_priority.notin_(['low', 'frozen']))
+                 else:
+                     query = query.filter_by(refresh_priority=status_filter)
              
         threads = query.all()
         data = []
