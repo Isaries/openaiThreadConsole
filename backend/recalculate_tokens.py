@@ -35,13 +35,13 @@ def recalculate_all_tokens():
         total_threads = Thread.query.count()
         old_total_tokens = db.session.query(func.sum(Thread.total_tokens)).scalar() or 0
         
-        print(f"\n📊 Current Statistics:")
+        print(f"\n Current Statistics:")
         print(f"   Total Threads: {total_threads}")
         print(f"   Old Total Tokens: {old_total_tokens:,}")
         print(f"   Old Average: {old_total_tokens / total_threads if total_threads > 0 else 0:,.2f} tokens/thread")
         
         # Confirm before proceeding
-        print(f"\n⚠️  This will recalculate tokens for all {total_threads} threads.")
+        print(f"\n  This will recalculate tokens for all {total_threads} threads.")
         print("   Old token values (run execution tokens) will be replaced with new values (message reading tokens).")
         
         response = input("\nProceed with migration? (yes/no): ")
@@ -49,7 +49,7 @@ def recalculate_all_tokens():
             print("❌ Migration cancelled.")
             return
         
-        print("\n🔄 Starting migration...\n")
+        print("\n Starting migration...\n")
         
         # Process all threads
         threads = Thread.query.all()
@@ -88,16 +88,16 @@ def recalculate_all_tokens():
                         print(f"   Processed {i}/{total_threads} threads... (Latest: {thread.thread_id[:20]}... = {new_tokens:,} tokens)")
                 else:
                     error_count += 1
-                    print(f"   ⚠️  Error calculating tokens for {thread.thread_id}")
+                    print(f"     Error calculating tokens for {thread.thread_id}")
                 
             except Exception as e:
                 error_count += 1
-                print(f"   ❌ Error processing {thread.thread_id}: {e}")
+                print(f"    Error processing {thread.thread_id}: {e}")
         
         # Commit all changes
         try:
             db.session.commit()
-            print(f"\n✅ Migration completed successfully!")
+            print(f"\n Migration completed successfully!")
         except Exception as e:
             db.session.rollback()
             print(f"\n❌ Error committing changes: {e}")
@@ -105,7 +105,7 @@ def recalculate_all_tokens():
         
         # Final statistics
         print("\n" + "=" * 80)
-        print("📊 Migration Results:")
+        print(" Migration Results:")
         print("=" * 80)
         print(f"   Threads Updated: {updated_count}")
         print(f"   Errors: {error_count}")
