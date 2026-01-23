@@ -132,9 +132,11 @@ def index():
     if session.get('user_id'):
          curr_user = User.query.get(session['user_id'])
          if curr_user:
-             # Sort by created_at desc
-             my_bookmarks = curr_user.bookmarked_threads.order_by(user_bookmarks.c.created_at.desc()).all()
-             bookmarked_ids = {t.thread_id for t in my_bookmarks}
+             # Get bookmarked threads with proper field access
+             bookmark_threads = curr_user.bookmarked_threads.order_by(user_bookmarks.c.created_at.desc()).all()
+             bookmarked_ids = {t.thread_id for t in bookmark_threads}
+             # Convert to dict for template access
+             my_bookmarks = [{'thread_id': t.thread_id, 'project_id': t.project_id, 'remark': t.remark} for t in bookmark_threads]
     
     # Merge context (New context construction)
     context = {

@@ -37,9 +37,6 @@
                         onclick="event.preventDefault(); toggleBookmark(this.parentElement, '{{ b.thread_id }}', event)"
                         class="sidebar-unbookmark-btn" title="移除收藏"
                         style="cursor: pointer; opacity: 0.5; font-size: 0.9rem; padding: 2px;">✖</span>
-                    <div style="text-overflow: ellipsis; overflow: hidden; white-space: nowrap; max-width: 140px;">
-                        {{ b.thread_id }}
-                    </div>
                 </a>
                 {% endfor %}
             </div>

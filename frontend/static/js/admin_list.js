@@ -284,6 +284,49 @@
                     alert('操作失敗: ' + (data.error || 'Unknown'));
                 } else {
                     console.log('Bookmark toggled:', data.action);
+
+                    // Update sidebar items dynamically
+                    if (data.action === 'removed') {
+                        // Remove from sidebar
+                        const sidebarLink = document.querySelector(`.sidebar-item[href*="${threadId}"]`);
+                        if (sidebarLink) {
+                            sidebarLink.remove();
+                            // Check if sidebar is now empty
+                            const bookmarkContainer = document.querySelector('.mb-4 .flex.flex-col.gap-1');
+                            if (bookmarkContainer && bookmarkContainer.children.length === 0) {
+                                bookmarkContainer.innerHTML = '<div class="text-xs text-secondary" style="padding: 0.5rem 0; font-style: italic;">尚無收藏項目</div>';
+                            }
+                        }
+                    } else if (data.action === 'added') {
+                        // Add to sidebar (need remark info)
+                        const remarkText = element.closest('tr')?.querySelector('.editable-remark')?.dataset.remark || threadId;
+                        const projectId = element.closest('tr')?.querySelector('.editable-remark')?.dataset.projectId || '';
+
+                        const bookmarkContainer = document.querySelector('.mb-4 .flex.flex-col.gap-1');
+                        if (bookmarkContainer) {
+                            // Remove "no items" message if exists
+                            const emptyMsg = bookmarkContainer.querySelector('.text-xs.text-secondary');
+                            if (emptyMsg) emptyMsg.remove();
+
+                            // Create new bookmark item
+                            const newItem = document.createElement('a');
+                            newItem.href = `/admin/threads/view/${threadId}?group_id=${projectId}`;
+                            newItem.className = 'btn btn-block sidebar-item';
+                            newItem.style.cssText = 'display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem; font-size: 0.85rem; border-left: 2px solid transparent; justify-content: space-between;';
+                            newItem.innerHTML = `
+                                <div style="display: flex; align-items: center; gap: 0.5rem; overflow: hidden;">
+                                    <span class="star-icon active" style="font-size: 1rem;">★</span>
+                                    <div style="text-overflow: ellipsis; overflow: hidden; white-space: nowrap; max-width: 120px;" title="${threadId}">
+                                        ${remarkText || threadId}
+                                    </div>
+                                </div>
+                                <span onclick="event.preventDefault(); toggleBookmark(this.parentElement, '${threadId}', event)" 
+                                      class="sidebar-unbookmark-btn" title="移除收藏"
+                                      style="cursor: pointer; opacity: 0.5; font-size: 0.9rem; padding: 2px;">✖</span>
+                            `;
+                            bookmarkContainer.insertBefore(newItem, bookmarkContainer.firstChild);
+                        }
+                    }
                 }
             })
             .catch(err => {
