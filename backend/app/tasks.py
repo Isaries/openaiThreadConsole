@@ -148,11 +148,8 @@ def search_task(project_id, target_name, start_date, end_date, api_key, group_id
                 pass
         
         # Chunking Logic
-        # ... (rest of search processing) ...
         matching_count = len(matching_threads)
         processed_matches = 0
-        
-        # Chunking Logic
         BATCH_SIZE = 10
         current_batch = []
         page_index = 0
