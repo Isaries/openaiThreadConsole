@@ -158,19 +158,14 @@ def search_result(task_id):
                 import json
                 progress_metadata = json.loads(progress_chunk.progress_data)
                 progress = progress_metadata.get('progress', {})
-                current_app.logger.info(f"Task {task_id}: Found progress data: {progress}")
                 return jsonify({
                     'status': 'processing',
                     'progress': progress
                 }), 202
-            else:
-                current_app.logger.warning(f"Task {task_id}: Progress chunk found but no progress_data! (id: {progress_chunk.id if progress_chunk else 'None'})")
         except Exception as e:
-            current_app.logger.error(f"Task {task_id}: Progress fetch error: {e}")
-            import traceback
-            current_app.logger.error(traceback.format_exc())
+            current_app.logger.debug(f"Task {task_id}: Progress fetch error (expected during startup): {e}")
         
-        current_app.logger.warning(f"Task {task_id}: No progress chunk found (page_index=-1)")
+        # This is very normal during the first 1-2 seconds of a task
         return jsonify({'status': 'processing'}), 202
         
     if 'error' in task_meta:
