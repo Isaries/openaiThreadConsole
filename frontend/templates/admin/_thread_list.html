@@ -170,9 +170,9 @@
 
                     <!-- Star Toggle -->
                     <td style="text-align: center; cursor: pointer;"
-                        onclick="toggleBookmark(this, '{{ thread.thread_id }}')">
-                        <span class="star-icon"
-                            style="font-size: 1.2rem; line-height: 1; color: {% if thread.thread_id in bookmarked_ids %}#f59e0b{% else %}#ccc{% endif %}; transition: transform 0.1s;">
+                        onclick="toggleBookmark(this, '{{ thread.thread_id }}', event)">
+                        <span class="star-icon {% if thread.thread_id in bookmarked_ids %}active{% endif %}"
+                            style="font-size: 1.2rem; line-height: 1; transition: transform 0.1s;">
                             {% if thread.thread_id in bookmarked_ids %}★{% else %}☆{% endif %}
                         </span>
                     </td>

@@ -18,8 +18,8 @@ project_tags = db.Table('project_tags',
 
 # Association Table for User Bookmarks
 user_bookmarks = db.Table('user_bookmarks',
-    db.Column('user_id', db.String(36), db.ForeignKey('users.id'), primary_key=True),
-    db.Column('thread_id', db.Integer, db.ForeignKey('threads.id'), primary_key=True),
+    db.Column('user_id', db.String(36), db.ForeignKey('users.id', ondelete='CASCADE'), primary_key=True),
+    db.Column('thread_id', db.Integer, db.ForeignKey('threads.id', ondelete='CASCADE'), primary_key=True),
     db.Column('created_at', db.Integer, default=lambda: int(datetime.now().timestamp()))
 )
 

@@ -236,18 +236,27 @@
     });
 
     // Bookmark Logic
-    window.toggleBookmark = function (element, threadId) {
+    // Bookmark Logic
+    window.toggleBookmark = function (element, threadId, event) {
         // Prevent row click if any
-        if (window.event) window.event.stopPropagation();
+        if (event) {
+            event.stopPropagation();
+        } else if (window.event) {
+            window.event.stopPropagation();
+        }
 
         const starSpan = element.querySelector('.star-icon');
         const isCurrentlyActive = starSpan.innerText.trim() === '★';
 
         // Optimistic UI Update
-        starSpan.innerText = isCurrentlyActive ? '☆' : '★';
-        starSpan.style.color = isCurrentlyActive ? '#ccc' : '#f59e0b';
+        const newStatus = !isCurrentlyActive;
+        starSpan.innerText = newStatus ? '★' : '☆';
+        starSpan.style.color = newStatus ? '#f59e0b' : '#ccc';
         starSpan.style.transform = 'scale(1.2)';
         setTimeout(() => starSpan.style.transform = 'scale(1)', 150);
+
+        // Update Sidebar Count (Optimistic)
+        updateSidebarCount(newStatus ? 1 : -1);
 
         const csrfInput = document.querySelector('input[name="csrf_token"]');
         const token = csrfInput ? csrfInput.value : '';
@@ -264,21 +273,44 @@
             .then(data => {
                 if (!data.success) {
                     // Revert
-                    starSpan.innerText = isCurrentlyActive ? '★' : '☆';
-                    starSpan.style.color = isCurrentlyActive ? '#f59e0b' : '#ccc';
+                    if (isCurrentlyActive) {
+                        starSpan.classList.add('active');
+                        starSpan.innerText = '★';
+                    } else {
+                        starSpan.classList.remove('active');
+                        starSpan.innerText = '☆';
+                    }
+                    updateSidebarCount(newStatus ? -1 : 1); // Revert count
                     alert('操作失敗: ' + (data.error || 'Unknown'));
                 } else {
                     console.log('Bookmark toggled:', data.action);
-                    // Optional: Reload page to update Sidebar safely? 
-                    // Or just let it be. User will see sidebar update on next refresh.
                 }
             })
             .catch(err => {
-                console.error(err);
                 // Revert
-                starSpan.innerText = isCurrentlyActive ? '★' : '☆';
-                starSpan.style.color = isCurrentlyActive ? '#f59e0b' : '#ccc';
+                if (isCurrentlyActive) {
+                    starSpan.classList.add('active');
+                    starSpan.innerText = '★';
+                } else {
+                    starSpan.classList.remove('active');
+                    starSpan.innerText = '☆';
+                }
+                updateSidebarCount(newStatus ? -1 : 1); // Revert count
             });
+    }
+
+    function updateSidebarCount(delta) {
+        const countSpan = document.querySelector('#sidebar .text-xs[style*="font-weight: normal"]');
+        if (countSpan) {
+            const match = countSpan.innerText.match(/\((\d+)\)/);
+            if (match) {
+                let current = parseInt(match[1], 10);
+                if (!isNaN(current)) {
+                    current = Math.max(0, current + delta);
+                    countSpan.innerText = `(${current})`;
+                }
+            }
+        }
     }
 
 })();
