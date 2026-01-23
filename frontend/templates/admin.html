@@ -22,7 +22,7 @@
                     </summary>
 
                     {% for g in grouped_projects[tag] %}
-                    <a href="/admin?group_id={{ g.group_id }}"
+                    <a href="{{ url_for('admin.index', group_id=g.group_id) }}"
                         class="btn btn-block sidebar-item {{ 'active' if active_group.group_id == g.group_id else '' }}"
                         style="display: flex; flex-direction: column; align-items: flex-start; gap: 0.25rem; height: auto; padding: 0.75rem;">
                         <div style="font-weight: 500;">📁 {{ g.name }}</div>

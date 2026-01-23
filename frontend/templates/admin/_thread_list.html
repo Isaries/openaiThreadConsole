@@ -1,7 +1,7 @@
 <!-- Thread List -->
 <div class="card">
     <!-- Independent Search Form -->
-    <form id="searchForm" action="/admin" method="GET" style="display:none;">
+    <form id="searchForm" action="{{ url_for('admin.index') }}" method="GET" style="display:none;">
         <input type="hidden" name="group_id" value="{{ active_group.group_id }}">
     </form>
 

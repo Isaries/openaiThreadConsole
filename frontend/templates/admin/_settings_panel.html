@@ -3,7 +3,7 @@
     <div class="flex items-center justify-between"
         style="padding-bottom: 1rem; border-bottom: 1px solid var(--surface-border); margin-bottom: 1rem;">
         <h2>{{ active_group.name }}</h2>
-        <button onclick="toggleSettings()" class="btn btn-secondary btn-sm">⚙️ 設定</button>
+        <button onclick="toggleSettings(); loadRefreshHistoryIfNeeded()" class="btn btn-secondary btn-sm">⚙️ 設定</button>
     </div>
 
     <!-- Settings Panel -->
@@ -97,8 +97,16 @@
                         });
                     }
                     // Load history on load (or when panel opens if we hook it)
-                    loadRefreshHistory();
+                    // loadRefreshHistory(); // Removed: Lazy load instead
                 });
+
+                let hasLoadedHistory = false;
+
+                function loadRefreshHistoryIfNeeded() {
+                    if (hasLoadedHistory) return;
+                    loadRefreshHistory();
+                    hasLoadedHistory = true;
+                }
 
                 function loadRefreshHistory() {
                     fetch('/admin/api/refresh_history')
