@@ -798,153 +798,121 @@ tr:hover {
         position: relative;
     }
 
-    /* Checkbox: Top Left */
-    .thread-list-table td:nth-child(1) {
-        grid-column: 1;
-        grid-row: 1;
+    .thread-list-table td {
+        display: block;
         padding: 0;
-        border: none;
-        width: auto;
-        min-height: auto;
+        border: none !important;
     }
 
-    .thread-list-table td:nth-child(1)::before {
-        display: none;
-    }
-
-    /* Thread ID: Top Middle/Right */
+    /* Title Row */
     .thread-list-table td:nth-child(2) {
-        grid-column: 2;
-        grid-row: 1;
-        padding: 0;
-        border: none;
-        font-weight: bold;
+        grid-column: 1 / -1;
+        font-weight: 600;
         font-size: 1rem;
-        color: var(--primary);
+        margin-bottom: 0.25rem;
     }
 
-    .thread-list-table td:nth-child(2)::before {
-        display: none;
-    }
-
-    /* Actions: Top Right (Absolute) or Grid */
-    .thread-list-table td:nth-child(4) {
-        grid-column: 3;
-        grid-row: 1 / span 2;
-        padding: 0;
-        border: none;
-        display: flex;
-        align-items: flex-start;
-        justify-content: flex-end;
-    }
-
-    .thread-list-table td:nth-child(4)::before {
-        display: none;
-    }
-
-    /* Remark: Full Width Row 2 */
-    .thread-list-table td:nth-child(3) {
-        grid-column: 1 / span 3;
-        grid-row: 2;
-        padding: 0.5rem 0 0 0;
-        border: none;
-        border-top: 1px dashed #eee;
-        margin-top: 0.5rem;
+    /* ID Row (Small text) */
+    .thread-list-table td:nth-child(1) {
+        font-size: 0.8rem;
         color: var(--text-secondary);
-        font-size: 0.9rem;
-        white-space: normal;
     }
 
-    .thread-list-table td:nth-child(3)::before {
-        display: none;
+    /* Status Badge */
+    .thread-list-table td:nth-child(3) {
+        position: absolute;
+        top: 1rem;
+        right: 1rem;
     }
-}
 
-/* --- Bottom Action Sheet (Mobile Contextual) --- */
-.bottom-action-sheet {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    background: rgba(255, 255, 255, 0.94);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    padding: 1rem 1.5rem;
-    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.1);
-    border-top: 1px solid rgba(255, 255, 255, 0.5);
-    z-index: 900;
+    /* Info Row */
+    .thread-list-table td:nth-child(4),
+    .thread-list-table td:nth-child(5) {
+        font-size: 0.85rem;
+        color: var(--text-secondary);
+        display: inline-block;
+        margin-right: 1rem;
+    }
 
-    display: flex;
-    justify-content: center;
-
-    transform: translateY(120%);
-    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.bottom-action-sheet.active {
-    transform: translateY(0);
-}
-
-.bottom-action-sheet .sheet-content {
-    max-width: 600px;
-    width: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-}
-
-.bottom-action-sheet .selected-count {
-    font-weight: 700;
-    font-size: 1.25rem;
-    color: var(--primary);
-    display: flex;
-    align-items: baseline;
-}
-
-.bottom-action-sheet .sheet-actions {
-    display: flex;
-    gap: 0.5rem;
-}
-
-.bottom-action-sheet .btn {
-    padding: 0.5rem 1rem;
-    border-radius: 50px;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
-}
-
-@media (min-width: 769px) {
-    .bottom-action-sheet {
-        display: none !important;
+    /* Action (Hidden or transformed) */
+    .thread-list-table td:last-child {
+        display: flex;
+        gap: 0.5rem;
+        margin-top: 0.5rem;
+        grid-column: 1 / -1;
     }
 }
 
-/* Utility Classes for Responsive Visibility */
-@media (max-width: 768px) {
-    .desktop-only {
-        display: none !important;
-    }
+/* --- Utility: Key-Value Grid --- */
+.kv-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 1rem;
 }
 
-@media (min-width: 769px) {
-    .mobile-only {
-        display: none !important;
-    }
-}
-
-/* Markdown Content Styles (Global) */
-.message-content img {
-    max-width: 100%;
-    height: auto;
-    border: 1px solid #e2e8f0;
+.kv-item {
+    background: #f8fafc;
+    padding: 0.75rem;
     border-radius: var(--radius-md);
-    margin-top: 0.5rem;
+    border: 1px solid var(--surface-border);
+}
+
+.kv-label {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+    letter-spacing: 0.05em;
+    margin-bottom: 0.25rem;
+    display: block;
+}
+
+.kv-value {
+    font-size: 1rem;
+    font-weight: 500;
+    color: var(--text-main);
+    word-break: break-all;
+}
+
+/* --- Message Content Output --- */
+.message-content {
+    font-size: 0.95rem;
+    line-height: 1.6;
+    color: #334155;
+    background: white;
+    padding: 1.5rem;
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--surface-border);
+    margin-top: 1rem;
+    max-height: 600px;
+    overflow-y: auto;
+}
+
+.message-content ul,
+.message-content ol {
+    padding-left: 1.5rem;
+    margin: 1rem 0;
+}
+
+.message-content li {
+    margin-bottom: 0.25rem;
+}
+
+.message-content h1,
+.message-content h2,
+.message-content h3 {
+    margin-top: 1.5rem;
+    margin-bottom: 1rem;
+    color: #1e293b;
+}
+
+.message-content p {
+    margin-bottom: 1rem;
 }
 
 .message-content table {
     width: 100%;
     border-collapse: collapse;
     margin: 1rem 0;
-    font-size: 0.9em;
 }
 
 .message-content th,
@@ -980,4 +948,46 @@ tr:hover {
     margin: 1rem 0;
     padding-left: 1rem;
     color: var(--text-secondary);
+}
+
+/* --- TomSelect Customization for Organization Grouping --- */
+
+.ts-dropdown .optgroup-header {
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: var(--text-main);
+    background-color: #f1f5f9;
+    padding: 6px 10px;
+    border-bottom: 1px solid var(--surface-border);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.ts-dropdown .option {
+    display: flex !important;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 10px;
+}
+
+.ts-dropdown .option .option-title {
+    font-weight: 500;
+}
+
+.ts-dropdown .option .org-badge {
+    font-size: 0.7rem;
+    padding: 2px 6px;
+    background-color: #e2e8f0;
+    color: #475569;
+    border-radius: 4px;
+    margin-left: 8px;
+    white-space: nowrap;
+    opacity: 0.8;
+    flex-shrink: 0;
+}
+
+/* Highlight badge when active */
+.ts-dropdown .option.active .org-badge {
+    background-color: rgba(255, 255, 255, 0.3);
+    color: inherit;
 }

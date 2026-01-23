@@ -28,63 +28,54 @@ document.addEventListener('DOMContentLoaded', () => {
                 direction: "asc"
             },
             placeholder: '請選擇或搜尋 Project...',
-            maxOptions: null // Show all
+            maxOptions: null, // Show all
+            valueField: 'id',
+            labelField: 'name',
+            searchField: ['name', 'tags'], // Search by name AND tags
+            // Custom Rendering for Options and Items
+            render: {
+                option: function (data, escape) {
+                    let orgBadge = '';
+                    if (data.tags && data.tags.length > 0) {
+                        orgBadge = `<span class="org-badge">${escape(data.tags[0])}</span>`;
+                    }
+                    return `<div>
+                        <span class="option-title">${escape(data.name)}</span>
+                        ${orgBadge}
+                    </div>`;
+                },
+                item: function (data, escape) {
+                    return `<div>${escape(data.name)}</div>`;
+                }
+            }
         });
     }
 
     /**
      * Renders Project Options into the Select Element
-     * Grouping strategy:
-     * 1. If Tag Filter is active: Show only matching projects (Flat list or simplified grouping)
-     * 2. If No Tag Filter: Show all projects grouped by their FIRST tag (or 'Uncategorized')
      */
     function renderProjectOptions(projects, isFiltered = false) {
-        // Clear current options (keep default disabled one)
-        // Note: For TomSelect, modifying the underlying option and calling sync() is the way.
-
-        // 1. Destroy old options if not using TomSelect (Vanilla Fallback)
+        // Clear current options
         if (!tomControl) {
             projectSelect.innerHTML = '<option value="" disabled selected>請選擇 Project...</option>';
         } else {
-            // For TomSelect, we can clear via API or clear DOM and sync.
-            // Clearing DOM is safer for re-grouping logic.
             tomControl.clear();
             tomControl.clearOptions();
         }
 
-        // Helper to add option
-        const addOption = (parent, value, text) => {
-            if (tomControl) {
-                tomControl.addOption({ value: value, text: text });
-            } else {
-                const opt = document.createElement('option');
-                opt.value = value;
-                opt.textContent = text;
-                parent.appendChild(opt);
-            }
+        // Helper to add option (Vanilla Fallback)
+        const addVanillaOption = (parent, value, text) => {
+            const opt = document.createElement('option');
+            opt.value = value;
+            opt.textContent = text;
+            parent.appendChild(opt);
         };
 
-        const addGroup = (label) => {
-            if (tomControl) {
-                tomControl.addOptionGroup(label, { label: label });
-                return label; // ID is label
-            } else {
-                const el = document.createElement('optgroup');
-                el.label = label;
-                projectSelect.appendChild(el);
-                return el;
-            }
-        };
-
-        const addOptionToGroup = (groupHandle, value, text) => {
-            if (tomControl) {
-                tomControl.addOption({ value: value, text: text, optgroup: groupHandle });
-            } else {
-                const opt = document.createElement('option');
-                opt.value = value;
-                opt.textContent = text;
-                groupHandle.appendChild(opt);
-            }
+        const addVanillaGroup = (label) => {
+            const el = document.createElement('optgroup');
+            el.label = label;
+            projectSelect.appendChild(el);
+            return el;
         };
 
         if (projects.length === 0) {
@@ -94,18 +85,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 opt.disabled = true;
                 projectSelect.appendChild(opt);
             }
-            // TomSelect handles empty state via 'no_results' option, but we can't easily push a disabled option to it dynamically as main option.
             return;
         }
-
-        // Logic: Should we group?
-        // If filtered by a specific tag, flat list is often better.
-        // If showing all, grouping helps navigation.
 
         if (isFiltered) {
             // Flat list for specific filter
             projects.forEach(p => {
-                addOption(projectSelect, p.id, `📁 ${p.name}`);
+                if (tomControl) {
+                    // TomSelect: Add full data object for custom render
+                    tomControl.addOption(p);
+                } else {
+                    addVanillaOption(projectSelect, p.id, `📁 ${p.name}`);
+                }
             });
         } else {
             // Group by Tag logic for "All Projects"
@@ -125,18 +116,34 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // Render Groups (Sorted keys)
             Object.keys(groups).sort().forEach(tagName => {
-                const groupHandle = addGroup(tagName);
-                groups[tagName].forEach(p => {
-                    addOptionToGroup(groupHandle, p.id, p.name);
-                });
+                if (tomControl) {
+                    tomControl.addOptionGroup(tagName, { label: tagName });
+                    groups[tagName].forEach(p => {
+                        // Pass full object, specify group
+                        tomControl.addOption({ ...p, optgroup: tagName });
+                    });
+                } else {
+                    const groupHandle = addVanillaGroup(tagName);
+                    groups[tagName].forEach(p => {
+                        addVanillaOption(groupHandle, p.id, p.name);
+                    });
+                }
             });
 
             // Render Uncategorized
             if (noTag.length > 0) {
-                const groupHandle = addGroup("未分類");
-                noTag.forEach(p => {
-                    addOptionToGroup(groupHandle, p.id, p.name);
-                });
+                if (tomControl) {
+                    const label = "未分類";
+                    tomControl.addOptionGroup(label, { label: label });
+                    noTag.forEach(p => {
+                        tomControl.addOption({ ...p, optgroup: label });
+                    });
+                } else {
+                    const groupHandle = addVanillaGroup("未分類");
+                    noTag.forEach(p => {
+                        addVanillaOption(groupHandle, p.id, p.name);
+                    });
+                }
             }
         }
 
@@ -168,22 +175,20 @@ document.addEventListener('DOMContentLoaded', () => {
         if (exists) selectProject(savedId);
     }
 
-    // Project Select Handler (Change event is robust for Selects)
-    // TomSelect updates the original Select, so this Listener DOES fire.
+    // Project Select Handler
     projectSelect.addEventListener('change', () => {
         const val = projectSelect.value;
         if (val) {
             hiddenGroupId.value = val;
             localStorage.setItem('threadConsole_selectedGroupId', val);
         } else {
-            // Also handle clear
             hiddenGroupId.value = "";
         }
     });
 
     // Tag Filter Logic
     tagFilter.addEventListener('change', () => {
-        const tagVal = tagFilter.value; // Select value is direct
+        const tagVal = tagFilter.value;
         let filtered = ALL_PROJECTS;
         let isFilteredMode = false;
 
@@ -191,37 +196,29 @@ document.addEventListener('DOMContentLoaded', () => {
             isFilteredMode = true;
             filtered = ALL_PROJECTS.filter(p => {
                 const projectTags = p.tags || [];
-                return projectTags.some(t => t === tagVal); // Exact match for Select option
+                return projectTags.some(t => t === tagVal);
             });
         }
 
-        // Handle "Ignore" UI clear
         if (tagVal === 'Ignore') {
-            tagFilter.value = ""; // Reset to default "Select Tag..."
+            tagFilter.value = "";
             isFilteredMode = false;
         }
 
-        // Re-render Select
         renderProjectOptions(filtered, isFilteredMode);
 
-        // Auto-select logic
         if (filtered.length === 1) {
             selectProject(filtered[0].id);
         } else if (filtered.length > 0) {
-            // Try to keep current selection if it's still valid
             const currentId = hiddenGroupId.value;
             const stillExists = filtered.find(p => p.id === currentId);
-
             if (!stillExists) {
-                selectProject(""); // Clear if current selection is filtered out
+                selectProject("");
             } else {
-                // Ensure UI sync
                 projectSelect.value = currentId;
             }
         } else {
             selectProject("");
         }
     });
-
-    // We don't need 'enableFocusToClear' for Select elements as they don't have text to clear
 });
