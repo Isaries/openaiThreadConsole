@@ -62,6 +62,9 @@ def view_thread(thread_id):
                 f"Failed to trigger async task: {e}")
         result = logic.process_thread_from_db(
             thread_obj, target_name="", start_date=None, end_date=None)
+        # Extract remark for template (it's in result['data']['remark'])
+        if not result.get('remark') and result.get('data'):
+            result['remark'] = result['data'].get('remark', thread_obj.remark or '')
     else:
         try:
             tasks.refresh_specific_threads.schedule(
