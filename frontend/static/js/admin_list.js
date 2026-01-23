@@ -299,8 +299,30 @@
                         }
                     } else if (data.action === 'added') {
                         // Add to sidebar (need remark info)
-                        const remarkText = element.closest('tr')?.querySelector('.editable-remark')?.dataset.remark || threadId;
-                        const projectId = element.closest('tr')?.querySelector('.editable-remark')?.dataset.projectId || '';
+                        // Try to get from table row first (when clicking from list)
+                        let remarkText = threadId;
+                        let projectId = '';
+
+                        const tableRow = element.closest('tr');
+                        if (tableRow) {
+                            const remarkCell = tableRow.querySelector('.editable-remark');
+                            if (remarkCell) {
+                                // Get the actual displayed text, not the dataset
+                                const displayedText = remarkCell.innerText.trim();
+                                // Only use it if it's not the edit icon placeholder
+                                if (displayedText && displayedText !== '✏️') {
+                                    remarkText = displayedText;
+                                }
+                                // Also try to get from dataset as fallback
+                                if (!remarkText || remarkText === threadId) {
+                                    remarkText = remarkCell.dataset.remark || threadId;
+                                }
+                                projectId = remarkCell.dataset.projectId || remarkCell.dataset.groupId || '';
+                            }
+                        }
+
+                        // If remark is just the edit icon, use threadId
+                        if (remarkText === '✏️') remarkText = threadId;
 
                         const bookmarkContainer = document.querySelector('.mb-4 .flex.flex-col.gap-1');
                         if (bookmarkContainer) {
