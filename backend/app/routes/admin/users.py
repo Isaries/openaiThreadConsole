@@ -63,10 +63,16 @@ def create_user():
     )
     
     db.session.add(new_user)
-    db.session.commit()
     
-    log_audit('Create User', username)
-    flash(f'教師帳戶 {username} 建立成功', 'success')
+    try:
+        db.session.commit()
+        log_audit('Create User', username)
+        flash(f'教師帳戶 {username} 建立成功', 'success')
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Failed to create user: {e}")
+        flash('建立失敗，請稍後再試', 'error')
+    
     return redirect(url_for('admin.index'))
 
 @admin_bp.route('/user/reset', methods=['POST'])
@@ -95,9 +101,15 @@ def reset_user_password():
     user.password_hash = generate_password_hash(new_password)
     user.password_hint = core_security.generate_password_hint(new_password)
     
-    db.session.commit()
-    log_audit('Reset Password', user.username)
-    flash(f'用戶 {user.username} 密碼重設成功', 'success')
+    try:
+        db.session.commit()
+        log_audit('Reset Password', user.username)
+        flash(f'用戶 {user.username} 密碼重設成功', 'success')
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Failed to reset password: {e}")
+        flash('密碼重設失敗，請稍後再試', 'error')
+    
     return redirect(url_for('admin.index'))
 
 @admin_bp.route('/user/delete', methods=['POST'])
@@ -119,11 +131,15 @@ def delete_user():
                     if admin_user not in project.owners:
                         project.owners.append(admin_user)
 
-        db.session.delete(user)
-        db.session.commit()
-        
-        log_audit('Delete User', username)
-        flash('用戶已刪除', 'success')
+        try:
+            db.session.delete(user)
+            db.session.commit()
+            log_audit('Delete User', username)
+            flash('用戶已刪除', 'success')
+        except Exception as e:
+            db.session.rollback()
+            current_app.logger.error(f"Failed to delete user: {e}")
+            flash('刪除失敗，請稍後再試', 'error')
     
     return redirect(url_for('admin.index'))
 
@@ -154,7 +170,13 @@ def update_user():
     user.username = new_username
     user.email = new_email if new_email else None
     
-    db.session.commit()
-    log_audit('Update User', new_username)
-    flash(f'用戶 {new_username} 資料更新成功', 'success')
+    try:
+        db.session.commit()
+        log_audit('Update User', new_username)
+        flash(f'用戶 {new_username} 資料更新成功', 'success')
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Failed to update user: {e}")
+        flash('更新失敗，請稍後再試', 'error')
+    
     return redirect(url_for('admin.index'))

@@ -69,10 +69,16 @@ def create_group():
     
     db.session.add(new_project)
     log_audit('Create Project', name)
-    flash('專案建立成功', 'success')
     
-    db.session.commit()
-    return redirect(url_for('admin.index', group_id=new_project.id))
+    try:
+        db.session.commit()
+        flash('專案建立成功', 'success')
+        return redirect(url_for('admin.index', group_id=new_project.id))
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Failed to create project: {e}")
+        flash('專案建立失敗，請稍後再試', 'error')
+        return redirect(url_for('admin.index'))
 
 @admin_bp.route('/projects/tags/add', methods=['POST'])
 def add_project_tag():
@@ -156,14 +162,25 @@ def delete_group():
     # Track tags before deletion to check for orphans later
     affected_tags = list(project.tags)
     
-    db.session.delete(project)
-    db.session.commit()
-    
-    # Cleanup Orphan Tags
-    for t in affected_tags:
-        if not t.projects:
-            db.session.delete(t)
-    db.session.commit()
+    try:
+        db.session.delete(project)
+        db.session.commit()
+        
+        # Cleanup Orphan Tags (separate transaction)
+        try:
+            for t in affected_tags:
+                if not t.projects:
+                    db.session.delete(t)
+            db.session.commit()
+        except Exception as e:
+            current_app.logger.warning(f"Failed to cleanup orphan tags: {e}")
+            db.session.rollback()
+        
+        flash('專案已刪除', 'success')
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Failed to delete project: {e}")
+        flash('刪除失敗，請稍後再試', 'error')
     
     return redirect(url_for('admin.index'))
 

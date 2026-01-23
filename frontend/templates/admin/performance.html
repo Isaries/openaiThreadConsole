@@ -89,10 +89,18 @@
         <canvas id="memChart"></canvas>
     </div>
 
-    <!-- Token Chart -->
+    <!-- Token Cumulative Chart -->
     <div class="chart-container">
-        <h3>資料量趨勢 (Token 計數)</h3>
-        <canvas id="tokenChart"></canvas>
+        <h3>資料量累積趨勢 (Token 總量)</h3>
+        <p class="text-xs text-secondary mb-2">顯示系統管理的總資料量成長趨勢</p>
+        <canvas id="tokenCumulativeChart"></canvas>
+    </div>
+
+    <!-- Token Delta Chart -->
+    <div class="chart-container">
+        <h3>資料量增量趨勢 (新增 Token 數)</h3>
+        <p class="text-xs text-secondary mb-2">顯示每個時間點新增的資料量，可看出活躍使用時段</p>
+        <canvas id="tokenDeltaChart"></canvas>
     </div>
 </div>
 
@@ -106,6 +114,8 @@
     const cpuData = rawData.map(d => d.cpu);
     const memData = rawData.map(d => d.mem_gb);
     const tokenData = rawData.map(d => d.tokens || 0);
+    const tokenDeltaData = rawData.map(d => d.tokens_delta || 0);
+
 
     // Common Chart Options
     const commonOptions = {
@@ -193,13 +203,14 @@
         }
     });
 
-    // Token Chart
-    new Chart(document.getElementById('tokenChart'), {
+
+    // Token Cumulative Chart (Line)
+    new Chart(document.getElementById('tokenCumulativeChart'), {
         type: 'line',
         data: {
             labels: labels,
             datasets: [{
-                label: 'Data Volume (Tokens)',
+                label: '累積資料量 (Tokens)',
                 data: tokenData,
                 borderColor: 'rgb(54, 162, 235)',
                 backgroundColor: 'rgba(54, 162, 235, 0.2)',
@@ -216,8 +227,53 @@
         options: {
             ...commonOptions,
             scales: {
+                x: {
+                    ticks: {
+                        maxRotation: 45,
+                        minRotation: 45
+                    }
+                },
                 y: {
                     min: 0,
+                    ticks: {
+                        callback: function (value) {
+                            return value.toLocaleString();
+                        }
+                    }
+                }
+            }
+        }
+    });
+
+    // Token Delta Chart (Bar)
+    new Chart(document.getElementById('tokenDeltaChart'), {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: '新增資料量 (Tokens)',
+                data: tokenDeltaData,
+                backgroundColor: 'rgba(75, 192, 192, 0.6)',
+                borderColor: 'rgb(75, 192, 192)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            ...commonOptions,
+            scales: {
+                x: {
+                    ticks: {
+                        maxRotation: 45,
+                        minRotation: 45
+                    }
+                },
+                y: {
+                    min: 0,
+                    ticks: {
+                        callback: function (value) {
+                            return value.toLocaleString();
+                        }
+                    }
                 }
             }
         }

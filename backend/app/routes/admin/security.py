@@ -169,6 +169,8 @@ def api_ip_geo():
     results = {}
     for ip in ips:
         info = utils.get_ip_info(ip)
-        results[ip] = info.get('desc', 'Unknown')
+        # get_ip_info returns a string, not a dict
+        results[ip] = info if isinstance(info, str) else 'Unknown'
         
     return jsonify(results)
+

@@ -90,14 +90,24 @@ def performance_dashboard():
     
     metrics = [m for m in metrics_query if m.timestamp >= cutoff]
     
-    chart_data = [{
-        'time': utils.unix_to_utc8(m.timestamp),
-        'timestamp': m.timestamp,
-        'cpu': m.cpu_percent,
-        'mem_pct': m.memory_percent,
-        'mem_gb': m.memory_used,
-        'tokens': m.total_managed_tokens
-    } for m in metrics]
+    
+    chart_data = []
+    for i, m in enumerate(metrics):
+        tokens_delta = 0
+        if i > 0:
+            # Calculate incremental growth from previous data point
+            tokens_delta = m.total_managed_tokens - metrics[i-1].total_managed_tokens
+        
+        chart_data.append({
+            'time': utils.unix_to_utc8(m.timestamp),
+            'timestamp': m.timestamp,
+            'cpu': m.cpu_percent,
+            'mem_pct': m.memory_percent,
+            'mem_gb': m.memory_used,
+            'tokens': m.total_managed_tokens,
+            'tokens_delta': max(0, tokens_delta)  # Prevent negative deltas from data cleanup
+        })
+
     
     # 2. Real-time Snapshot
     # Get current token count
@@ -111,15 +121,22 @@ def performance_dashboard():
         current_mem_gb = round(mem.used / (1024**3), 2)
         current_mem_total = round(mem.total / (1024**3), 2)
         
+        # Calculate delta from last historical data point
+        last_tokens_delta = 0
+        if len(chart_data) > 0:
+            last_tokens_delta = current_tokens - chart_data[-1]['tokens']
+        
         current_snapshot = {
             'time': '現在 (即時)',
             'timestamp': int(time.time()),
             'cpu': current_cpu,
             'mem_pct': current_mem_pct,
             'mem_gb': current_mem_gb,
-            'tokens': current_tokens
+            'tokens': current_tokens,
+            'tokens_delta': max(0, last_tokens_delta)
         }
         chart_data.append(current_snapshot)
+
         
     except ImportError:
         flash('錯誤: 尚未安裝 psutil 套件', 'error')

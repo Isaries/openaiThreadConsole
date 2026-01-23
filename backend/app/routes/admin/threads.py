@@ -174,6 +174,11 @@ def delete_multi():
             if not thread_ids:
                 flash('No threads selected', 'warning')
                 return redirect(url_for('admin.index', group_id=group_id))
+            
+            # Safety limit to prevent accidental mass deletion
+            if len(thread_ids) > 1000:
+                flash(f'單次最多刪除1000條記錄，當前選擇了{len(thread_ids)}條', 'error')
+                return redirect(url_for('admin.index', group_id=group_id))
             for tid in thread_ids:
                 t = Thread.query.filter_by(
                     thread_id=tid, project_id=project.id
