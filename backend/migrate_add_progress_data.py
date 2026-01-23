@@ -3,13 +3,16 @@
 
 from app import create_app
 from app.extensions import db
+from sqlalchemy import text
 
 def run_migration():
     app = create_app()
     with app.app_context():
         try:
-            # Add the new column
-            db.engine.execute('ALTER TABLE search_result_chunks ADD COLUMN progress_data TEXT')
+            # Add the new column using SQLAlchemy 2.0 syntax
+            with db.engine.connect() as conn:
+                conn.execute(text('ALTER TABLE search_result_chunks ADD COLUMN progress_data TEXT'))
+                conn.commit()
             print('✅ Migration completed successfully!')
             print('   Added progress_data column to search_result_chunks table')
         except Exception as e:
