@@ -43,17 +43,33 @@ def create_app():
         commands.ensure_admin_exists()
     
     # Security Headers
-    csp = {
-        'default-src': ["'self'"],
-        'script-src': ["'self'", "'unsafe-inline'", "https://cdnjs.cloudflare.com", "https://cdn.jsdelivr.net"],
-        'style-src': ["'self'", "'unsafe-inline'", "https://cdnjs.cloudflare.com", "https://fonts.googleapis.com", "https://cdn.jsdelivr.net"],
-        'font-src': ["'self'", "https://cdnjs.cloudflare.com", "https://fonts.gstatic.com"],
-        'img-src': ["*"],
-        'connect-src': ["'self'", "https://cdnjs.cloudflare.com", "https://cdn.jsdelivr.net"]
-    }
+    # We disable Talisman's CSP to manually handle Nonce generation
+    # because the installed version lacks 'nonce_in' support and function-based policy support.
+    Talisman(app, content_security_policy=False, force_https=False)
     
-    # nonce_in=['script-src'] automatically adds 'nonce-{random}' to script-src
-    Talisman(app, content_security_policy=csp, nonce_in=['script-src'], force_https=False)
+    # CSP Nonce & Header Logic
+    import base64
+    def get_csp_nonce():
+        if not getattr(request, 'csp_nonce', None):
+            request.csp_nonce = base64.b64encode(os.urandom(16)).decode()
+        return request.csp_nonce
+
+    app.jinja_env.globals['csp_nonce'] = get_csp_nonce
+
+    @app.after_request
+    def set_csp_header(response):
+        if not response.headers.get('Content-Security-Policy'):
+            nonce = get_csp_nonce()
+            policy = (
+                f"default-src 'self'; "
+                f"script-src 'self' 'unsafe-inline' 'nonce-{nonce}' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; "
+                f"style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://fonts.googleapis.com https://cdn.jsdelivr.net; "
+                f"font-src 'self' https://cdnjs.cloudflare.com https://fonts.gstatic.com; "
+                f"img-src *; "
+                f"connect-src 'self' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net"
+            )
+            response.headers['Content-Security-Policy'] = policy
+        return response
     
     # Register Blueprints
     app.register_blueprint(auth_bp)
