@@ -141,6 +141,9 @@ def performance_dashboard():
         last_tokens_delta = 0
         if len(chart_data) > 0:
             last_tokens_delta = current_tokens - chart_data[-1]['tokens']
+        elif len(chart_data) == 0:
+             # Logic Fix: If no history exists, the entire current volume is the "Delta" (Growth from 0)
+             last_tokens_delta = current_tokens
         
         current_snapshot = {
             'time': '現在 (即時)',
