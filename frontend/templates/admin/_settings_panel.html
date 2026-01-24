@@ -64,7 +64,7 @@
             <!-- Auto Refresh History Table -->
             <div style="margin-top: 1.5rem; padding-top: 0.5rem; border-top: 1px dashed var(--surface-border);">
                 <h5 style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.5rem;">📜 最近 5 次執行紀錄</h5>
-                <div class="card" style="background: white; border: 1px solid var(--surface-border); padding: 0.5rem;">
+                <div class="table-responsive">
                     <table style="width: 100%; font-size: 0.8rem; border-collapse: collapse;">
                         <thead>
                             <tr style="border-bottom: 2px solid #eee; text-align: left;">
@@ -80,6 +80,7 @@
                             <tr>
                                 <td colspan="6" style="text-align:center; padding: 1rem;">載入中...</td>
                             </tr>
+
                         </tbody>
                     </table>
                 </div>
@@ -152,12 +153,12 @@
 
                                 const row = `
                                     <tr style="border-bottom: 1px solid #f0f0f0;">
-                                        <td style="padding: 6px;">${item.time}</td>
-                                        <td style="padding: 6px;"><span class="badge" style="background:${statusColor}; color:white; padding:2px 6px; font-size:0.75rem;">${item.status}</span></td>
-                                        <td style="padding: 6px;">${item.duration}</td>
-                                        <td style="padding: 6px;">${item.updated} / ${item.total}</td>
-                                        <td style="padding: 6px; color:${item.errors > 0 ? 'red' : 'inherit'}">${item.errors}</td>
-                                        <td style="padding: 6px;">${logsHtml}</td>
+                                        <td style="padding: 6px;" data-label="時間">${item.time}</td>
+                                        <td style="padding: 6px;" data-label="狀態"><span class="badge" style="background:${statusColor}; color:white; padding:2px 6px; font-size:0.75rem;">${item.status}</span></td>
+                                        <td style="padding: 6px;" data-label="耗時">${item.duration}</td>
+                                        <td style="padding: 6px;" data-label="更新/總數">${item.updated} / ${item.total}</td>
+                                        <td style="padding: 6px; color:${item.errors > 0 ? 'red' : 'inherit'}" data-label="錯誤">${item.errors}</td>
+                                        <td style="padding: 6px;" data-label="詳情">${logsHtml}</td>
                                     </tr>
                                 `;
                                 tbody.insertAdjacentHTML('beforeend', row);
