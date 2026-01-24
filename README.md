@@ -1,33 +1,28 @@
 # Thread Console
 
-A centralized management platform for OpenAI Assistant Threads, featuring an advanced search engine, project organization, and secure administration capabilities. This system bridges the gap between raw OpenAI Assistant interactions and meaningful business data, allowing administrators to organize threads into "Projects", tag them for categorization, and perform high-performance full-text searches.
+A centralized management platform for OpenAI Assistant Threads, featuring an advanced search engine, project organization, and secure administration capabilities. This system bridges the gap between raw OpenAI Assistant interactions and meaningful business data, allowing administrators to organize threads into Projects, tag them for categorization, and perform high-performance full-text searches.
 
 ## Architecture
 
 The system follows a modular Flask application factory pattern, separating concerns between a robust backend API and a responsive frontend interface.
 
-### Backend (`backend/`)
-*   **Framework**: Flask (Python).
-*   **Database**: SQLite with SQLAlchemy ORM.
-*   **Task Queue**: Huey (SqliteHuey) for asynchronous background processing (Search, Sync, Metrics).
+### Backend
+*   **Framework**: Flask (Python)
+*   **Database**: SQLite with SQLAlchemy ORM
+*   **Task Queue**: Huey (SqliteHuey) for asynchronous background processing (Search, Sync, Metrics)
 *   **Security**:
-    *   **Rate Limiting**: `Flask-Limiter` for DoS protection.
-    *   **Input Sanitization**: `bleach` and `markupsafe` for XSS prevention.
-    *   **Cryptography**: AES encryption for storing API Keys.
-*   **Structure**:
-    *   `app/routes`: Blueprint definitions for Main, Auth, Admin, and API endpoints.
-    *   `app/models`: SQLAlchemy data models (User, Project, Thread, Message, AuditLog, SystemMetric).
-    *   `app/services`: Business logic isolation (Excel export, PDF generation, CAPTCHA).
-    *   `app/tasks`: Background task definitions for Huey workers.
+    *   **Rate Limiting**: DOS protection via Flask-Limiter
+    *   **Input Sanitization**: XSS prevention via Bleach and MarkupSafe
+    *   **Cryptography**: AES encryption for API Key storage
+*   **Key Components**:
+    *   **Smart Refresh System**: Adaptive polling mechanism that prioritizes active threads and reduces API consumption for stale ones.
+    *   **Token Analytics**: Built-in tracking for input/output tokens to monitor usage and costs.
 
-### Frontend (`frontend/`)
-*   **Templating**: Jinja2 (Serverside rendering) with dynamic HTML injection.
-*   **Styling**: Custom CSS implementing a modern Glassmorphism aesthetic.
-*   **JavaScript**: Modular ES6 scripts (`admin_list.js`, `search.js`) managing AJAX requests, polling, and DOM manipulation.
-*   **Features**:
-    *   **Responsive Design**: Mobile-optimized layouts with native OS-level controls.
-    *   **Real-time Feedback**: Polling-based progress bars for background tasks.
-    *   **Debounced Interactions**: Optimized UX to prevent server overload.
+### Frontend
+*   **Templating**: Jinja2 (Server-side rendering) with dynamic HTML injection
+*   **Styling**: Custom CSS implementing a modern, responsive Glassmorphism aesthetic
+*   **JavaScript**: Modular ES6 scripts managing AJAX requests, polling, and DOM updates
+*   **UX**: Real-time progress bars, debounced interactions, and mobile-optimized layouts
 
 ## Features
 
@@ -35,32 +30,29 @@ The system follows a modular Flask application factory pattern, separating conce
 *   **Centralized Dashboard**: Manage multiple OpenAI API keys and projects from a single interface.
 *   **Advanced Search**: Full-text search capability across thread messages, metadata, and IDs. Supports date range filtering and Boolean logic.
 *   **Project Management**: Organize threads into Projects. Each project supports independent API Keys and Access Control Lists (ACL).
-*   **Math CAPTCHA V2**: A robust, dual-mode CAPTCHA system (Text/Math) protecting resource-intensive endpoints. The Math mode generates calculus problems (Polynomial, Trigonometry, Chain Rule) that guarantee integer answers to prevent bot automated attacks.
+*   **Math CAPTCHA V2**: A robust, dual-mode CAPTCHA system (Text/Math) protecting resource-intensive endpoints. The Math mode generates calculus problems (Polynomial, Trigonometry, Chain Rule) to prevent automated attacks.
 
-### Performance & Scalability
-*   **SQL-Based Search**: Optimized search engine using SQLAlchemy `subqueryload` to prevent N+1 query performance issues.
-*   **Asynchronous Processing**: Integrated Huey Task Queue offloads heavy operations (like "Fresh Search" API synchronization) to background workers.
-*   **Auto-Refresh**: Configurable background tasks ensuring data remains up-to-date without manual intervention, featuring race-condition protection for settings updates.
-*   **System Metrics**: Real-time monitoring of CPU and Memory usage displayed in the Admin dashboard.
+### Intelligent Data Management
+*   **Smart Refresh**: The system intelligently schedules updates based on thread activity. Active threads are refreshed frequently, while stale threads are moved to lower priority queues to conserve API quotas.
+*   **Token Usage Tracking**: Automatically records and aggregates token usage (total, prompt, completion) per thread and system-wide, aiding in cost analysis.
+*   **SQL-Based Search**: Optimized search engine using SQLAlchemy techniques to prevent N+1 query performance issues.
 
-## Security Hardening
-
-Following a comprehensive Red Team audit, the system includes multiple layers of defense:
-
-1.  **Injection Protection**:
-    *   **Excel/CSV**: All exported data is sanitized to prevent Formula Injection (CSV Injection) attacks on administrator workstations.
-    *   **XSS**: Markdown rendering strictly escapes HTML attributes and creates safe HTML structures to prevent Cross-Site Scripting.
-2.  **Rate Limiting**: Critical endpoints (Login, Refresh, Export) are protected by IP-based rate limits to mitigate Denial of Service (DoS) attacks.
-3.  **Server-Side Request Forgery (SSRF) Protection**: File proxy endpoints enforce strict regex validation on file IDs to prevent path traversal or internal network scanning.
-4.  **Timezone Integrity**: All date handling and scheduled tasks strictly enforce UTC+8 (Asia/Taipei) timezones to ensure data consistency across different server environments.
+### Security Hardening
+*   **Injection Protection**:
+    *   **Excel/CSV**: Exports are sanitized to prevent Formula Injection.
+    *   **XSS**: Markdown rendering strictly escapes HTML attributes.
+*   **Rate Limiting**: Critical endpoints (Login, Refresh, Export) are protected by IP-based limits.
+*   **SSRF Protection**: Strict validation on file proxy endpoints.
+*   **Audit Logging**: comprehensive tracking of all admin actions, including logins, settings changes, and data exports.
 
 ## Installation & Deployment
 
 ### Prerequisites
 *   Docker and Docker Compose
-*   Git
+*   Or Python 3.11+ for manual installation
 
-### Quick Start
+### Docker Deployment (Recommended)
+
 1.  **Clone the repository**
     ```bash
     git clone <repository_url>
@@ -75,38 +67,65 @@ Following a comprehensive Red Team audit, the system includes multiple layers of
     FLASK_DEBUG=false
     ```
 
-3.  **Deploy with Docker**
+3.  **Start Services**
     ```bash
     docker-compose up -d --build
     ```
 
 4.  **Access**
     *   Web Interface: `http://localhost:8010`
-    *   Default Admin User: Use the password defined in `.env`.
+    *   Default Admin Password: As defined in your `.env` file.
 
-### Updating
-To update the application while preserving your database:
-```bash
-git pull origin main
-docker-compose down
-docker-compose up -d --build
-```
-*Note: The local database file `backend/app.db` is configured to be ignored by Git to prevent data loss.*
+### Manual Installation
+
+1.  **Install Dependencies**
+    ```bash
+    cd backend
+    pip install -r requirements.txt
+    ```
+
+2.  **Run Application**
+    ```bash
+    python run.py
+    ```
+
+## Updating & Migrations
+
+If you are updating an existing installation, you may need to apply database schema changes.
+
+1.  **Pull latest changes**
+    ```bash
+    git pull origin main
+    ```
+
+2.  **Run Migrations** (If not using a fresh database)
+    The system includes specific migration scripts for new features like Smart Refresh and Token Tracking. Run these scripts from the `backend` directory:
+    ```bash
+    cd backend
+    python migrate_smart_refresh.py
+    python migrate_tokens.py
+    ```
+
+3.  **Restart Services**
+    ```bash
+    docker-compose down
+    docker-compose up -d --build
+    ```
 
 ## Administration
 
 ### Managing Projects
-Log in as Admin to create new projects and assign "Owners". Owners can manage their specific project settings but cannot see system-wide logs or other projects unless authorized.
+Log in as Admin to create new projects and assign "Owners". Owners can manage their specific project settings (API Keys, Tags) but cannot see system-wide logs or other projects unless authorized.
 
 ### Search Operations
 *   **Quick Search**: Queries the local database. Fast and efficient.
-*   **Fresh Search**: Connects to the OpenAI API to fetch the latest threads. This consumes API quota and requires a valid CAPTCHA token to initiate.
+*   **Fresh Search**: Connects to the OpenAI API to fetch the latest threads. This consumes API quota and requires a valid CAPTCHA token.
 
-### Logs & Auditing
-The Admin Panel provides comprehensive logs for:
-*   **Audit Logs**: Action history (Login, Settings Change, Data Export).
-*   **System Performance**: Historical CPU/Memory usage charts.
-*   **IP Monitoring**: Track and ban suspicious IP addresses.
+### Logs & Monitoring
+The Admin Panel provides:
+*   **Audit Logs**: History of sensitive actions.
+*   **System Metrics**: CPU/Memory usage and Total Managed Tokens count.
+*   **IP Monitoring**: Tools to track and ban suspicious IP addresses.
 
 ## License
 
