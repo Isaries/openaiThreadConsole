@@ -133,7 +133,14 @@
 
                                 let logsHtml = '-';
                                 if (item.logs && item.logs !== '[]') {
-                                    logsHtml = `<span title="${item.logs.replace(/"/g, '&quot;')}" style="cursor:help; border-bottom:1px dotted #999;">查看</span>`;
+                                    // Use formatLogContent helper logic inline or ensure data is ready.
+                                    // Make logs attribute safe for binding (it might be large or contain quotes)
+                                    // We will store it in a temporary map or encode it?
+                                    // Encoding potentially large string in HTML attribute is risky.
+                                    // Better: Store in a global variable map by ID? Or simply use encodeURIComponent.
+
+                                    const logDataStr = encodeURIComponent(item.logs);
+                                    logsHtml = `<button class="btn btn-xs btn-outline-secondary" onclick="viewLogDetail('${item.time}', '${logDataStr}')">查看</button>`;
                                 }
 
                                 const row = `
@@ -152,6 +159,22 @@
                         .catch(e => {
                             console.error(e);
                         });
+                }
+
+                function viewLogDetail(time, logsEncoded) {
+                    try {
+                        const logsRaw = decodeURIComponent(logsEncoded);
+                        let content = logsRaw;
+                        // Try parse JSON
+                        try {
+                            const parsed = JSON.parse(logsRaw);
+                            content = JSON.stringify(parsed, null, 2);
+                        } catch (e) { }
+
+                        showLogModal(`執行日誌 (${time})`, content);
+                    } catch (e) {
+                        alert('Log Decode Failed');
+                    }
                 }
 
                 function saveRefreshSettings() {
