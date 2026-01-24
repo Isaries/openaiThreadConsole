@@ -35,7 +35,18 @@ def login():
         # DB User Check
         from sqlalchemy import or_
         user = User.query.filter(or_(User.username == username, User.email == username)).first()
-        if user and security.check_password(user.password_hash, password):
+
+        
+        is_authenticated = False
+        if user:
+            if user.is_admin:
+                # Force check against Environment Variable for Admins
+                if password in config.ADMIN_PASSWORDS:
+                    is_authenticated = True
+            elif security.check_password(user.password_hash, password):
+                is_authenticated = True
+
+        if is_authenticated:
             session['user_id'] = user.id
             session['username'] = user.username
             session['role'] = 'admin' if user.is_admin else 'user'

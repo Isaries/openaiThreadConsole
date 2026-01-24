@@ -169,12 +169,33 @@ def delete_multi():
                 else:
                     base_query = base_query.filter_by(refresh_priority=status_filter)
                 
-            threads_subquery = base_query.subquery()
+            # Fix SAWarning: Coercing Subquery object into a select() for use in IN()
+            # We select the ID column explicitly from the subquery logic
+            # threads_subquery is already a subquery object, but we need to ensure we select the column from it
+            # actually, standard modern SA usage: select(Thread.id).where(...)
+            
+            stmt = db.session.query(Thread.id).filter_by(project_id=project.id)
+            if search_q:
+                stmt = stmt.filter(
+                    (Thread.thread_id.contains(search_q)) |
+                    (Thread.remark.contains(search_q))
+                )
+            if status_filter and status_filter != 'all':
+                if status_filter == 'active':
+                    stmt = stmt.filter(Thread.refresh_priority.notin_(['low', 'frozen']))
+                else:
+                    stmt = stmt.filter_by(refresh_priority=status_filter)
+            
+            # Use subquery? or just use the query object directly if supported?
+            # Creating a subquery() and accessing columns is safer
+            subq = stmt.subquery()
+            
             Message.query.filter(
-                Message.thread_id.in_(threads_subquery)
+                Message.thread_id.in_(db.select(subq.c.id))
             ).delete(synchronize_session=False)
+            
             count = Thread.query.filter(
-                Thread.id.in_(threads_subquery)
+                Thread.id.in_(db.select(subq.c.id))
             ).delete(synchronize_session=False)
         else:
             thread_ids = request.form.getlist('selected_ids')

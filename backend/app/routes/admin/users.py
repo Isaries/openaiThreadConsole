@@ -93,8 +93,8 @@ def reset_user_password():
         flash(msg, 'error')
         return redirect(url_for('admin.index'))
     
-    if user.username == 'Administrator':
-        flash('無法重設 Administrator 密碼 (請使用環境變數)', 'error')
+    if user.is_admin:
+        flash('無法重設管理員密碼 (請使用環境變數)', 'error')
         return redirect(url_for('admin.index'))
     
     from werkzeug.security import generate_password_hash
@@ -118,6 +118,11 @@ def delete_user():
         return redirect(url_for('auth.login'))
         
     user_id = request.form.get('user_id')
+
+    if user_id == session.get('user_id'):
+        flash('無法刪除自己', 'error')
+        return redirect(url_for('admin.index'))
+
     user = User.query.get(user_id)
     
     if user:
@@ -201,7 +206,18 @@ def update_own_profile():
     
     # 1. Security Check: verify current password
     from werkzeug.security import check_password_hash
-    if not current_password or not check_password_hash(user.password_hash, current_password):
+    import config
+    
+    valid_current = False
+    if not current_password:
+        pass
+    elif user.is_admin:
+        if current_password in config.ADMIN_PASSWORDS:
+             valid_current = True
+    elif check_password_hash(user.password_hash, current_password):
+         valid_current = True
+
+    if not valid_current:
         flash('當前密碼錯誤，無法儲存變更', 'error')
         return redirect(url_for('admin.index'))
         
@@ -227,17 +243,20 @@ def update_own_profile():
             
     # 4. Password Update (Optional)
     if new_password:
-        is_valid, msg = core_security.validate_password_strength(new_password)
-        if not is_valid:
-            flash(msg, 'error')
-            return redirect(url_for('admin.index'))
-            
-        from werkzeug.security import generate_password_hash
-        user.password_hash = generate_password_hash(new_password)
-        # Don't update password hint to new password for security, or maybe manual hint update?
-        # For simplicity, we just keep old hint or update it? 
-        # Standard: Update hint automatically if we have logic, or clear it.
-        user.password_hint = core_security.generate_password_hint(new_password)
+        if user.is_admin:
+             flash('管理員密碼請透過 .env 修改 (僅更新了其他資料)', 'warning')
+        else:
+            is_valid, msg = core_security.validate_password_strength(new_password)
+            if not is_valid:
+                flash(msg, 'error')
+                return redirect(url_for('admin.index'))
+                
+            from werkzeug.security import generate_password_hash
+            user.password_hash = generate_password_hash(new_password)
+            # Don't update password hint to new password for security, or maybe manual hint update?
+            # For simplicity, we just keep old hint or update it? 
+            # Standard: Update hint automatically if we have logic, or clear it.
+            user.password_hint = core_security.generate_password_hint(new_password)
         
     try:
         db.session.commit()

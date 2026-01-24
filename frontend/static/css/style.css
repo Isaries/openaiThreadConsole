@@ -8,7 +8,7 @@
 
 /* 2. Layout */
 @import 'layout/utils.css';
-@import 'layout/admin.css';
+
 
 /* 3. Components */
 @import 'components/buttons.css';
@@ -24,6 +24,7 @@
 @import 'pages/auth.css';
 @import 'pages/thread-list.css';
 @import 'pages/message.css';
+@import 'layout/admin.css';
 
 /* Custom Utilities */
 .star-icon {
