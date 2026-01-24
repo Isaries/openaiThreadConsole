@@ -51,10 +51,18 @@
                             <button type="button" class="btn btn-primary btn-sm" onclick="saveRefreshSettings()">
                                 儲存設定
                             </button>
-                            <button type="button" class="btn btn-secondary btn-sm ml-2"
-                                onclick="triggerManualRefresh()">
-                                立即手動執行
-                            </button>
+                            <div class="inline-flex ml-2">
+                                <button type="button" class="btn btn-secondary btn-sm"
+                                    style="border-top-right-radius: 0; border-bottom-right-radius: 0;"
+                                    onclick="triggerManualRefresh(false)">
+                                    立即執行 (標準)
+                                </button>
+                                <button type="button" class="btn btn-danger btn-sm"
+                                    style="border-top-left-radius: 0; border-bottom-left-radius: 0; border-left: 1px solid rgba(0,0,0,0.1);"
+                                    onclick="triggerManualRefresh(true)" title="忽略時間限制，強制刷新所有 Thread">
+                                    強制全量
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -194,8 +202,12 @@
                     }
                 }
 
-                function triggerManualRefresh() {
-                    if (!confirm('確定要立即執行全域刷新嗎？這可能會花費一些時間。')) return;
+                function triggerManualRefresh(force) {
+                    let msg = '確定要立即執行「標準刷新」嗎？\n\n系統將依照設定頻率，僅更新過期的資料。';
+                    if (force) {
+                        msg = '⚠️ 警告：您即將執行「強制全量刷新」！\n\n系統將無視時間限制，強制重新同步資料庫中的每一筆 Thread。\n這可能會花費較長時間並消耗大量 API 次數。\n\n確定要繼續嗎？';
+                    }
+                    if (!confirm(msg)) return;
 
                     const csrf = "{{ csrf_token() }}";
                     fetch('/admin/settings/refresh_now', {
@@ -203,7 +215,8 @@
                         headers: {
                             'Content-Type': 'application/json',
                             'X-CSRFToken': csrf
-                        }
+                        },
+                        body: JSON.stringify({ force: force }) // Send param
                     })
                         .then(r => r.json())
                         .then(data => {

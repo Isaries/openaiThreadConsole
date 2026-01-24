@@ -344,15 +344,21 @@ def run_global_refresh_logic(frequency_days=3, force_all=False):
                     
                     if should_refresh:
                         logger.info(f"Refeshing stale cache: {t.thread_id}")
-                        s, m = logic.sync_thread_to_db(t.thread_id, p.api_key, p.id)
-                        if s: 
-                            updated_count += 1
-                            pending_updates += 1
-                        else: 
+                        try:
+                            s, m = logic.sync_thread_to_db(t.thread_id, p.api_key, p.id)
+                            if s: 
+                                updated_count += 1
+                                pending_updates += 1
+                            else: 
+                                error_count += 1
+                                logger.warning(f"Failed to refresh {t.thread_id}: {m}")
+                                if len(error_logs) < 10: # Limit log size
+                                    error_logs.append(f"{t.thread_id}: {m}")
+                        except Exception as sync_err:
                             error_count += 1
-                            logger.warning(f"Failed to refresh {t.thread_id}: {m}")
-                            if len(error_logs) < 10: # Limit log size
-                                error_logs.append(f"{t.thread_id}: {m}")
+                            logger.error(f"CRITICAL Sync Error for {t.thread_id}: {sync_err}")
+                            if len(error_logs) < 10:
+                                error_logs.append(f"{t.thread_id}: CRITICAL {sync_err}")
                         
                         # Batch Commit (Every 50 updates) to prevent long transactions
                         if pending_updates >= 50:
@@ -413,30 +419,20 @@ def run_global_refresh_logic(frequency_days=3, force_all=False):
         return 0, 0 # Return 0 on failure
 
 @huey.task()
-def manual_global_refresh_task():
+def manual_global_refresh_task(force=False):
     """
     Manual global refresh triggered by Admin.
-    Forces a check on all threads (effectively force_all=True? Or just standard check?)
-    User asked for "Manual Global Refresh", usually implies running the check Now.
-    If we want to force re-download everything even if fresh, that's heavy.
-    Let's assume standard logic (respect frequency) but immediate execution.
-    BUT, usually "Run Now" implies "I want to update now".
-    Let's use frequency_days=0 which effectively makes everything stale.
+    If force=True, we bypass frequency check (force_all=True).
+    If force=False, we respect frequency settings (standard check).
     """
-    logger.info("Starting Manual Global Refresh Task")
-    # Using 3 days default? Or 0 to force? 
-    # Logic: Manual refresh usually means "I changed something, update it".
-    # So we use default frequency to "Check Now", but reuse the setting?
-    # Actually, let's load the setting to respect user preference, 
-    # OR, just run with default 3 days.
-    # User said "Manual Global Refresh", let's load current settings to be consistent.
+    logger.info(f"Starting Manual Global Refresh Task (Force={force})")
     
     settings = database.load_settings()
     config_data = settings.get('auto_refresh', {})
     frequency_days = int(config_data.get('frequency_days', 3))
     
-    # We run logic immediately.
-    run_global_refresh_logic(frequency_days=frequency_days)
+    # Run logic
+    run_global_refresh_logic(frequency_days=frequency_days, force_all=force)
 
 
 @huey.periodic_task(crontab(minute=0)) # Check every hour

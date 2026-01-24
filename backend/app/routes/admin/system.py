@@ -81,7 +81,9 @@ def trigger_manual_refresh():
         return jsonify({'error': 'Unauthorized'}), 403
         
     from ... import tasks
-    tasks.manual_global_refresh_task()
+    
+    force_refresh = request.json.get('force', False)
+    tasks.manual_global_refresh_task(force=force_refresh)
     
     # Log Audit
     log_audit(session.get('username'), 'Manual Refresh', 'Global')
