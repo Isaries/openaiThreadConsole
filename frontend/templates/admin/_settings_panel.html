@@ -153,12 +153,12 @@
 
                                 const row = `
                                     <tr style="border-bottom: 1px solid #f0f0f0;">
-                                        <td style="padding: 6px;" data-label="時間">${item.time}</td>
-                                        <td style="padding: 6px;" data-label="狀態"><span class="badge" style="background:${statusColor}; color:white; padding:2px 6px; font-size:0.75rem;">${item.status}</span></td>
-                                        <td style="padding: 6px;" data-label="耗時">${item.duration}</td>
-                                        <td style="padding: 6px;" data-label="更新/總數">${item.updated} / ${item.total}</td>
-                                        <td style="padding: 6px; color:${item.errors > 0 ? 'red' : 'inherit'}" data-label="錯誤">${item.errors}</td>
-                                        <td style="padding: 6px;" data-label="詳情">${logsHtml}</td>
+                                        <td data-label="時間">${item.time}</td>
+                                        <td data-label="狀態"><span class="badge" style="background:${statusColor}; color:white; padding:2px 6px; font-size:0.75rem;">${item.status}</span></td>
+                                        <td data-label="耗時">${item.duration}</td>
+                                        <td data-label="更新/總數">${item.updated} / ${item.total}</td>
+                                        <td style="color:${item.errors > 0 ? 'red' : 'inherit'}" data-label="錯誤">${item.errors}</td>
+                                        <td data-label="詳情">${logsHtml}</td>
                                     </tr>
                                 `;
                                 tbody.insertAdjacentHTML('beforeend', row);

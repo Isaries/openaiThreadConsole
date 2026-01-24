@@ -61,13 +61,12 @@ tr:hover {
         border-bottom: 1px solid #f0f0f0;
         position: relative;
         padding: 0.75rem 0.5rem;
-        display: flex;
-        justify-content: space-between;
-        /* Space between label and content */
-        align-items: flex-start;
-        /* Align to top for multi-line content */
+
+        display: grid;
+        grid-template-columns: 80px 1fr;
+        /* Fixed label width, flexible content */
         gap: 1rem;
-        /* Space between label and content */
+        align-items: start;
         text-align: right;
     }
 
@@ -82,11 +81,6 @@ tr:hover {
         color: var(--text-secondary);
         font-size: 0.8rem;
         text-align: left;
-        flex-shrink: 0;
-        /* Don't shrink label */
-        /* Fixed width or auto? Auto is better for flex */
-        /* width: 35%; removed absolute width */
-        min-width: 80px;
-        /* Ensure minimum space for label */
+        /* Remove flex properties */
     }
 }
