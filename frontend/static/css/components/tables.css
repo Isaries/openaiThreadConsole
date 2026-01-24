@@ -58,29 +58,35 @@ tr:hover {
 
     .table-responsive td {
         border: none;
+        border-bottom: 1px solid #f0f0f0;
         position: relative;
-        padding-left: 40%;
-        padding-top: 0.5rem;
-        padding-bottom: 0.5rem;
+        padding: 0.75rem 0.5rem;
         display: flex;
-        align-items: center;
+        justify-content: space-between;
+        /* Space between label and content */
+        align-items: flex-start;
+        /* Align to top for multi-line content */
+        gap: 1rem;
+        /* Space between label and content */
+        text-align: right;
+    }
 
-        /* Auto-wrap long text */
-        white-space: normal;
-        word-break: break-word;
-        overflow-wrap: anywhere;
+    .table-responsive td:last-child {
+        border-bottom: none;
     }
 
     /* Simulate headers */
     .table-responsive td::before {
-        position: absolute;
-        left: 0.75rem;
-        width: 35%;
-        padding-right: 10px;
-        white-space: nowrap;
+        content: attr(data-label);
         font-weight: 600;
         color: var(--text-secondary);
-        font-size: 0.75rem;
-        content: attr(data-label);
+        font-size: 0.8rem;
+        text-align: left;
+        flex-shrink: 0;
+        /* Don't shrink label */
+        /* Fixed width or auto? Auto is better for flex */
+        /* width: 35%; removed absolute width */
+        min-width: 80px;
+        /* Ensure minimum space for label */
     }
 }
