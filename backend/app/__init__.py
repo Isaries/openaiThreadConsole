@@ -62,7 +62,7 @@ def create_app():
             nonce = get_csp_nonce()
             policy = (
                 f"default-src 'self'; "
-                f"script-src 'self' 'unsafe-inline' 'nonce-{nonce}' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; "
+                f"script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; "
                 f"style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://fonts.googleapis.com https://cdn.jsdelivr.net; "
                 f"font-src 'self' https://cdnjs.cloudflare.com https://fonts.gstatic.com; "
                 f"img-src *; "
