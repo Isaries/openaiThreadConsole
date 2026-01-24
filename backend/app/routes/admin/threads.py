@@ -267,6 +267,7 @@ def refresh_threads_cache():
 
     select_all_pages = request.form.get('select_all_pages') == 'true'
     search_q = request.form.get('search_q', '').strip()
+    status_filter = request.form.get('status_filter', '').strip()
     thread_ids = []
 
     if select_all_pages:
