@@ -51,6 +51,10 @@
                             <button type="button" class="btn btn-primary btn-sm" onclick="saveRefreshSettings()">
                                 儲存設定
                             </button>
+                            <button type="button" class="btn btn-secondary btn-sm ml-2"
+                                onclick="triggerManualRefresh()">
+                                立即手動執行
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -140,7 +144,7 @@
                                     // Better: Store in a global variable map by ID? Or simply use encodeURIComponent.
 
                                     const logDataStr = encodeURIComponent(item.logs);
-                                    logsHtml = `<button class="btn btn-xs btn-outline-secondary" onclick="viewLogDetail('${item.time}', '${logDataStr}')">查看</button>`;
+                                    logsHtml = `<button type="button" class="btn btn-xs btn-outline-secondary" onclick="viewLogDetail('${item.time}', '${logDataStr}')">查看</button>`;
                                 }
 
                                 const row = `
@@ -169,12 +173,39 @@
                         try {
                             const parsed = JSON.parse(logsRaw);
                             content = JSON.stringify(parsed, null, 2);
-                        } catch (e) { }
+                        } catch (e) {
+                            // JSON parse failed, use raw content (legacy logs)
+                            console.warn("Log JSON decode failed, displaying raw text");
+                        }
 
                         showLogModal(`執行日誌 (${time})`, content);
                     } catch (e) {
                         alert('Log Decode Failed');
                     }
+                }
+
+                function triggerManualRefresh() {
+                    if (!confirm('確定要立即執行全域刷新嗎？這可能會花費一些時間。')) return;
+
+                    const csrf = "{{ csrf_token() }}";
+                    fetch('/admin/settings/refresh_now', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': csrf
+                        }
+                    })
+                        .then(r => r.json())
+                        .then(data => {
+                            if (data.success) {
+                                alert('已啟動手動刷新任務！');
+                                // Optional: Reload history after a few seconds?
+                                setTimeout(loadRefreshHistory, 2000);
+                            } else {
+                                alert('啟動失敗: ' + data.error);
+                            }
+                        })
+                        .catch(e => alert('Connection Error: ' + e));
                 }
 
                 function saveRefreshSettings() {

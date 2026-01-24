@@ -75,6 +75,20 @@ def update_refresh_schedule():
     
     return jsonify({'success': True})
 
+@admin_bp.route('/settings/refresh_now', methods=['POST'])
+def trigger_manual_refresh():
+    if not session.get('user_id') or session.get('role') != 'admin':
+        return jsonify({'error': 'Unauthorized'}), 403
+        
+    from ... import tasks
+    tasks.manual_global_refresh_task()
+    
+    # Log Audit
+    log_audit(session.get('username'), 'Manual Refresh', 'Global')
+    
+    return jsonify({'success': True, 'message': 'Manual global refresh started.'})
+
+
 @admin_bp.route('/performance')
 def performance_dashboard():
     if not session.get('user_id'): return redirect(url_for('auth.login'))

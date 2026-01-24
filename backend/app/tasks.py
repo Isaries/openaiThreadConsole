@@ -305,6 +305,140 @@ def search_task(project_id, target_name, start_date, end_date, api_key, group_id
 
 # --- Scheduled Tasks ---
 
+
+def run_global_refresh_logic(frequency_days=3, force_all=False):
+    """
+    Core logic for global refresh.
+    frequency_days: Staleness threshold.
+    force_all: If True, bypass staleness check (effectively frequency_days=0).
+    """
+    from .models import Project, RefreshHistory
+    from . import create_app
+    app = create_app()
+    
+    start_ts = time.time()
+    total_scanned = 0
+    updated_count = 0
+    error_count = 0
+    error_logs = []
+    
+    try:
+        with app.app_context():
+            projects = Project.query.all()
+            current_ts = int(time.time())
+            day_seconds = 86400
+            interval = frequency_days * day_seconds 
+            
+            # Batch Commit Counter
+            pending_updates = 0
+
+            for p in projects:
+                for t in p.threads:
+                    total_scanned += 1
+                    
+                    last_sync = t.last_synced_at or 0
+                    
+                    # Check staleness
+                    # If force_all is True, we skip interval check
+                    should_refresh = force_all or ((current_ts - last_sync) > interval)
+                    
+                    if should_refresh:
+                        logger.info(f"Refeshing stale cache: {t.thread_id}")
+                        s, m = logic.sync_thread_to_db(t.thread_id, p.api_key, p.id)
+                        if s: 
+                            updated_count += 1
+                            pending_updates += 1
+                        else: 
+                            error_count += 1
+                            logger.warning(f"Failed to refresh {t.thread_id}: {m}")
+                            if len(error_logs) < 10: # Limit log size
+                                error_logs.append(f"{t.thread_id}: {m}")
+                        
+                        # Batch Commit (Every 50 updates) to prevent long transactions
+                        if pending_updates >= 50:
+                            db.session.commit()
+                            pending_updates = 0
+                                
+                        time.sleep(0.5) # Rate Limit Protection
+            
+            # Final Commit for remaining
+            if pending_updates > 0:
+                db.session.commit()
+            
+            # --- Save History ---
+            duration = time.time() - start_ts
+            status = 'Success'
+            if error_count > 0:
+                status = 'Partial' if updated_count > 0 else 'Failed'
+                
+            history = RefreshHistory(
+                timestamp=int(start_ts),
+                duration=round(duration, 2),
+                result_status=status,
+                total_scanned=total_scanned,
+                updated_count=updated_count,
+                error_count=error_count,
+                log_json=json.dumps(error_logs, ensure_ascii=False)
+            )
+            db.session.add(history)
+            
+            # --- Cleanup Old History (> 30 Days) ---
+            cutoff_ts = int(start_ts) - (30 * 86400)
+            RefreshHistory.query.filter(RefreshHistory.timestamp < cutoff_ts).delete()
+            
+            db.session.commit()
+            
+            logger.info(f"Refresh Logic Completed. Updated: {updated_count}, Errors: {error_count}")
+            return updated_count, error_count
+
+    except Exception as e:
+        logger.error(f"Refresh CRITICAL FAILURE: {e}")
+        # Try to log failure to DB even if unexpected error
+        try:
+            with app.app_context():
+                duration = time.time() - start_ts
+                history = RefreshHistory(
+                    timestamp=int(start_ts),
+                    duration=round(duration, 2),
+                    result_status='Critical Failed',
+                    total_scanned=total_scanned,
+                    updated_count=updated_count,
+                    error_count=error_count + 1,
+                    log_json=json.dumps([f"System Error: {str(e)}"], ensure_ascii=False)
+                )
+                db.session.add(history)
+                db.session.commit()
+        except Exception as e:
+            logger.error(f"Failed to save refresh history: {e}")
+        return 0, 0 # Return 0 on failure
+
+@huey.task()
+def manual_global_refresh_task():
+    """
+    Manual global refresh triggered by Admin.
+    Forces a check on all threads (effectively force_all=True? Or just standard check?)
+    User asked for "Manual Global Refresh", usually implies running the check Now.
+    If we want to force re-download everything even if fresh, that's heavy.
+    Let's assume standard logic (respect frequency) but immediate execution.
+    BUT, usually "Run Now" implies "I want to update now".
+    Let's use frequency_days=0 which effectively makes everything stale.
+    """
+    logger.info("Starting Manual Global Refresh Task")
+    # Using 3 days default? Or 0 to force? 
+    # Logic: Manual refresh usually means "I changed something, update it".
+    # So we use default frequency to "Check Now", but reuse the setting?
+    # Actually, let's load the setting to respect user preference, 
+    # OR, just run with default 3 days.
+    # User said "Manual Global Refresh", let's load current settings to be consistent.
+    
+    settings = database.load_settings()
+    config_data = settings.get('auto_refresh', {})
+    frequency_days = int(config_data.get('frequency_days', 3))
+    
+    # We run logic immediately.
+    run_global_refresh_logic(frequency_days=frequency_days)
+
+
 @huey.periodic_task(crontab(minute=0)) # Check every hour
 def scheduled_refresh_task():
     logger.info("Starting Scheduled Refresh Check (Hourly)")
@@ -355,115 +489,33 @@ def scheduled_refresh_task():
             pass
             
     logger.info("Conditions met. Executing Refresh Logic...")
-
-    logger.info("Conditions met. Executing Refresh Logic...")
-
-    from .models import Project, RefreshHistory
-    from . import create_app
-    app = create_app()
     
-    start_ts = time.time()
-    total_scanned = 0
-    updated_count = 0
-    error_count = 0
-    error_logs = []
+    # Run Logic
+    updated, errors = run_global_refresh_logic(frequency_days=frequency_days)
     
+    # Update Last Run Time ONLY for Scheduled Task
+    # Update Last Run Time (Re-load to prevent Race Condition with Admin UI)
     try:
+        # Need app context for database load/save? logic runs inside app context.
+        # But here we are outside app context in the task wrapper.
+        # database.load_settings creates context if needed? NO.
+        # We need to create context or use the one inside logic?
+        # logic handles context internally.
+        # We should create context here for saving settings.
+        
+        from . import create_app
+        app = create_app()
         with app.app_context():
-            projects = Project.query.all()
-            current_ts = int(time.time())
-            day_seconds = 86400
-            interval = frequency_days * day_seconds 
-            
-            # Batch Commit Counter
-            pending_updates = 0
-
-            for p in projects:
-                for t in p.threads:
-                    total_scanned += 1
-                    
-                    last_sync = t.last_synced_at or 0
-                    
-                    # Double check against individual thread latency
-                    # Even if task runs, we only update stale threads
-                    if (current_ts - last_sync) > interval:
-                        logger.info(f"Refeshing stale cache: {t.thread_id}")
-                        s, m = logic.sync_thread_to_db(t.thread_id, p.api_key, p.id)
-                        if s: 
-                            updated_count += 1
-                            pending_updates += 1
-                        else: 
-                            error_count += 1
-                            logger.warning(f"Failed to refresh {t.thread_id}: {m}")
-                            if len(error_logs) < 10: # Limit log size
-                                error_logs.append(f"{t.thread_id}: {m}")
-                        
-                        # Batch Commit (Every 50 updates) to prevent long transactions
-                        if pending_updates >= 50:
-                            db.session.commit()
-                            pending_updates = 0
-                                
-                        time.sleep(0.5) # Rate Limit Protection
-            
-            # Final Commit for remaining
-            if pending_updates > 0:
-                db.session.commit()
-            
-            # --- Save History ---
-            duration = time.time() - start_ts
-            status = 'Success'
-            if error_count > 0:
-                status = 'Partial' if updated_count > 0 else 'Failed'
-                
-            history = RefreshHistory(
-                timestamp=int(start_ts),
-                duration=round(duration, 2),
-                result_status=status,
-                total_scanned=total_scanned,
-                updated_count=updated_count,
-                error_count=error_count,
-                log_json=json.dumps(error_logs, ensure_ascii=False)
-            )
-            db.session.add(history)
-            
-            # --- Cleanup Old History (> 30 Days) ---
-            cutoff_ts = int(start_ts) - (30 * 86400)
-            RefreshHistory.query.filter(RefreshHistory.timestamp < cutoff_ts).delete()
-            
-            db.session.commit()
-                        
-            # Update Last Run Time
-            # Update Last Run Time (Re-load to prevent Race Condition with Admin UI)
             current_settings = database.load_settings()
             current_config = current_settings.get('auto_refresh', {})
             
-            # Update only the timestamp, keeping other admin-set values (enabled, hour, freq)
             current_config['last_run'] = now.isoformat()
             current_settings['auto_refresh'] = current_config
             
             database.save_settings(current_settings)
-            logger.info(f"Scheduled Refresh Completed. Updated: {updated_count}, Errors: {error_count}")
-
-
+            
     except Exception as e:
-        logger.error(f"Scheduled Refresh CRITICAL FAILURE: {e}")
-        # Try to log failure to DB even if unexpected error
-        try:
-            with app.app_context():
-                duration = time.time() - start_ts
-                history = RefreshHistory(
-                    timestamp=int(start_ts),
-                    duration=round(duration, 2),
-                    result_status='Critical Failed',
-                    total_scanned=total_scanned,
-                    updated_count=updated_count,
-                    error_count=error_count + 1,
-                    log_json=json.dumps([f"System Error: {str(e)}"], ensure_ascii=False)
-                )
-                db.session.add(history)
-                db.session.commit()
-        except Exception as e:
-            logger.error(f"Failed to save refresh history: {e}")
+        logger.error(f"Failed to update last run time: {e}")
                     
 
 @huey.task()
