@@ -432,17 +432,18 @@ def scheduled_refresh_task():
             
             db.session.commit()
                         
-        # Update Last Run Time
-        # Update Last Run Time (Re-load to prevent Race Condition with Admin UI)
-        current_settings = database.load_settings()
-        current_config = current_settings.get('auto_refresh', {})
-        
-        # Update only the timestamp, keeping other admin-set values (enabled, hour, freq)
-        current_config['last_run'] = now.isoformat()
-        current_settings['auto_refresh'] = current_config
-        
-        database.save_settings(current_settings)
-        logger.info(f"Scheduled Refresh Completed. Updated: {updated_count}, Errors: {error_count}")
+            # Update Last Run Time
+            # Update Last Run Time (Re-load to prevent Race Condition with Admin UI)
+            current_settings = database.load_settings()
+            current_config = current_settings.get('auto_refresh', {})
+            
+            # Update only the timestamp, keeping other admin-set values (enabled, hour, freq)
+            current_config['last_run'] = now.isoformat()
+            current_settings['auto_refresh'] = current_config
+            
+            database.save_settings(current_settings)
+            logger.info(f"Scheduled Refresh Completed. Updated: {updated_count}, Errors: {error_count}")
+
 
     except Exception as e:
         logger.error(f"Scheduled Refresh CRITICAL FAILURE: {e}")

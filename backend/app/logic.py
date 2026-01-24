@@ -100,7 +100,7 @@ def fetch_thread_messages(thread_id, api_key=None):
                     logging.getLogger().warning(f"Partial fetch for {thread_id}: {response.status_code}")
                     break 
                 else: 
-                     return None
+                     return {'error': f"HTTP {response.status_code}"}
             
             data = response.json()
             messages = data.get('data', [])
@@ -114,7 +114,7 @@ def fetch_thread_messages(thread_id, api_key=None):
         return {'data': all_messages}
     except Exception as e:
         logging.getLogger().error(f"Fetch error {thread_id}: {e}")
-        return None
+        return {'error': str(e)}
 
 
 def calculate_messages_tokens(messages_data):
@@ -348,7 +348,8 @@ def sync_thread_to_db(thread_id_str, api_key=None, project_id=None, force_active
         if not api_response or 'data' not in api_response:
              # Check if it was because of empty? 
              # If fetch returns None, it's error.
-             return False, 'API Error'
+             error_msg = api_response.get('error', 'Unknown API Error') if api_response else 'API Connection Failed'
+             return False, error_msg
         
         messages_data = api_response['data']
         
