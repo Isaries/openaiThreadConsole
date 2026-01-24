@@ -15,7 +15,9 @@
 
     <div class="flex items-center gap-4">
         <div class="text-sm text-secondary desktop-only">
-            <span onclick="openProfileModal('{{ session.get('username') }}', '{{ current_user_email or '' }}')"
+            <span id="profileTrigger" data-username="{{ session.get('username') }}"
+                data-email="{{ current_user_email or '' }}"
+                onclick="openProfileModal(this.dataset.username, this.dataset.email)"
                 style="cursor: pointer; display: flex; align-items: center; gap: 4px; padding: 4px 8px; border-radius: 4px; transition: background 0.2s;"
                 onmouseover="this.style.background='#f3f4f6'" onmouseout="this.style.background='transparent'"
                 title="編輯個人資料">

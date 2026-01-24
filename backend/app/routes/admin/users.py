@@ -180,8 +180,6 @@ def update_user():
         flash('更新失敗，請稍後再試', 'error')
     
     return redirect(url_for('admin.index'))
-    
-    return redirect(url_for('admin.index'))
 
 @admin_bp.route('/user/profile/update', methods=['POST'])
 def update_own_profile():
