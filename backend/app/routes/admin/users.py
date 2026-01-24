@@ -180,3 +180,74 @@ def update_user():
         flash('更新失敗，請稍後再試', 'error')
     
     return redirect(url_for('admin.index'))
+    
+    return redirect(url_for('admin.index'))
+
+@admin_bp.route('/user/profile/update', methods=['POST'])
+def update_own_profile():
+    if not session.get('user_id'):
+        return redirect(url_for('auth.login'))
+        
+    user_id = session.get('user_id')
+    user = User.query.get(user_id)
+    
+    if not user:
+        session.clear()
+        return redirect(url_for('auth.login'))
+
+    # Inputs
+    new_username = request.form.get('username', '').strip()
+    new_email = request.form.get('email', '').strip()
+    new_password = request.form.get('new_password', '').strip()
+    current_password = request.form.get('current_password', '').strip()
+    
+    # 1. Security Check: verify current password
+    from werkzeug.security import check_password_hash
+    if not current_password or not check_password_hash(user.password_hash, current_password):
+        flash('當前密碼錯誤，無法儲存變更', 'error')
+        return redirect(url_for('admin.index'))
+        
+    # 2. Username Update
+    if new_username and new_username != user.username:
+        if User.query.filter_by(username=new_username).first():
+            flash('此名稱已被使用', 'error')
+            return redirect(url_for('admin.index'))
+        user.username = new_username
+        session['username'] = new_username # Update session
+        
+    # 3. Email Update
+    if new_email != (user.email or ''):
+        if new_email:
+            # Check duplicate
+            existing = User.query.filter_by(email=new_email).first()
+            if existing and existing.id != user.id:
+                flash('此 Email 已被其他帳號使用', 'error')
+                return redirect(url_for('admin.index'))
+            user.email = new_email
+        else:
+            user.email = None
+            
+    # 4. Password Update (Optional)
+    if new_password:
+        is_valid, msg = core_security.validate_password_strength(new_password)
+        if not is_valid:
+            flash(msg, 'error')
+            return redirect(url_for('admin.index'))
+            
+        from werkzeug.security import generate_password_hash
+        user.password_hash = generate_password_hash(new_password)
+        # Don't update password hint to new password for security, or maybe manual hint update?
+        # For simplicity, we just keep old hint or update it? 
+        # Standard: Update hint automatically if we have logic, or clear it.
+        user.password_hint = core_security.generate_password_hint(new_password)
+        
+    try:
+        db.session.commit()
+        log_audit('Update Profile', user.username)
+        flash('個人資料更新成功', 'success')
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Failed to update profile: {e}")
+        flash('更新失敗，請稍後再試', 'error')
+        
+    return redirect(url_for('admin.index'))

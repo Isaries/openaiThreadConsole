@@ -45,4 +45,45 @@
             </div>
         </form>
     </div>
+    </form>
+</div>
+</div>
+
+<div id="profileModal" class="flex items-center justify-center"
+    style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; z-index: var(--z-modal); pointer-events: none;">
+    <div style="position:absolute; inset:0; background:rgba(0,0,0,0.5); pointer-events: auto;"
+        onclick="closeProfileModal()"></div>
+    <div class="card" style="width: 350px; pointer-events: auto; position: relative; z-index: 2002; margin: 0;">
+        <h3>編輯個人資料</h3>
+        <form action="/admin/user/profile/update" method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+            <div class="form-group">
+                <label>顯示名稱</label>
+                <input type="text" name="username" id="profileUsername" required class="input">
+            </div>
+            <div class="form-group">
+                <label>Email</label>
+                <input type="email" name="email" id="profileEmail" class="input">
+            </div>
+
+            <hr style="margin: 1rem 0; border: 0; border-top: 1px dashed #eee;">
+
+            <div class="form-group">
+                <label>新密碼 (若不修改請留空)</label>
+                <input type="password" name="new_password" placeholder="輸入新密碼..." class="input">
+            </div>
+
+            <div class="form-group">
+                <label style="color: var(--primary);">當前密碼 (驗證用, 必填)</label>
+                <input type="password" name="current_password" required placeholder="輸入當前密碼以儲存..." class="input"
+                    style="border-color: var(--primary);">
+            </div>
+
+            <div class="flex justify-end gap-2">
+                <button type="button" class="btn btn-secondary btn-sm" onclick="closeProfileModal()">取消</button>
+                <button type="submit" class="btn btn-primary btn-sm">儲存變更</button>
+            </div>
+        </form>
+    </div>
 </div>

@@ -77,6 +77,15 @@ function closeEditUserModal() {
     document.getElementById('editUserModal').style.display = 'none';
 }
 
+function openProfileModal(username, email) {
+    document.getElementById('profileUsername').value = username;
+    document.getElementById('profileEmail').value = email;
+    document.getElementById('profileModal').style.display = 'flex';
+}
+function closeProfileModal() {
+    document.getElementById('profileModal').style.display = 'none';
+}
+
 // Smart ID
 const manualInput = document.getElementById('manual_thread_input');
 if (manualInput) {

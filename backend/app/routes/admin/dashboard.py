@@ -157,8 +157,10 @@ def index():
         'masked_key': masked_key,
         'auto_refresh_settings': database.load_settings().get('auto_refresh', {}),
         'username': session.get('username'),
+        'current_user_email': curr_user.email if session.get('user_id') and (curr_user := User.query.get(session['user_id'])) else None,
         'current_role': session.get('role'),
         'my_bookmarks': my_bookmarks,
+
         'bookmarked_ids': bookmarked_ids,
     }
 

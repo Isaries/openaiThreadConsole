@@ -15,7 +15,12 @@
 
     <div class="flex items-center gap-4">
         <div class="text-sm text-secondary desktop-only">
-            👤 {{ session.get('username') }}
+            <span onclick="openProfileModal('{{ session.get('username') }}', '{{ current_user_email or '' }}')"
+                style="cursor: pointer; display: flex; align-items: center; gap: 4px; padding: 4px 8px; border-radius: 4px; transition: background 0.2s;"
+                onmouseover="this.style.background='#f3f4f6'" onmouseout="this.style.background='transparent'"
+                title="編輯個人資料">
+                👤 {{ session.get('username') }}
+            </span>
         </div>
         <a href="/" class="btn btn-secondary btn-sm">🔍 前往搜尋</a>
         <a href="/logout" class="btn btn-danger btn-sm">登出</a>
