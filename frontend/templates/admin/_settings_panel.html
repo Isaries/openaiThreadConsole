@@ -104,6 +104,8 @@
                     // loadRefreshHistory(); // Removed: Lazy load instead
                 });
 
+                // Global Log Map to avoid encoding issues
+                window.logDataMap = {};
                 let hasLoadedHistory = false;
 
                 function loadRefreshHistoryIfNeeded() {
@@ -130,7 +132,7 @@
                                 return;
                             }
 
-                            resp.data.forEach(item => {
+                            resp.data.forEach((item, index) => {
                                 let statusColor = 'green';
                                 if (item.status === 'Partial') statusColor = 'orange';
                                 if (item.status === 'Failed' || item.status === 'Critical Failed') statusColor = 'red';
@@ -143,8 +145,9 @@
                                     // Encoding potentially large string in HTML attribute is risky.
                                     // Better: Store in a global variable map by ID? Or simply use encodeURIComponent.
 
-                                    const logDataStr = encodeURIComponent(item.logs);
-                                    logsHtml = `<button type="button" class="btn btn-xs btn-outline-secondary" onclick="viewLogDetail('${item.time}', '${logDataStr}')">查看</button>`;
+                                    const logId = 'log_' + index + '_' + Date.now();
+                                    window.logDataMap[logId] = item.logs;
+                                    logsHtml = `<button type="button" class="btn btn-xs btn-outline-secondary" onclick="viewLogDetail('${item.time}', '${logId}')">查看</button>`;
                                 }
 
                                 const row = `
@@ -165,10 +168,16 @@
                         });
                 }
 
-                function viewLogDetail(time, logsEncoded) {
+                function viewLogDetail(time, logId) {
                     try {
-                        const logsRaw = decodeURIComponent(logsEncoded);
+                        const logsRaw = window.logDataMap[logId];
                         let content = logsRaw;
+
+                        if (!content) {
+                            alert('Log not found in memory');
+                            return;
+                        }
+
                         // Try parse JSON
                         try {
                             const parsed = JSON.parse(logsRaw);
@@ -180,7 +189,7 @@
 
                         showLogModal(`執行日誌 (${time})`, content);
                     } catch (e) {
-                        alert('Log Decode Failed');
+                        alert('Log Display Error: ' + e);
                     }
                 }
 
