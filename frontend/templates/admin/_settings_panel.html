@@ -104,7 +104,7 @@
             </div> <!-- End of Auto-Refresh Global Settings Container -->
             <!-- </div> removed to include rest of form in settingsSection -->
 
-            <script>
+            <script nonce="{{ csp_nonce() }}">
                 // Auto-correction for Frequency Input
                 document.addEventListener('DOMContentLoaded', function () {
                     const freqInput = document.getElementById('refresh_frequency');

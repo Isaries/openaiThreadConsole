@@ -19,7 +19,7 @@
     </div>
 </div>
 
-<script>
+<script nonce="{{ csp_nonce() }}">
     function showLogModal(title, content) {
         document.getElementById('logModalTitle').innerText = title || 'Log Details';
         document.getElementById('logModalContent').innerText = content || 'No content';

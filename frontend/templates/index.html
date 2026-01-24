@@ -67,7 +67,7 @@
 
                 <!-- Data Source for JS -->
                 <!-- Data Source for JS -->
-                <script id="projects-data" type="application/json">
+                <script id="projects-data" type="application/json" nonce="{{ csp_nonce() }}">
                     [
                         {% for group in groups %}
                         {
@@ -78,7 +78,7 @@
                         {% endfor %}
                     ]
                 </script>
-                <script>
+                <script nonce="{{ csp_nonce() }}">
                     const ALL_PROJECTS = JSON.parse(document.getElementById('projects-data').textContent);
                 </script>
             </div>

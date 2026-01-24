@@ -186,7 +186,7 @@
     </div>
     {% endfor %}
 
-    <script>
+    <script nonce="{{ csp_nonce() }}">
         // Auto print on load option (configured server side if needed)
         // window.onload = function() { window.print(); }
     </script>

@@ -21,12 +21,7 @@ def login():
         username = request.form.get('username')
         password = request.form.get('password')
         
-        # Admin Bypass (from env)
-        # Validate Admin Password from Config (Global Search)
-        import sys
-        if not 'config' in sys.modules:
-             pass
-        import config
+        
 
         if not username or not password:
              flash('請輸入帳號與密碼', 'error')
@@ -39,11 +34,7 @@ def login():
         
         is_authenticated = False
         if user:
-            if user.is_admin:
-                # Force check against Environment Variable for Admins
-                if password in config.ADMIN_PASSWORDS:
-                    is_authenticated = True
-            elif security.check_password(user.password_hash, password):
+            if security.check_password(user.password_hash, password):
                 is_authenticated = True
 
         if is_authenticated:

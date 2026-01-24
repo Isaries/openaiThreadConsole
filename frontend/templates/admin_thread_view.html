@@ -74,7 +74,7 @@
             <p>系統正在從後台獲取數據，請稍候。</p>
             <p style="font-size: 0.9em; color: #666;">頁面將在 5 秒後自動刷新。</p>
             <div class="loader" style="margin: 20px auto;"></div>
-            <script>
+            <script nonce="{{ csp_nonce() }}">
                 setTimeout(function () {
                     window.location.reload();
                 }, 5000);
@@ -102,7 +102,8 @@
     <!-- CSRF Token for JS -->
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"
+        nonce="{{ csp_nonce() }}"></script>
     <script src="{{ url_for('static', filename='js/admin_thread_view.js') }}"></script>
     <!-- Include admin_list.js for editRemark and others -->
     <script src="{{ url_for('static', filename='js/admin_list.js') }}?v=1.2"></script>

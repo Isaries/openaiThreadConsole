@@ -42,16 +42,30 @@ def create_app():
         from . import commands
         commands.ensure_admin_exists()
     
-    # Security Headers
-    csp = {
-        'default-src': ["'self'"],
-        'script-src': ["'self'", "'unsafe-inline'", "https://cdnjs.cloudflare.com", "https://cdn.jsdelivr.net"],
-        'style-src': ["'self'", "'unsafe-inline'", "https://cdnjs.cloudflare.com", "https://fonts.googleapis.com", "https://cdn.jsdelivr.net"],
-        'font-src': ["'self'", "https://cdnjs.cloudflare.com", "https://fonts.gstatic.com"],
-        'img-src': ["*"],
-        'connect-src': ["'self'", "https://cdnjs.cloudflare.com", "https://cdn.jsdelivr.net"]
-    }
-    Talisman(app, content_security_policy=csp, force_https=False)
+    # CSP Nonce Logic
+    import base64
+    def get_csp_nonce():
+        if not getattr(request, 'csp_nonce', None):
+            request.csp_nonce = base64.b64encode(os.urandom(16)).decode()
+        return request.csp_nonce
+
+    app.jinja_env.globals['csp_nonce'] = get_csp_nonce
+
+
+    
+    # Dynamic CSP Builder ensuring nonce is added
+    def csp_policy():
+         nonce = get_csp_nonce()
+         return {
+            'default-src': ["'self'"],
+            'script-src': ["'self'", f"'nonce-{nonce}'", "'unsafe-inline'", "https://cdnjs.cloudflare.com", "https://cdn.jsdelivr.net"],
+            'style-src': ["'self'", "'unsafe-inline'", "https://cdnjs.cloudflare.com", "https://fonts.googleapis.com", "https://cdn.jsdelivr.net"], # Keeping unsafe-inline for style is often necessary for JS layout libs unless refactored heavily
+            'font-src': ["'self'", "https://cdnjs.cloudflare.com", "https://fonts.gstatic.com"],
+            'img-src': ["*"],
+            'connect-src': ["'self'", "https://cdnjs.cloudflare.com", "https://cdn.jsdelivr.net"]
+         }
+
+    Talisman(app, content_security_policy=csp_policy, force_https=False)
     
     # Register Blueprints
     app.register_blueprint(auth_bp)

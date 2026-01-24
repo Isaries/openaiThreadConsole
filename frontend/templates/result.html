@@ -62,7 +62,8 @@
         </div>
         {% endif %}
 
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"
+            nonce="{{ csp_nonce() }}"></script>
 
         <!-- Removed Form Wrapper -->
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -112,10 +113,10 @@
     <button id="scrollTopBtn" class="scroll-top-btn" title="回到頂部">↑</button>
 
     <!-- Result Configurations -->
-    <script type="application/json" id="server-data-debug-log">
+    <script type="application/json" id="server-data-debug-log" nonce="{{ csp_nonce() }}">
         {{ debug_log | default([]) | tojson | safe }}
     </script>
-    <script>
+    <script nonce="{{ csp_nonce() }}">
         window.THREAD_CONFIG = {
             totalPages: parseInt("{{ total_pages | default(1) }}", 10),
             currentPage: parseInt("{{ current_page | default(0) }}", 10),
