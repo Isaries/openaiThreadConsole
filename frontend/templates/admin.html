@@ -9,15 +9,16 @@
 
 
         <!-- Bookmarks Section -->
-        <div class="mb-4" style="margin-bottom: 1.5rem;">
+        <div class="mb-4" style="margin-bottom: 1.5rem;" id="sidebar-bookmarks-container">
             <div
                 style="font-size: 0.7rem; font-weight: 600; color: #f59e0b; text-transform: uppercase; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 4px;">
                 <span>⭐ 我的收藏</span>
-                <span class="text-xs" style="opacity: 0.7; font-weight: normal;">({{ my_bookmarks|length }})</span>
+                <span class="text-xs" style="opacity: 0.7; font-weight: normal;" id="sidebar-bookmarks-count">({{
+                    my_bookmarks|length }})</span>
             </div>
 
-            {% if my_bookmarks %}
-            <div class="flex flex-col gap-1">
+            <!-- Bookmark List (Always Rendered) -->
+            <div id="sidebar-bookmarks-list" class="flex flex-col gap-1">
                 {% for b in my_bookmarks %}
                 <a href="/admin/threads/view/{{ b.thread_id }}?group_id={{ b.project_id }}"
                     class="btn btn-block sidebar-item"
@@ -37,11 +38,12 @@
                 </a>
                 {% endfor %}
             </div>
-            {% else %}
-            <div class="text-xs text-secondary" style="padding: 0.5rem 0; font-style: italic;">
+
+            <!-- Empty State (Toggled via JS/CSS) -->
+            <div id="sidebar-bookmarks-empty" class="text-xs text-secondary"
+                style="padding: 0.5rem 0; font-style: italic;" {% if my_bookmarks %}hidden{% endif %}>
                 尚無收藏項目
             </div>
-            {% endif %}
         </div>
 
         <hr style="margin: 1rem 0; border: 0; border-top: 1px solid var(--surface-border);">

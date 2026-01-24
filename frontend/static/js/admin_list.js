@@ -236,7 +236,6 @@
     });
 
     // Bookmark Logic
-    // Bookmark Logic
     window.toggleBookmark = function (element, threadId, event) {
         // Prevent row click if any
         if (event) {
@@ -276,9 +275,11 @@
                     if (isCurrentlyActive) {
                         starSpan.classList.add('active');
                         starSpan.innerText = '★';
+                        starSpan.style.color = '#f59e0b';
                     } else {
                         starSpan.classList.remove('active');
                         starSpan.innerText = '☆';
+                        starSpan.style.color = '#ccc';
                     }
                     updateSidebarCount(newStatus ? -1 : 1); // Revert count
                     alert('操作失敗: ' + (data.error || 'Unknown'));
@@ -286,16 +287,21 @@
                     console.log('Bookmark toggled:', data.action);
 
                     // Update sidebar items dynamically
+                    const listContainer = document.getElementById('sidebar-bookmarks-list');
+                    const emptyMsg = document.getElementById('sidebar-bookmarks-empty');
+
                     if (data.action === 'removed') {
                         // Remove from sidebar
-                        const sidebarLink = document.querySelector(`.sidebar-item[href*="${threadId}"]`);
+                        // Use attribute selector searching within the list container
+                        const sidebarLink = listContainer ? listContainer.querySelector(`a[href*="/view/${threadId}"]`) : null;
+
                         if (sidebarLink) {
                             sidebarLink.remove();
-                            // Check if sidebar is now empty
-                            const bookmarkContainer = document.querySelector('.mb-4 .flex.flex-col.gap-1');
-                            if (bookmarkContainer && bookmarkContainer.children.length === 0) {
-                                bookmarkContainer.innerHTML = '<div class="text-xs text-secondary" style="padding: 0.5rem 0; font-style: italic;">尚無收藏項目</div>';
-                            }
+                        }
+
+                        // Check if sidebar is now empty
+                        if (listContainer && listContainer.children.length === 0) {
+                            if (emptyMsg) emptyMsg.style.display = 'block';
                         }
 
                         // Also update the star in the table if visible
@@ -307,12 +313,13 @@
                                 if (starCell) {
                                     starCell.classList.remove('active');
                                     starCell.innerText = '☆';
+                                    starCell.style.color = '#ccc';
                                 }
                             }
                         });
                     } else if (data.action === 'added') {
-                        // Add to sidebar (need remark info)
-                        // Try to get from table row first (when clicking from list)
+                        // Add to sidebar
+                        // Try to get remark from table row
                         let remarkText = threadId;
                         let projectId = '';
 
@@ -320,46 +327,46 @@
                         if (tableRow) {
                             const remarkCell = tableRow.querySelector('.editable-remark');
                             if (remarkCell) {
-                                // Get the actual displayed text, not the dataset
                                 const displayedText = remarkCell.innerText.trim();
-                                // Only use it if it's not the edit icon placeholder
                                 if (displayedText && displayedText !== '✏️') {
                                     remarkText = displayedText;
                                 }
-                                // Also try to get from dataset as fallback
                                 if (!remarkText || remarkText === threadId) {
                                     remarkText = remarkCell.dataset.remark || threadId;
                                 }
                                 projectId = remarkCell.dataset.projectId || remarkCell.dataset.groupId || '';
                             }
+                            // Fallback to active group if not found on row
+                            if (!projectId) {
+                                projectId = new URLSearchParams(window.location.search).get('group_id') || '';
+                            }
                         }
 
-                        // If remark is just the edit icon, use threadId
                         if (remarkText === '✏️') remarkText = threadId;
 
-                        const bookmarkContainer = document.querySelector('.mb-4 .flex.flex-col.gap-1');
-                        if (bookmarkContainer) {
-                            // Remove "no items" message if exists
-                            const emptyMsg = bookmarkContainer.querySelector('.text-xs.text-secondary');
-                            if (emptyMsg) emptyMsg.remove();
+                        if (listContainer) {
+                            // Hide "no items" message
+                            if (emptyMsg) emptyMsg.style.display = 'none';
 
-                            // Create new bookmark item
-                            const newItem = document.createElement('a');
-                            newItem.href = `/admin/threads/view/${threadId}?group_id=${projectId}`;
-                            newItem.className = 'btn btn-block sidebar-item';
-                            newItem.style.cssText = 'display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem; font-size: 0.85rem; border-left: 2px solid transparent; justify-content: space-between;';
-                            newItem.innerHTML = `
-                                <div style="display: flex; align-items: center; gap: 0.5rem; overflow: hidden;">
-                                    <span class="star-icon active" style="font-size: 1rem;">★</span>
-                                    <div style="text-overflow: ellipsis; overflow: hidden; white-space: nowrap; max-width: 120px;" title="${threadId}">
-                                        ${remarkText || threadId}
+                            // Check if already exists to prevent duplicates (rare race condition)
+                            if (!listContainer.querySelector(`a[href*="/view/${threadId}"]`)) {
+                                const newItem = document.createElement('a');
+                                newItem.href = `/admin/threads/view/${threadId}?group_id=${projectId}`;
+                                newItem.className = 'btn btn-block sidebar-item';
+                                newItem.style.cssText = 'display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem; font-size: 0.85rem; border-left: 2px solid transparent; justify-content: space-between;';
+                                newItem.innerHTML = `
+                                    <div style="display: flex; align-items: center; gap: 0.5rem; overflow: hidden;">
+                                        <span class="star-icon active" style="font-size: 1rem;">★</span>
+                                        <div style="text-overflow: ellipsis; overflow: hidden; white-space: nowrap; max-width: 120px;" title="${threadId}">
+                                            ${remarkText || threadId}
+                                        </div>
                                     </div>
-                                </div>
-                                <span onclick="event.preventDefault(); toggleBookmark(this.parentElement, '${threadId}', event)" 
-                                      class="sidebar-unbookmark-btn" title="移除收藏"
-                                      style="cursor: pointer; opacity: 0.5; font-size: 0.9rem; padding: 2px;">✖</span>
-                            `;
-                            bookmarkContainer.insertBefore(newItem, bookmarkContainer.firstChild);
+                                    <span onclick="event.preventDefault(); toggleBookmark(this.parentElement, '${threadId}', event)" 
+                                          class="sidebar-unbookmark-btn" title="移除收藏"
+                                          style="cursor: pointer; opacity: 0.5; font-size: 0.9rem; padding: 2px;">✖</span>
+                                `;
+                                listContainer.insertBefore(newItem, listContainer.firstChild);
+                            }
                         }
                     }
                 }
@@ -369,16 +376,19 @@
                 if (isCurrentlyActive) {
                     starSpan.classList.add('active');
                     starSpan.innerText = '★';
+                    starSpan.style.color = '#f59e0b';
                 } else {
                     starSpan.classList.remove('active');
                     starSpan.innerText = '☆';
+                    starSpan.style.color = '#ccc';
                 }
                 updateSidebarCount(newStatus ? -1 : 1); // Revert count
+                console.error(err);
             });
     }
 
     function updateSidebarCount(delta) {
-        const countSpan = document.querySelector('#sidebar .text-xs[style*="font-weight: normal"]');
+        const countSpan = document.getElementById('sidebar-bookmarks-count');
         if (countSpan) {
             const match = countSpan.innerText.match(/\((\d+)\)/);
             if (match) {
