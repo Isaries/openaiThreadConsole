@@ -5,8 +5,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>管理員查看 - {{ result.data.thread_id }}</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/admin_thread_view.css') }}">
+    <link rel="stylesheet" href="{{ hashed_url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="{{ hashed_url_for('static', filename='css/admin_thread_view.css') }}">
 </head>
 
 <body>
@@ -104,9 +104,9 @@
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"
         nonce="{{ csp_nonce() }}"></script>
-    <script src="{{ url_for('static', filename='js/admin_thread_view.js') }}"></script>
+    <script src="{{ hashed_url_for('static', filename='js/admin_thread_view.js') }}"></script>
     <!-- Include admin_list.js for editRemark and others -->
-    <script src="{{ url_for('static', filename='js/admin_list.js') }}?v=1.2"></script>
+    <script src="{{ hashed_url_for('static', filename='js/admin_list.js') }}"></script>
 </body>
 
 </html>

@@ -147,5 +147,5 @@
 </div>
 
 {% include "admin/_modals.html" %}
-<script src="{{ url_for('static', filename='js/admin_list.js') }}?v=1.1"></script>
+<script src="{{ hashed_url_for('static', filename='js/admin_list.js') }}"></script>
 {% endblock %}
