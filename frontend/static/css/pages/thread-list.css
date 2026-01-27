@@ -59,54 +59,61 @@
     /* Grid Layout */
     .thread-list-table tr {
         display: grid;
-        grid-template-columns: auto 1fr auto;
-        /* Checkbox | Content | Space */
+        grid-template-columns: auto auto 1fr;
+        /* Checkbox | Star | Content */
         gap: 0.5rem;
         padding: 1rem;
         position: relative;
         border-bottom: 1px solid var(--surface-border);
     }
 
-    .thread-list-table td {
-        display: block;
-        padding: 0;
-        border: none !important;
-    }
-
     /* Col 1: Checkbox */
     .thread-list-table td:nth-child(1) {
         grid-column: 1;
         grid-row: 1 / span 3;
-        /* Spans height of card roughly */
         display: flex;
         align-items: center;
     }
 
-    /* Col 2: Thread ID (Title) */
+    /* Col 2: Star (New) */
     .thread-list-table td:nth-child(2) {
         grid-column: 2;
+        grid-row: 1;
+        display: flex;
+        align-items: center;
+        padding-right: 0.5rem;
+    }
+
+    /* Col 3: Thread ID (Title) */
+    .thread-list-table td:nth-child(3) {
+        grid-column: 3;
         grid-row: 1;
         font-weight: 600;
         font-size: 1rem;
         margin-bottom: 0.25rem;
         padding-right: 2rem;
         /* Space for status badge */
+        word-break: break-all;
     }
 
-    /* Col 3: Remark (Body Text) - Previously mis-targeted */
-    .thread-list-table td:nth-child(3) {
+    /* Col 4: Remark (Body Text) */
+    .thread-list-table td:nth-child(4) {
         grid-column: 2 / -1;
+        /* Span from Star to End */
         grid-row: 2;
         font-size: 0.85rem;
         color: var(--text-secondary);
         min-height: 1.2em;
+        padding-top: 0.25rem;
     }
 
-    /* Col 4: Status (Badge) - Previously mis-targeted as nth-child(3) */
-    .thread-list-table td:nth-child(4) {
+    /* Col 5: Status (Badge) - Top Right Absolute */
+    .thread-list-table td:nth-child(5) {
         position: absolute;
         top: 1rem;
         right: 1rem;
+        display: block !important;
+        /* Ensure it's visible */
     }
 
     /* Col 5: Actions (Footer) */
