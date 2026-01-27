@@ -132,3 +132,6 @@ def register_filters(app):
     app.jinja_env.filters['sanitize_html'] = utils.sanitize_html
     app.jinja_env.filters['format_timestamp'] = utils.unix_to_utc8
     app.jinja_env.filters['mask_credential'] = utils.mask_credential
+    
+    # Global Function
+    app.jinja_env.globals['hashed_url_for'] = utils.hashed_url_for

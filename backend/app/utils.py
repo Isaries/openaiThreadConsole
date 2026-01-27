@@ -125,3 +125,20 @@ def unix_to_date_str(unix_timestamp):
     utc8 = timezone(timedelta(hours=8))
     dt = datetime.fromtimestamp(unix_timestamp, tz=utc8)
     return dt.strftime('%Y-%m-%d')
+
+def hashed_url_for(endpoint, **values):
+    """
+    Generates a URL with a 'v' query parameter containing the file's modification timestamp.
+    Used for cache busting static assets.
+    """
+    from flask import url_for, current_app
+    import os
+
+    if endpoint == 'static' and 'filename' in values:
+        filename = values['filename']
+        file_path = os.path.join(current_app.static_folder, filename)
+        
+        if os.path.exists(file_path):
+            values['v'] = int(os.path.getmtime(file_path))
+
+    return url_for(endpoint, **values)
