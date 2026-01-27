@@ -155,3 +155,10 @@ class SystemSetting(db.Model):
     value = db.Column(db.Text, nullable=True) # JSON content
     updated_at = db.Column(db.DateTime, default=datetime.now, onupdate=datetime.now)
 
+class LoginAttempt(db.Model):
+    __tablename__ = 'login_attempts'
+    ip = db.Column(db.String(45), primary_key=True)
+    count = db.Column(db.Integer, default=0)
+    lockout_until = db.Column(db.Float, default=0)
+    last_attempt = db.Column(db.Float, default=lambda: datetime.now().timestamp())
+

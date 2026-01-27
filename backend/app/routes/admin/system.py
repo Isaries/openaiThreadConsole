@@ -30,16 +30,18 @@ def update_settings():
     data = request.json
     openai_key = data.get('openai_api_key')
     
-    settings = database.load_settings()
+    # settings = database.load_settings() # No longer needed for single update
     if openai_key:
-        settings['openai_api_key'] = core_security.encrypt_data(openai_key)
-        
-    try:
-        database.save_settings(settings)
-        log_audit('Update Global Settings', 'OpenAI Key')
-        return jsonify({'success': True})
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        encrypted_key = core_security.encrypt_data(openai_key)
+        # Atomic Update
+        success = database.update_setting('openai_api_key', encrypted_key)
+        if success:
+            log_audit('Update Global Settings', 'OpenAI Key')
+            return jsonify({'success': True})
+        else:
+            return jsonify({'error': 'Database Update Failed'}), 500
+            
+    return jsonify({'success': True}) # Nothing changed
 
 @admin_bp.route('/settings/refresh_schedule', methods=['POST'])
 def update_refresh_schedule():
@@ -60,20 +62,29 @@ def update_refresh_schedule():
     if not (0 <= hour <= 23):
         return jsonify({'error': 'Hour must be between 0 and 23'}), 400
     
+    # We need to preserve 'last_run' if it exists, so we might need to load just this setting
+    # OR we treat 'auto_refresh' value as a JSON object that we update partially?
+    # db value is text. To update partial JSON, we must read-modify-write THIS key.
+    # This is still a race condition on THIS key, but better than global.
+    # To fix strictly, we would need to store fields separately or use JSONB (not sqlite standard).
+    # For now, Read-Modify-Write on a SINGLE key is acceptable risk compared to global race.
+    
     settings = database.load_settings()
     current_config = settings.get('auto_refresh', {})
     last_run = current_config.get('last_run')
     
-    settings['auto_refresh'] = {
+    new_config = {
         'enabled': enabled,
         'frequency_days': frequency,
         'hour': hour,
         'last_run': last_run
     }
     
-    database.save_settings(settings)
-    
-    return jsonify({'success': True})
+    # database.save_settings(settings) # OLD
+    if database.update_setting('auto_refresh', new_config):
+        return jsonify({'success': True})
+    else:
+        return jsonify({'error': 'Database Update Failed'}), 500
 
 @admin_bp.route('/settings/refresh_now', methods=['POST'])
 def trigger_manual_refresh():

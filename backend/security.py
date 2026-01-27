@@ -80,54 +80,92 @@ def generate_password_hint(password):
     return f"{password[0]}{'*' * 8}{password[-1]}"
 
 # --- Security Policies (Lockout) ---
-LOGIN_ATTEMPTS = {} # { ip: { count: int, lockout_until: float } }
+# LOGIN_ATTEMPTS = {} # Moved to Database
 LOCKOUT_THRESHOLD = 5
 LOCKOUT_DURATION = 15 * 60 # 15 minutes
 
 def check_lockout(ip):
-    record = LOGIN_ATTEMPTS.get(ip)
-    if not record: return False, 0
-    
-    if record['count'] >= LOCKOUT_THRESHOLD:
-        if time.time() < record['lockout_until']:
-            return True, record['lockout_until'] - time.time()
-        else:
-            del LOGIN_ATTEMPTS[ip]
+    try:
+        from app.models import LoginAttempt
+        attempt = LoginAttempt.query.get(ip)
+        
+        if not attempt:
             return False, 0
-    return False, 0
+            
+        if attempt.count >= LOCKOUT_THRESHOLD:
+            remaining = attempt.lockout_until - time.time()
+            if remaining > 0:
+                return True, remaining
+            else:
+                # Expired, reset?
+                # We can reset logic here or in record_login_attempt
+                pass
+                
+        return False, 0
+    except Exception as e:
+        # If DB fails, fail open (allow)? or fail closed?
+        # Safe to allow if DB is down? or Error?
+        print(f"Lockout Check Failed: {e}")
+        return False, 0
 
 def record_login_attempt(ip, success):
-    if success:
-        if ip in LOGIN_ATTEMPTS: del LOGIN_ATTEMPTS[ip]
-    else:
-        record = LOGIN_ATTEMPTS.get(ip, {'count': 0, 'lockout_until': 0})
-        record['count'] += 1
-        if record['count'] >= LOCKOUT_THRESHOLD:
-            record['lockout_until'] = time.time() + LOCKOUT_DURATION
-        LOGIN_ATTEMPTS[ip] = record
-    
-    # Cleanup expired records to prevent memory leak
-    # Only run cleanup occasionally (when dict size > 100)
-    if len(LOGIN_ATTEMPTS) > 100:
+    try:
+        from app.extensions import db
+        from app.models import LoginAttempt
+        
+        attempt = LoginAttempt.query.get(ip)
+        
+        if success:
+            if attempt:
+                db.session.delete(attempt)
+                db.session.commit()
+            return
+
+        # Failed Login
         current_time = time.time()
-        expired_ips = [ip for ip, rec in LOGIN_ATTEMPTS.items() 
-                      if rec.get('lockout_until', 0) > 0 and current_time > rec['lockout_until']]
-        for ip in expired_ips:
-            del LOGIN_ATTEMPTS[ip]
+        
+        if not attempt:
+            attempt = LoginAttempt(ip=ip, count=0, lockout_until=0)
+            db.session.add(attempt)
+        
+        # Check if previous lockout expired, reset if so
+        if attempt.lockout_until > 0 and attempt.lockout_until < current_time:
+             attempt.count = 0
+             attempt.lockout_until = 0
+
+        attempt.count += 1
+        attempt.last_attempt = current_time
+        
+        if attempt.count >= LOCKOUT_THRESHOLD:
+            # Refresh lockout time only if not already locked? 
+            # Or extend? Usually extend or set if not set.
+            if attempt.lockout_until <= current_time:
+                attempt.lockout_until = current_time + LOCKOUT_DURATION
+                
+        db.session.commit()
+        
+    except Exception as e:
+        # It's important to not crash app logic if audit fails
+        print(f"Record Login Attempt Failed: {e}")
+        try:
+             db.session.rollback()
+        except:
+             pass
 
 # --- IP Banning System ---
 import database
-
-# Cache for bans to avoid reading file on every request (simple in-memory cache)
-# However, for multi-worker, we should read file or use redis.
-# Given simple json persistence, we will load on check to be safe or cache with short TTL.
-# Let's load on check for accuracy as performance impact is low for small file.
 
 def check_ban(ip):
     """
     Returns (True, reason, remaining_seconds) if banned.
     Returns (False, "", 0) if allowed.
     """
+    # Optimized: Query DB directly? 
+    # Or keep using database.load_ip_bans() which queries DB all().
+    # For now, keep using database.load_ip_bans() for caching effect compatibility,
+    # OR better: use atomic check if we want real-time.
+    # Given database.load_ip_bans() now queries all(), safe to use.
+    
     bans = database.load_ip_bans()
     if ip not in bans:
         return False, "", 0
@@ -143,30 +181,17 @@ def check_ban(ip):
     if now < until:
         return True, ban_info.get('reason', 'Banned'), int(until - now)
     else:
-        # Expired, clean up?
-        # Ideally yes, but lazy cleanup is fine.
         return False, "", 0
 
 def ban_ip(ip, duration_seconds, reason="Admin Ban"):
     """
     bans ip for duration_seconds. If duration_seconds <= 0, permanent.
     """
-    bans = database.load_ip_bans()
-    
     until = 0 # Permanent
     if duration_seconds > 0:
         until = time.time() + duration_seconds
         
-    bans[ip] = {
-        'expires_at': until,
-        'reason': reason,
-        'created_at': time.time()
-    }
-    return database.save_ip_bans(bans)
+    return database.add_ip_ban(ip, reason, until)
 
 def unban_ip(ip):
-    bans = database.load_ip_bans()
-    if ip in bans:
-        del bans[ip]
-        return database.save_ip_bans(bans)
-    return True
+    return database.remove_ip_ban(ip)
