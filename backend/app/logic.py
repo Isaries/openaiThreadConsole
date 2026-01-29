@@ -374,7 +374,7 @@ def process_thread(thread_data, target_name, start_date, end_date, api_key=None,
             from .models import Thread
             # logic.py might be used where app context is active
             # Use local import to avoid circular dependency
-            db_thread = Thread.query.get(t_id)
+            db_thread = Thread.query.filter_by(thread_id=t_id).first()
             if db_thread and db_thread.remark:
                 thread_remark = db_thread.remark
         except Exception:
