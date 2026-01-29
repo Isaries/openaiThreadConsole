@@ -156,6 +156,12 @@ def sanitize_filename(filename):
     s = re.sub(r'(?u)[^-\w.\u4e00-\u9fa5]', '', s)
     if not s:
         s = 'untitled'
+    
+    # Truncate to reasonable length (e.g. 100 chars) to prevent filesystem errors
+    # NTFS/Ext4 usually limit to 255 bytes, but we need space for suffix and ID
+    if len(s) > 100:
+        s = s[:100]
+        
     return s
 
 def generate_pdf_filename(thread_id, remark=None):
@@ -166,3 +172,12 @@ def generate_pdf_filename(thread_id, remark=None):
         safe_remark = sanitize_filename(remark.strip())
         return f"{safe_remark}_({thread_id}).pdf"
     return f"thread_{thread_id}.pdf"
+
+def encode_filename_header(filename):
+    """
+    Generate RFC 5987 compliant Content-Disposition header for non-ASCII filenames.
+    browsers support: filename*=UTF-8''encoded_value
+    """
+    from urllib.parse import quote
+    encoded_filename = quote(filename)
+    return f"attachment; filename*=UTF-8''{encoded_filename}"

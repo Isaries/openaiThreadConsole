@@ -590,7 +590,7 @@ def _generate_sync_pdf_export(project, thread_ids):
     def get_headers_callback(key):
         return legacy_services.get_headers(key)
         
-    from ...utils import generate_pdf_filename
+    from ...utils import generate_pdf_filename, encode_filename_header
     
     CHUNK_SIZE = 50
     
@@ -616,7 +616,7 @@ def _generate_sync_pdf_export(project, thread_ids):
             try:
                 pdf_bytes = pdf_service.generate_pdf_bytes(html)
                 return Response(pdf_bytes, mimetype='application/pdf', headers={
-                    'Content-Disposition': f'attachment; filename="{filename}"'
+                    'Content-Disposition': encode_filename_header(filename)
                 })
             finally:
                 pdf_service.cleanup_temp_images(temp_files)
@@ -627,8 +627,6 @@ def _generate_sync_pdf_export(project, thread_ids):
             
             with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zf:
                 for i in range(chunks):
-                    # ... chunk processing code remains similar but simplified in structure request ...
-                    # Re-implementing chunk loop to ensure correctness within replacement block
                     start = i * CHUNK_SIZE
                     end = start + CHUNK_SIZE
                     chunk_msgs = messages[start:end]
@@ -651,7 +649,7 @@ def _generate_sync_pdf_export(project, thread_ids):
             zip_buffer.seek(0)
             zip_filename = filename.rsplit('.', 1)[0] + "_split.zip"
             return Response(zip_buffer.getvalue(), mimetype='application/zip', headers={
-                'Content-Disposition': f'attachment; filename="{zip_filename}"'
+                'Content-Disposition': encode_filename_header(zip_filename)
             })
     else:
         # Multiple threads - ZIP

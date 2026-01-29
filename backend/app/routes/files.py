@@ -76,7 +76,7 @@ def download_pdf(thread_id):
     def get_headers_callback(key):
         return legacy_services.get_headers(key)
 
-    from ...utils import generate_pdf_filename
+    from ...utils import generate_pdf_filename, encode_filename_header
     
     remark = thread_data['data'].get('remark')
     filename = generate_pdf_filename(thread_id, remark)
@@ -87,7 +87,7 @@ def download_pdf(thread_id):
         try:
             pdf_bytes = pdf_service.generate_pdf_bytes(html)
             return Response(pdf_bytes, mimetype='application/pdf', headers={
-                'Content-Disposition': f'attachment; filename="{filename}"'
+                'Content-Disposition': encode_filename_header(filename)
             })
         finally:
             pdf_service.cleanup_temp_images(temp_files)
@@ -123,7 +123,7 @@ def download_pdf(thread_id):
         zip_filename = filename.rsplit('.', 1)[0] + "_split.zip"
         
         return Response(zip_buffer.getvalue(), mimetype='application/zip', headers={
-            'Content-Disposition': f'attachment; filename="{zip_filename}"'
+            'Content-Disposition': encode_filename_header(zip_filename)
         })
 
 @files_bp.route('/file/<file_id>')
