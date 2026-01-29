@@ -368,6 +368,19 @@ def process_thread(thread_data, target_name, start_date, end_date, api_key=None,
     status = "Filtered"
     
     thread_remark = thread_data.get('remark', '') or ''
+    # If remark is missing in input data, try to fetch from DB
+    if not thread_remark:
+        try:
+            from .models import Thread
+            # logic.py might be used where app context is active
+            # Use local import to avoid circular dependency
+            db_thread = Thread.query.get(t_id)
+            if db_thread and db_thread.remark:
+                thread_remark = db_thread.remark
+        except Exception:
+            # DB might not be initialized or accessible (e.g. during tests without app context)
+            pass
+
     
     if target_name:
         is_remark_match = target_name.lower() in thread_remark.lower()
