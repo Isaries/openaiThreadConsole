@@ -76,13 +76,18 @@ def download_pdf(thread_id):
     def get_headers_callback(key):
         return legacy_services.get_headers(key)
 
+    from ...utils import generate_pdf_filename
+    
+    remark = thread_data['data'].get('remark')
+    filename = generate_pdf_filename(thread_id, remark)
+
     if total_messages <= CHUNK_SIZE:
         html = render_template('print_view.html', threads=[thread_data['data']])
         html, temp_files = pdf_service.preprocess_html_for_pdf(html, found_group['group_id'], get_headers_callback)
         try:
             pdf_bytes = pdf_service.generate_pdf_bytes(html)
             return Response(pdf_bytes, mimetype='application/pdf', headers={
-                'Content-Disposition': f'attachment; filename="thread_{thread_id}.pdf"'
+                'Content-Disposition': f'attachment; filename="{filename}"'
             })
         finally:
             pdf_service.cleanup_temp_images(temp_files)
@@ -105,13 +110,20 @@ def download_pdf(thread_id):
                 
                 try:
                     pdf_bytes = pdf_service.generate_pdf_bytes(html)
-                    zf.writestr(f"thread_{thread_id}_part_{i+1}.pdf", pdf_bytes)
+                    # For parts, filename needs modification
+                    base_name = filename.rsplit('.', 1)[0]
+                    part_filename = f"{base_name}_part_{i+1}.pdf"
+                    zf.writestr(part_filename, pdf_bytes)
                 finally:
                     pdf_service.cleanup_temp_images(temp_files)
                 
         zip_buffer.seek(0)
+        
+        # Zip Filename
+        zip_filename = filename.rsplit('.', 1)[0] + "_split.zip"
+        
         return Response(zip_buffer.getvalue(), mimetype='application/zip', headers={
-            'Content-Disposition': f'attachment; filename="thread_{thread_id}_split.zip"'
+            'Content-Disposition': f'attachment; filename="{zip_filename}"'
         })
 
 @files_bp.route('/file/<file_id>')

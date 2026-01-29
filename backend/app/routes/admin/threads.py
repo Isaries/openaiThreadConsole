@@ -589,6 +589,8 @@ def _generate_sync_pdf_export(project, thread_ids):
     # Helper function
     def get_headers_callback(key):
         return legacy_services.get_headers(key)
+        
+    from ...utils import generate_pdf_filename
     
     CHUNK_SIZE = 50
     
@@ -604,6 +606,8 @@ def _generate_sync_pdf_export(project, thread_ids):
             return redirect(url_for('admin.index', group_id=project.id))
         
         messages = thread_data['data']['messages']
+        remark = thread_data['data'].get('remark')
+        filename = generate_pdf_filename(thread_id, remark)
         
         if len(messages) <= CHUNK_SIZE:
             # Single PDF
@@ -612,7 +616,7 @@ def _generate_sync_pdf_export(project, thread_ids):
             try:
                 pdf_bytes = pdf_service.generate_pdf_bytes(html)
                 return Response(pdf_bytes, mimetype='application/pdf', headers={
-                    'Content-Disposition': f'attachment; filename="thread_{thread_id}.pdf"'
+                    'Content-Disposition': f'attachment; filename="{filename}"'
                 })
             finally:
                 pdf_service.cleanup_temp_images(temp_files)
@@ -623,6 +627,8 @@ def _generate_sync_pdf_export(project, thread_ids):
             
             with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zf:
                 for i in range(chunks):
+                    # ... chunk processing code remains similar but simplified in structure request ...
+                    # Re-implementing chunk loop to ensure correctness within replacement block
                     start = i * CHUNK_SIZE
                     end = start + CHUNK_SIZE
                     chunk_msgs = messages[start:end]
@@ -635,13 +641,17 @@ def _generate_sync_pdf_export(project, thread_ids):
                     
                     try:
                         pdf_bytes = pdf_service.generate_pdf_bytes(html)
-                        zf.writestr(f"thread_{thread_id}_part_{i+1}.pdf", pdf_bytes)
+                        # Filename for part
+                        base_name = filename.rsplit('.', 1)[0]
+                        part_filename = f"{base_name}_part_{i+1}.pdf"
+                        zf.writestr(part_filename, pdf_bytes)
                     finally:
                         pdf_service.cleanup_temp_images(temp_files)
             
             zip_buffer.seek(0)
+            zip_filename = filename.rsplit('.', 1)[0] + "_split.zip"
             return Response(zip_buffer.getvalue(), mimetype='application/zip', headers={
-                'Content-Disposition': f'attachment; filename="thread_{thread_id}_split.zip"'
+                'Content-Disposition': f'attachment; filename="{zip_filename}"'
             })
     else:
         # Multiple threads - ZIP
@@ -659,6 +669,8 @@ def _generate_sync_pdf_export(project, thread_ids):
                         continue
                     
                     messages = thread_data['data']['messages']
+                    remark = thread_data['data'].get('remark')
+                    filename = generate_pdf_filename(thread_id, remark)
                     
                     if len(messages) <= CHUNK_SIZE:
                         # Single PDF for this thread
@@ -667,7 +679,7 @@ def _generate_sync_pdf_export(project, thread_ids):
                         
                         try:
                             pdf_bytes = pdf_service.generate_pdf_bytes(html)
-                            zf.writestr(f"thread_{thread_id}.pdf", pdf_bytes)
+                            zf.writestr(filename, pdf_bytes)
                         finally:
                             pdf_service.cleanup_temp_images(temp_files)
                     else:
@@ -686,7 +698,9 @@ def _generate_sync_pdf_export(project, thread_ids):
                             
                             try:
                                 pdf_bytes = pdf_service.generate_pdf_bytes(html)
-                                zf.writestr(f"thread_{thread_id}_part_{i+1}.pdf", pdf_bytes)
+                                base_name = filename.rsplit('.', 1)[0]
+                                part_filename = f"{base_name}_part_{i+1}.pdf"
+                                zf.writestr(part_filename, pdf_bytes)
                             finally:
                                 pdf_service.cleanup_temp_images(temp_files)
                 except Exception as e:

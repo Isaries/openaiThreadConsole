@@ -695,6 +695,11 @@ def _generate_single_thread_pdf(project_id, thread_id):
     def get_headers_callback(key):
         return legacy_services.get_headers(key)
     
+    from .utils import generate_pdf_filename
+    
+    remark = thread_data['data'].get('remark')
+    filename = generate_pdf_filename(thread_id, remark)
+    
     CHUNK_SIZE = 50
     total_messages = len(messages)
     
@@ -704,7 +709,7 @@ def _generate_single_thread_pdf(project_id, thread_id):
         html, temp_files = pdf_service.preprocess_html_for_pdf(html, project_id, get_headers_callback)
         try:
             pdf_bytes = pdf_service.generate_pdf_bytes(html)
-            return {'type': 'pdf', 'data': pdf_bytes}
+            return {'type': 'pdf', 'data': pdf_bytes, 'filename': filename}
         finally:
             pdf_service.cleanup_temp_images(temp_files)
     else:
@@ -727,12 +732,15 @@ def _generate_single_thread_pdf(project_id, thread_id):
                 
                 try:
                     pdf_bytes = pdf_service.generate_pdf_bytes(html)
-                    zf.writestr(f"thread_{thread_id}_part_{i+1}.pdf", pdf_bytes)
+                    # Use filename for parts
+                    base_name = filename.rsplit('.', 1)[0]
+                    part_filename = f"{base_name}_part_{i+1}.pdf"
+                    zf.writestr(part_filename, pdf_bytes)
                 finally:
                     pdf_service.cleanup_temp_images(temp_files)
         
         zip_buffer.seek(0)
-        return {'type': 'zip', 'data': zip_buffer.getvalue()}
+        return {'type': 'zip', 'data': zip_buffer.getvalue(), 'filename': filename}
 
 def _worker_generate_pdf_wrapper(project_id, thread_id):
     """
@@ -818,8 +826,9 @@ def generate_batch_pdf_task(project_id, thread_ids, user_id, task_id):
                                     logger.info(f"Task {task_id}: Expanded ZIP for {thread_id} ({len(result['data'])} bytes)")
                                 else:
                                     # Single PDF
-                                    zf.writestr(f"thread_{thread_id}.pdf", result['data'])
-                                    logger.info(f"Task {task_id}: Added {thread_id} PDF ({len(result['data'])} bytes)")
+                                    filename = result.get('filename', f"thread_{thread_id}.pdf")
+                                    zf.writestr(filename, result['data'])
+                                    logger.info(f"Task {task_id}: Added {filename} ({len(result['data'])} bytes)")
                                 
                                 success_count += 1
                             else:

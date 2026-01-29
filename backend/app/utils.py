@@ -142,3 +142,27 @@ def hashed_url_for(endpoint, **values):
             values['v'] = int(os.path.getmtime(file_path))
 
     return url_for(endpoint, **values)
+
+def sanitize_filename(filename):
+    """
+    Sanitize filename to be safe for filesystem.
+    Removes invalid characters.
+    """
+    import re
+    # Remove potentially dangerous characters
+    s = str(filename).strip().replace(' ', '_')
+    # Keep only alphanumeric, hyphens, underscores, dots, and Chinese characters
+    # But for broad compatibility, just remove explicitly bad chars is safer
+    s = re.sub(r'(?u)[^-\w.\u4e00-\u9fa5]', '', s)
+    if not s:
+        s = 'untitled'
+    return s
+
+def generate_pdf_filename(thread_id, remark=None):
+    """
+    Generate PDF filename: 'remark (thread_id).pdf' or 'thread_thread_id.pdf'
+    """
+    if remark and remark.strip():
+        safe_remark = sanitize_filename(remark.strip())
+        return f"{safe_remark}_({thread_id}).pdf"
+    return f"thread_{thread_id}.pdf"
