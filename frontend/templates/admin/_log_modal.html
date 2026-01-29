@@ -9,8 +9,9 @@
 
         <div
             style="flex:1; overflow-y: auto; background: #f8f9fa; padding: 1rem; border-radius: var(--radius-sm); border: 1px solid var(--surface-border);">
-            <pre id="logModalContent"
-                style="white-space: pre-wrap; word-wrap: break-word; font-family: monospace; font-size: 0.85rem; margin: 0; color: #333;"></pre>
+            <div id="logModalContent"
+                style="white-space: pre-wrap; word-wrap: break-word; font-family: monospace; font-size: 0.85rem; margin: 0; color: #333;">
+            </div>
         </div>
 
         <div class="flex justify-end gap-2" style="margin-top: 1rem;">
@@ -22,9 +23,45 @@
 <script nonce="{{ csp_nonce() }}">
     function showLogModal(title, content) {
         document.getElementById('logModalTitle').innerText = title || 'Log Details';
-        document.getElementById('logModalContent').innerText = content || 'No content';
+        const contentDiv = document.getElementById('logModalContent');
+
+        let htmlContent = content || 'No content';
+
+        // Try to parse JSON
+        try {
+            if (content && (content.startsWith('{') || content.startsWith('['))) {
+                const json = JSON.parse(content);
+                htmlContent = renderJsonTable(json);
+            }
+        } catch (e) {
+            // Not JSON, keep as text
+            console.log('Log content is not JSON:', e);
+        }
+
+        contentDiv.innerHTML = htmlContent;
         document.getElementById('logModal').style.display = 'flex';
-        document.getElementById('logModal').style.pointerEvents = 'auto'; // Ensure it captures clicks
+        document.getElementById('logModal').style.pointerEvents = 'auto';
+    }
+
+    function renderJsonTable(data) {
+        if (typeof data !== 'object' || data === null) return String(data);
+
+        let html = '<table style="width:100%; border-collapse: collapse; font-size: 0.85rem;">';
+        for (const key in data) {
+            html += `<tr style="border-bottom: 1px solid #eee;">
+                <td style="padding: 4px; font-weight: bold; width: 30%; vertical-align: top; color: #555;">${key}</td>
+                <td style="padding: 4px; color: #333;">`;
+
+            if (typeof data[key] === 'object' && data[key] !== null) {
+                html += renderJsonTable(data[key]); // Recursive
+            } else {
+                html += String(data[key]);
+            }
+
+            html += '</td></tr>';
+        }
+        html += '</table>';
+        return html;
     }
 
     function closeLogModal() {

@@ -7,7 +7,8 @@ import security as core_security
 from datetime import datetime
 import uuid
 # We need to import log_audit from local security module
-from .security import log_audit 
+# We need to import log_audit from utils
+from ... import utils 
 
 def get_dashboard_user_data():
     users_list = []
@@ -66,7 +67,7 @@ def create_user():
     
     try:
         db.session.commit()
-        log_audit('Create User', username)
+        utils.log_audit('Create User', username)
         flash(f'教師帳戶 {username} 建立成功', 'success')
     except Exception as e:
         db.session.rollback()
@@ -103,7 +104,7 @@ def reset_user_password():
     
     try:
         db.session.commit()
-        log_audit('Reset Password', user.username)
+        utils.log_audit('Reset Password', user.username, 'Admin Reset Password')
         flash(f'用戶 {user.username} 密碼重設成功', 'success')
     except Exception as e:
         db.session.rollback()
@@ -139,7 +140,7 @@ def delete_user():
         try:
             db.session.delete(user)
             db.session.commit()
-            log_audit('Delete User', username)
+            utils.log_audit('Delete User', username)
             flash('用戶已刪除', 'success')
         except Exception as e:
             db.session.rollback()
@@ -161,6 +162,9 @@ def update_user():
     if not user:
         flash('用戶不存在', 'error')
         return redirect(url_for('admin.index'))
+
+    old_username = user.username
+    old_email = user.email or ''
         
     if new_username != user.username:
         if User.query.filter_by(username=new_username).first():
@@ -175,9 +179,17 @@ def update_user():
     user.username = new_username
     user.email = new_email if new_email else None
     
+    # Calculate Diff
+    diff = {}
+    if old_username != new_username:
+        diff['username'] = {'old': old_username, 'new': new_username}
+    if old_email != (user.email or ''):
+        diff['email'] = {'old': old_email, 'new': user.email or ''}
+    
     try:
         db.session.commit()
-        log_audit('Update User', new_username)
+        if diff:
+            utils.log_audit('Update User', new_username, diff)
         flash(f'用戶 {new_username} 資料更新成功', 'success')
     except Exception as e:
         db.session.rollback()
@@ -203,6 +215,12 @@ def update_own_profile():
     new_email = request.form.get('email', '').strip()
     new_password = request.form.get('new_password', '').strip()
     current_password = request.form.get('current_password', '').strip()
+    
+    # Capture Old State
+    old_username = user.username
+    old_email = user.email or ''
+    # Password changed? We can track that boolean only
+
     
     # 1. Security Check: verify current password
     from werkzeug.security import check_password_hash
@@ -260,7 +278,19 @@ def update_own_profile():
         
     try:
         db.session.commit()
-        log_audit('Update Profile', user.username)
+        
+        # Calculate Diff
+        diff = {}
+        if old_username != user.username:
+             diff['username'] = {'old': old_username, 'new': user.username}
+        if old_email != (user.email or ''):
+             diff['email'] = {'old': old_email, 'new': user.email or ''}
+        if new_password:
+             diff['password'] = 'Changed'
+             
+        if diff:
+            utils.log_audit('Update Profile', user.username, diff)
+            
         flash('個人資料更新成功', 'success')
     except Exception as e:
         db.session.rollback()

@@ -22,7 +22,7 @@ def index():
     all_tags = sorted(list(set(t for g in groups for t in g.get('tags', []))))
     
     # Optional: Log visit (Unknown/User)
-    database.log_audit(session.get('username', 'Unknown'), 'Visit', 'Home')
+    utils.log_audit('Visit', 'Home', status='Success')
     
     return render_template('index.html', groups=groups, all_tags=all_tags)
 
@@ -111,7 +111,7 @@ def search():
 
     # Audit (Log initiation to count later)
     action_name = 'Search Init Fresh' if mode == 'fresh' else 'Search Init Quick'
-    database.log_audit(session.get('username', 'Unknown'), action_name, target_name or 'All', 'Success', f"Group: {group['name']}")
+    utils.log_audit(action_name, target_name or 'All', f"Group: {group['name']}")
     
     # Trigger Async Task
     from .. import tasks

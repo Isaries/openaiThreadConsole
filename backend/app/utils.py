@@ -14,6 +14,43 @@ def log_access(user, action):
     from flask import current_app
     current_app.logger.info(f"User: {user} | Action: {action}")
 
+def log_audit(action, target, details=None, status='Success', user_override=None):
+    """
+    Centralized Audit Logging.
+    :param details: Can be a string or a dict (will be JSON serialized).
+    :param user_override: Optional username to use instead of session user.
+    """
+    from flask import session, current_app
+    from .extensions import db
+    from .models import AuditLog
+    import json
+    
+    try:
+        user_name = user_override or session.get('username', 'Unknown')
+        ip = get_client_ip()
+        
+        # Serialize dict details
+        if isinstance(details, dict):
+            try:
+                details = json.dumps(details, ensure_ascii=False)
+            except:
+                details = str(details)
+                
+        log = AuditLog(
+            user_name=user_name,
+            ip_address=ip,
+            action=action,
+            target=str(target), # Ensure string
+            status=status,
+            details=details
+        )
+        db.session.add(log)
+        db.session.commit()
+    except Exception as e:
+        # Fallback to file logging if DB fails
+        current_app.logger.error(f"Failed to write audit log: {e}")
+
+
 # --- Template Filters ---
 # --- Template Filters ---
 def nl2br(value):

@@ -320,6 +320,7 @@ def refresh_threads_cache():
     tasks.refresh_specific_threads(
         group_id, thread_ids, group_name=project.name
     )
+    log_audit('Refresh Threads', f"Triggered refresh for {len(thread_ids)} threads in {project.name}")
     flash(f'已排程更新 {len(thread_ids)} 筆資料的快取', 'success')
     return redirect(url_for('admin.index', group_id=group_id))
 
@@ -350,6 +351,13 @@ def export_excel():
                 ids = [request.form.get('thread_id')]
             if ids:
                 filtered_ids = ids
+            status_filter=request.form.get('status_filter') if select_all_pages else None,
+        )
+        # Note: excel_service returns a Response object, so we can't easily log *after* it without wrapping.
+        # But we can log *before* returning.
+        count_str = "All" if select_all_pages else str(len(filtered_ids) if filtered_ids else 0)
+        log_audit('Export Excel', f"Exported threads from {project.name} (Count: {count_str})")
+        
         return excel_service.generate_excel_export(
             project.id,
             project.name,

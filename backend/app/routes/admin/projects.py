@@ -3,8 +3,9 @@ from datetime import datetime
 from . import admin_bp
 from ...models import Project, Tag, User
 from ...extensions import db
-from .security import log_audit
+from ... import utils
 import security as core_security
+# Removed: from .security import log_audit
 import uuid
 
 @admin_bp.route('/group/create', methods=['POST'])
@@ -70,7 +71,8 @@ def create_group():
     # So mostly important for non-admins.
     
     db.session.add(new_project)
-    log_audit('Create Project', name)
+    db.session.add(new_project)
+    utils.log_audit('Create Project', name, f"ID: {new_project.id}")
     
     try:
         db.session.commit()
@@ -113,6 +115,7 @@ def add_project_tag():
     if tag not in project.tags:
         project.tags.append(tag)
         db.session.commit()
+        utils.log_audit('Add Tag', project.name, f"Tag: {tag_name}")
         return {'status': 'success', 'tags': [t.name for t in project.tags]}
     
     return {'status': 'success', 'message': 'Tag already exists'}
@@ -140,6 +143,9 @@ def remove_project_tag():
         if not tag.projects:
              db.session.delete(tag)
              db.session.commit()
+    
+    # Log Audit for tag removal
+    utils.log_audit('Remove Tag', project.name, f"Tag: {tag_name}")
         
     return {'status': 'success', 'tags': [t.name for t in project.tags]}
 
@@ -161,6 +167,10 @@ def delete_group():
         flash('權限不足', 'error')
         return redirect(url_for('admin.index'))
     
+    # Audit: Capture details before delete
+    project_name = project.name
+    project_id = project.id
+    
     # Track tags before deletion to check for orphans later
     affected_tags = list(project.tags)
     
@@ -179,6 +189,7 @@ def delete_group():
             db.session.rollback()
         
         flash('專案已刪除', 'success')
+        utils.log_audit('Delete Project', project_name, f"ID: {project_id}")
     except Exception as e:
         db.session.rollback()
         current_app.logger.error(f"Failed to delete project: {e}")
@@ -223,6 +234,14 @@ def update_group():
         flash('資料已被其他人修改，請重新整理頁面後再試 (Optimistic Lock Error)', 'error')
         return redirect(url_for('admin.index', group_id=group_id))
         
+    # Capture Old State for Diff
+    old_state = {
+        'name': project.name,
+        'is_visible': project.is_visible,
+        'api_key_set': bool(project.api_key),
+        'owners': [o.username for o in project.owners]
+    }
+        
     # Update logic
     if name and name.strip() and len(name.strip()) <= 100:
         project.name = name.strip()
@@ -259,6 +278,24 @@ def update_group():
     project.version += 1
     db.session.commit()
     
-    log_audit('Update Group', project.name)
+    project.version += 1
+    db.session.commit()
+    
+    # Calculate Diff
+    new_state = {
+        'name': project.name,
+        'is_visible': project.is_visible,
+        'api_key_set': bool(project.api_key),
+        'owners': [o.username for o in project.owners]
+    }
+    
+    diff = {}
+    for key, old_val in old_state.items():
+        if new_state[key] != old_val:
+            diff[key] = {'old': old_val, 'new': new_state[key]}
+            
+    if diff:
+        utils.log_audit('Update Project', project.name, diff)
+        
     flash("Project updated", 'success')
     return redirect(url_for('admin.index', group_id=group_id))

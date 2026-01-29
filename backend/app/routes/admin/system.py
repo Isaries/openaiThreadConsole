@@ -3,7 +3,8 @@ from . import admin_bp
 from ...models import SystemMetric, Tag
 from ...extensions import db
 import database
-from .security import log_audit
+from ... import utils
+# Removed: from .security import log_audit
 import security as core_security
 import psutil
 import time
@@ -36,7 +37,7 @@ def update_settings():
         # Atomic Update
         success = database.update_setting('openai_api_key', encrypted_key)
         if success:
-            log_audit('Update Global Settings', 'OpenAI Key')
+            utils.log_audit('Update Global Settings', 'OpenAI Key')
             return jsonify({'success': True})
         else:
             return jsonify({'error': 'Database Update Failed'}), 500
@@ -82,6 +83,7 @@ def update_refresh_schedule():
     
     # database.save_settings(settings) # OLD
     if database.update_setting('auto_refresh', new_config):
+        utils.log_audit('Update Global Settings', 'Refresh Schedule', new_config)
         return jsonify({'success': True})
     else:
         return jsonify({'error': 'Database Update Failed'}), 500
@@ -97,7 +99,7 @@ def trigger_manual_refresh():
     tasks.manual_global_refresh_task(force=force_refresh)
     
     # Log Audit
-    log_audit(session.get('username'), 'Manual Refresh', 'Global')
+    utils.log_audit(session.get('username'), 'Manual Refresh', 'Global')
     
     return jsonify({'success': True, 'message': 'Manual global refresh started.'})
 
@@ -121,7 +123,7 @@ def update_assistant_cache_settings():
     }
     
     if database.update_setting('assistant_cache', new_config):
-        log_audit(session.get('username'), 'Update Assistant Cache Settings', f'{expiry_days} days')
+        utils.log_audit(session.get('username'), 'Update Assistant Cache Settings', f'{expiry_days} days')
         return jsonify({'success': True})
     else:
         return jsonify({'error': 'Database Update Failed'}), 500

@@ -123,7 +123,18 @@
                             </td>
                             <td>
                                 <div class="font-bold">{{ log.action }}</div>
-                                <div class="text-xs opacity-70">{{ log.target }} {{ log.details }}</div>
+                                <div class="text-xs opacity-70">
+                                    {{ log.target }}
+                                    {% if log.details %}
+                                    <button class="btn btn-xs btn-secondary"
+                                        style="padding: 0px 4px; font-size: 0.65rem;"
+                                        data-title="{{ log.action }} - {{ log.target }}"
+                                        data-details="{{ log.details }}"
+                                        onclick="showLogModal(this.dataset.title, this.dataset.details)">
+                                        View Details
+                                    </button>
+                                    {% endif %}
+                                </div>
                             </td>
                             <td>{{ log.status }}</td>
                         </tr>

@@ -8,6 +8,8 @@ import requests
 import io
 import math
 import zipfile
+from app import utils
+
 
 from ..extensions import limiter
 
@@ -91,6 +93,9 @@ def download_pdf(thread_id):
             })
         finally:
             pdf_service.cleanup_temp_images(temp_files)
+            
+        utils.log_audit('Download PDF', f"Thread: {thread_id}", "Single PDF")
+            
     else:
         # Split into ZIP
         chunks = math.ceil(total_messages / CHUNK_SIZE)
@@ -116,6 +121,8 @@ def download_pdf(thread_id):
                     zf.writestr(part_filename, pdf_bytes)
                 finally:
                     pdf_service.cleanup_temp_images(temp_files)
+                
+        utils.log_audit('Download PDF', f"Thread: {thread_id}", f"Split ZIP ({chunks} parts)")
                 
         zip_buffer.seek(0)
         
@@ -161,6 +168,11 @@ def proxy_file(file_id):
         headers = [(name, value) for (name, value) in resp.raw.headers.items()
                    if name.lower() not in excluded_headers]
                    
+        headers = [(name, value) for (name, value) in resp.raw.headers.items()
+                   if name.lower() not in excluded_headers]
+                   
+        utils.log_audit('File Access', f"File ID: {file_id}", f"Group: {group.get('name')}")
+        
         return Response(resp.content, resp.status_code, headers)
     except requests.exceptions.Timeout:
         return "OpenAI Request Timeout", 504

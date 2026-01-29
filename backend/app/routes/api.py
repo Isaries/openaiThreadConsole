@@ -72,5 +72,8 @@ def search_api():
         db.session.commit()
     except Exception as e:
         current_app.logger.error(f"Failed to log search history: {e}")
+        
+    # Unified Audit Log
+    utils.log_audit('Search API', query, f"Matches: {len(response_data['results'])}", user_override=f"API:{project.name}")
     
     return jsonify(response_data)

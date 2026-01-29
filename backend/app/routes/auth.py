@@ -44,10 +44,14 @@ def login():
             session.permanent = True
             utils.log_access(username, "Login Success")
             security.record_login_attempt(client_ip, True) # Record Success
+            utils.log_audit('Login', user.username, 'Login Success')
             return redirect(url_for('admin.index'))
             
         utils.log_access(username, "Login Failed")
         security.record_login_attempt(client_ip, False) # Record Failure
+        # We also log audit for failure to track brute force better
+        if username:
+             utils.log_audit('Login Failed', username, f"IP: {client_ip}")
         flash('帳號或密碼錯誤', 'error')
         
     return render_template('login.html')
@@ -56,6 +60,8 @@ def login():
 def logout():
     username = session.get('username')
     utils.log_access(username, "Logout")
+    if username:
+        utils.log_audit('Logout', username, 'User Logged Out')
     session.clear()
     flash('您已登出', 'success')
     return redirect(url_for('auth.login'))

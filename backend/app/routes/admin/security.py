@@ -7,22 +7,8 @@ import database
 import security as core_security
 import json
 
-def log_audit(action, target, details=None, status='Success'):
-    try:
-        user_name = session.get('username', 'Unknown')
-        ip = utils.get_client_ip()
-        log = AuditLog(
-            user_name=user_name,
-            ip_address=ip,
-            action=action,
-            target=target,
-            status=status,
-            details=details
-        )
-        db.session.add(log)
-        db.session.commit()
-    except Exception as e:
-        print(f"Failed to write audit log: {e}")
+# Removed local log_audit in favor of utils.log_audit
+
 
 def get_dashboard_security_data():
     audit_logs_pagination = None
@@ -112,7 +98,7 @@ def ban_ip_route():
     
     if ip:
         core_security.ban_ip(ip, duration, reason)
-        log_audit('Ban IP', f"{ip} for {duration}s")
+        utils.log_audit('Ban IP', ip, f"Duration: {duration}s, Reason: {reason}")
         flash(f'IP {ip} 已封鎖', 'success')
         
     return redirect(url_for('admin.index'))
@@ -126,7 +112,7 @@ def unban_ip_route():
     
     if ip:
         core_security.unban_ip(ip)
-        log_audit('Unban IP', ip)
+        utils.log_audit('Unban IP', ip)
         flash(f'IP {ip} 已解除封鎖', 'success')
         
     return redirect(url_for('admin.index'))
