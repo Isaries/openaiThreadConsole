@@ -658,14 +658,37 @@ def _generate_sync_pdf_export(project, thread_ids):
                         current_app.logger.warning(f"Thread {thread_id} returned no data: {thread_data}")
                         continue
                     
-                    html = render_template('print_view.html', threads=[thread_data['data']])
-                    html, temp_files = pdf_service.preprocess_html_for_pdf(html, project.id, get_headers_callback)
+                    messages = thread_data['data']['messages']
                     
-                    try:
-                        pdf_bytes = pdf_service.generate_pdf_bytes(html)
-                        zf.writestr(f"thread_{thread_id}.pdf", pdf_bytes)
-                    finally:
-                        pdf_service.cleanup_temp_images(temp_files)
+                    if len(messages) <= CHUNK_SIZE:
+                        # Single PDF for this thread
+                        html = render_template('print_view.html', threads=[thread_data['data']])
+                        html, temp_files = pdf_service.preprocess_html_for_pdf(html, project.id, get_headers_callback)
+                        
+                        try:
+                            pdf_bytes = pdf_service.generate_pdf_bytes(html)
+                            zf.writestr(f"thread_{thread_id}.pdf", pdf_bytes)
+                        finally:
+                            pdf_service.cleanup_temp_images(temp_files)
+                    else:
+                        # Long thread - generate multiple PDFs
+                        chunks = math.ceil(len(messages) / CHUNK_SIZE)
+                        for i in range(chunks):
+                            start = i * CHUNK_SIZE
+                            end = start + CHUNK_SIZE
+                            chunk_msgs = messages[start:end]
+                            
+                            chunk_data = thread_data['data'].copy()
+                            chunk_data['messages'] = chunk_msgs
+                            
+                            html = render_template('print_view.html', threads=[chunk_data])
+                            html, temp_files = pdf_service.preprocess_html_for_pdf(html, project.id, get_headers_callback)
+                            
+                            try:
+                                pdf_bytes = pdf_service.generate_pdf_bytes(html)
+                                zf.writestr(f"thread_{thread_id}_part_{i+1}.pdf", pdf_bytes)
+                            finally:
+                                pdf_service.cleanup_temp_images(temp_files)
                 except Exception as e:
                     current_app.logger.error(f"Failed to export thread {thread_id}: {e}", exc_info=True)
                     continue

@@ -781,7 +781,7 @@ def generate_batch_pdf_task(project_id, thread_ids, user_id, task_id):
             
             # 3. Generate PDFs and write to ZIP (Parallel Processing)
             import zipfile
-            from concurrent.futures import ProcessPoolExecutor, as_completed
+            from concurrent.futures import ProcessPoolExecutor, as_completed, TimeoutError as FuturesTimeoutError
             
             max_workers = int(os.getenv('PDF_EXPORT_MAX_WORKERS', '2'))
             logger.info(f"Task {task_id}: Creating ZIP at {zip_path} with {max_workers} workers")
@@ -825,7 +825,7 @@ def generate_batch_pdf_task(project_id, thread_ids, user_id, task_id):
                             else:
                                 logger.warning(f"Task {task_id}: No result returned for {thread_id}")
                             
-                        except TimeoutError:
+                        except FuturesTimeoutError:
                             logger.error(f"Task {task_id}: Timeout for thread {thread_id} (>120s)")
                         except Exception as e:
                             logger.error(f"Task {task_id}: Failed to export thread {thread_id}: {e}", exc_info=True)
