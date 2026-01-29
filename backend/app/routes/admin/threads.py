@@ -483,3 +483,274 @@ def toggle_bookmark():
         
     db.session.commit()
     return {'success': True, 'action': action}
+
+@admin_bp.route('/threads/export-pdf', methods=['POST'])
+@limiter.limit("10 per hour")
+def export_pdf():
+    """Batch PDF export with hybrid sync/async approach"""
+    if not session.get('user_id'):
+        return redirect(url_for('auth.login'))
+
+    group_id = request.form.get('group_id')
+    project = Project.query.get(group_id)
+    if not project:
+        return redirect(url_for('admin.index'))
+
+    is_owner = any(o.id == session.get('user_id') for o in project.owners)
+    if session.get('role') != 'admin' and not is_owner:
+        flash('Permission Denied', 'error')
+        return redirect(url_for('admin.index'))
+
+    # Parse selection mode
+    select_all_pages = request.form.get('select_all_pages') == 'true'
+    thread_ids = []
+
+    if select_all_pages:
+        search_q = request.form.get('search_q', '').strip()
+        status_filter = request.form.get('status_filter', '').strip()
+        
+        query = Thread.query.with_entities(Thread.thread_id).filter_by(project_id=project.id)
+        if search_q:
+            query = query.filter(
+                (Thread.thread_id.contains(search_q)) |
+                (Thread.remark.contains(search_q))
+            )
+        if status_filter and status_filter != 'all':
+            if status_filter == 'active':
+                query = query.filter(Thread.refresh_priority.notin_(['low', 'frozen']))
+            else:
+                query = query.filter_by(refresh_priority=status_filter)
+        
+        thread_ids = [t.thread_id for t in query.all()]
+    else:
+        thread_ids = request.form.getlist('selected_ids')
+        if not thread_ids:
+            single = request.form.get('thread_id')
+            if single:
+                thread_ids = [single]
+
+    if not thread_ids:
+        flash('未選擇任何 Thread', 'warning')
+        return redirect(url_for('admin.index', group_id=group_id))
+
+    # Hybrid approach: sync for <=5 threads, async for >5
+    if len(thread_ids) <= 5:
+        # Synchronous export
+        return _generate_sync_pdf_export(project, thread_ids)
+    else:
+        # Asynchronous export - create record FIRST to avoid race condition
+        import time
+        from ...models import PDFExportTask
+        
+        # Generate a unique task ID
+        import uuid
+        task_id = str(uuid.uuid4())
+        
+        # Create task record with 'queued' status
+        task_record = PDFExportTask(
+            id=task_id,
+            user_id=session['user_id'],
+            project_id=project.id,
+            thread_count=len(thread_ids),
+            status='queued',
+            progress_total=len(thread_ids),
+            progress_current=0,
+            created_at=int(time.time())
+        )
+        db.session.add(task_record)
+        db.session.commit()
+        
+        # Schedule Huey task with the pre-created task ID
+        tasks.generate_batch_pdf_task(project.id, thread_ids, session['user_id'], task_id)
+        
+        flash(f'已啟動背景任務匯出 {len(thread_ids)} 筆資料', 'info')
+        return redirect(url_for('admin.pdf_export_status', task_id=task_id))
+
+
+
+def _generate_sync_pdf_export(project, thread_ids):
+    """Synchronous PDF generation for small batches"""
+    from ...services import pdf_service
+    from ... import logic as legacy_services
+    from flask import Response
+    import io
+    import zipfile
+    import math
+    
+    # Helper function
+    def get_headers_callback(key):
+        return legacy_services.get_headers(key)
+    
+    CHUNK_SIZE = 50
+    
+    if len(thread_ids) == 1:
+        # Single thread - may return PDF or ZIP depending on size
+        thread_id = thread_ids[0]
+        thread_data = legacy_services.process_thread(
+            {'thread_id': thread_id}, None, None, None, project.api_key, project.id
+        )
+        
+        if not thread_data or not thread_data.get('data'):
+            flash('Thread not found', 'error')
+            return redirect(url_for('admin.index', group_id=project.id))
+        
+        messages = thread_data['data']['messages']
+        
+        if len(messages) <= CHUNK_SIZE:
+            # Single PDF
+            html = render_template('print_view.html', threads=[thread_data['data']])
+            html, temp_files = pdf_service.preprocess_html_for_pdf(html, project.id, get_headers_callback)
+            try:
+                pdf_bytes = pdf_service.generate_pdf_bytes(html)
+                return Response(pdf_bytes, mimetype='application/pdf', headers={
+                    'Content-Disposition': f'attachment; filename="thread_{thread_id}.pdf"'
+                })
+            finally:
+                pdf_service.cleanup_temp_images(temp_files)
+        else:
+            # Split into ZIP
+            chunks = math.ceil(len(messages) / CHUNK_SIZE)
+            zip_buffer = io.BytesIO()
+            
+            with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zf:
+                for i in range(chunks):
+                    start = i * CHUNK_SIZE
+                    end = start + CHUNK_SIZE
+                    chunk_msgs = messages[start:end]
+                    
+                    chunk_data = thread_data['data'].copy()
+                    chunk_data['messages'] = chunk_msgs
+                    
+                    html = render_template('print_view.html', threads=[chunk_data])
+                    html, temp_files = pdf_service.preprocess_html_for_pdf(html, project.id, get_headers_callback)
+                    
+                    try:
+                        pdf_bytes = pdf_service.generate_pdf_bytes(html)
+                        zf.writestr(f"thread_{thread_id}_part_{i+1}.pdf", pdf_bytes)
+                    finally:
+                        pdf_service.cleanup_temp_images(temp_files)
+            
+            zip_buffer.seek(0)
+            return Response(zip_buffer.getvalue(), mimetype='application/zip', headers={
+                'Content-Disposition': f'attachment; filename="thread_{thread_id}_split.zip"'
+            })
+    else:
+        # Multiple threads - ZIP
+        zip_buffer = io.BytesIO()
+        
+        with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zf:
+            for thread_id in thread_ids:
+                try:
+                    thread_data = legacy_services.process_thread(
+                        {'thread_id': thread_id}, None, None, None, project.api_key, project.id
+                    )
+                    
+                    if not thread_data or not thread_data.get('data'):
+                        continue
+                    
+                    html = render_template('print_view.html', threads=[thread_data['data']])
+                    html, temp_files = pdf_service.preprocess_html_for_pdf(html, project.id, get_headers_callback)
+                    
+                    try:
+                        pdf_bytes = pdf_service.generate_pdf_bytes(html)
+                        zf.writestr(f"thread_{thread_id}.pdf", pdf_bytes)
+                    finally:
+                        pdf_service.cleanup_temp_images(temp_files)
+                except Exception as e:
+                    current_app.logger.error(f"Failed to export thread {thread_id}: {e}")
+                    continue
+        
+        zip_buffer.seek(0)
+        import time
+        timestamp = int(time.time())
+        return Response(zip_buffer.getvalue(), mimetype='application/zip', headers={
+            'Content-Disposition': f'attachment; filename="batch_export_{timestamp}.zip"'
+        })
+
+
+@admin_bp.route('/pdf-export/status/<task_id>')
+def pdf_export_status(task_id):
+    """Display progress tracking page for async PDF export"""
+    if not session.get('user_id'):
+        return redirect(url_for('auth.login'))
+    
+    from ...models import PDFExportTask
+    task_record = PDFExportTask.query.get(task_id)
+    
+    if not task_record:
+        flash('任務不存在', 'error')
+        return redirect(url_for('admin.index'))
+    
+    # Permission check: only creator or admin can view
+    if session.get('role') != 'admin' and task_record.user_id != session.get('user_id'):
+        flash('Permission Denied', 'error')
+        return redirect(url_for('admin.index'))
+    
+    return render_template('admin/pdf_export_status.html', task=task_record)
+
+
+@admin_bp.route('/api/pdf-export/progress/<task_id>')
+def pdf_export_progress(task_id):
+    """API endpoint for progress polling"""
+    if not session.get('user_id'):
+        return {'error': 'Unauthorized'}, 401
+    
+    from ...models import PDFExportTask
+    from flask import jsonify
+    
+    task_record = PDFExportTask.query.get(task_id)
+    
+    if not task_record:
+        return {'error': 'Task not found'}, 404
+    
+    # Permission check
+    if session.get('role') != 'admin' and task_record.user_id != session.get('user_id'):
+        return {'error': 'Permission denied'}, 403
+    
+    return jsonify({
+        'status': task_record.status,
+        'progress': {
+            'current': task_record.progress_current,
+            'total': task_record.progress_total
+        },
+        'file_path': task_record.file_path if task_record.status == 'completed' else None,
+        'error_message': task_record.error_message if task_record.status == 'failed' else None
+    })
+
+
+@admin_bp.route('/pdf-export/download/<task_id>')
+def pdf_export_download(task_id):
+    """Download completed PDF export file"""
+    if not session.get('user_id'):
+        return redirect(url_for('auth.login'))
+    
+    from ...models import PDFExportTask
+    from flask import send_file
+    import os
+    
+    task_record = PDFExportTask.query.get(task_id)
+    
+    if not task_record:
+        flash('任務不存在', 'error')
+        return redirect(url_for('admin.index'))
+    
+    # Permission check
+    if session.get('role') != 'admin' and task_record.user_id != session.get('user_id'):
+        flash('Permission Denied', 'error')
+        return redirect(url_for('admin.index'))
+    
+    if task_record.status != 'completed':
+        flash('PDF 尚未生成完成', 'warning')
+        return redirect(url_for('admin.pdf_export_status', task_id=task_id))
+    
+    if not task_record.file_path or not os.path.exists(task_record.file_path):
+        flash('檔案不存在或已被清理', 'error')
+        return redirect(url_for('admin.index'))
+    
+    log_audit('Download PDF Export', f"User downloaded PDF export {task_id}")
+    
+    return send_file(
+        task_record.file_path,
+        as_attachment=True,
+        download_name=f"batch_export_{task_id}.zip"
+    )

@@ -135,6 +135,25 @@ class SearchResultChunk(db.Model):
     progress_data = db.Column(db.Text) # JSON data for progress tracking
     created_at = db.Column(db.Integer, default=lambda: int(datetime.now().timestamp()))
 
+class PDFExportTask(db.Model):
+    __tablename__ = 'pdf_export_tasks'
+    id = db.Column(db.String(100), primary_key=True)  # Huey task ID
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    project_id = db.Column(db.String(50), db.ForeignKey('projects.id'), nullable=False)
+    thread_count = db.Column(db.Integer)
+    status = db.Column(db.String(20), nullable=False)  # queued / running / completed / failed
+    progress_current = db.Column(db.Integer, default=0)
+    progress_total = db.Column(db.Integer)
+    file_path = db.Column(db.String(500))  # Path to generated ZIP file
+    error_message = db.Column(db.Text)
+    created_at = db.Column(db.Integer, nullable=False)
+    completed_at = db.Column(db.Integer)
+    
+    # Relationships
+    user = db.relationship('User', backref='pdf_exports')
+    project = db.relationship('Project', backref='pdf_exports')
+
+
 class SystemMetric(db.Model):
     __tablename__ = 'sys_metrics'
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)

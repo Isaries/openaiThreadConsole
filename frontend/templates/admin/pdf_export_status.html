@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container" style="max-width: 800px; margin: 2rem auto; padding: 0 1rem;">
+    <div class="card">
+        <div style="text-align: center; padding: 2rem;">
+            <h2>📄 PDF 匯出進度</h2>
+
+            {% if task.status == 'queued' %}
+            <div style="margin: 2rem 0;">
+                <div
+                    style="background: #f0f0f0; border-radius: 8px; height: 30px; overflow: hidden; position: relative;">
+                    <div id="progressFill"
+                        style="background: linear-gradient(90deg, #667eea, #764ba2); height: 100%; width: 0%; transition: width 0.3s ease;">
+                    </div>
+                </div>
+                <p id="progressText" style="margin-top: 1rem; font-size: 1.1rem;">
+                    等待中...
+                </p>
+                <p class="text-secondary" style="font-size: 0.9rem;">任務已加入佇列</p>
+            </div>
+            {% elif task.status == 'running' %}
+            <div style="margin: 2rem 0;">
+                <div
+                    style="background: #f0f0f0; border-radius: 8px; height: 30px; overflow: hidden; position: relative;">
+                    {% set pct = (task.progress_current / task.progress_total * 100)|int if task.progress_total and
+                    task.progress_total > 0 else 0 %}
+                    <div id="progressFill"
+                        style="background: linear-gradient(90deg, #667eea, #764ba2); height: 100%; width: {{ pct }}%; transition: width 0.3s ease;">
+                    </div>
+                </div>
+                <p id="progressText" style="margin-top: 1rem; font-size: 1.1rem;">
+                    <strong>{{ task.progress_current or 0 }}</strong> / {{ task.progress_total or 0 }} 完成
+                </p>
+                <p class="text-secondary" style="font-size: 0.9rem;">正在生成 PDF，請稍候...</p>
+            </div>
+            {% elif task.status == 'completed' %}
+            <div style="margin: 2rem 0;">
+                <div style="background: #10b981; color: white; padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">
+                    ✅ PDF 生成完成！
+                </div>
+                <a href="{{ url_for('admin.pdf_export_download', task_id=task.id) }}" class="btn btn-primary"
+                    style="font-size: 1.1rem; padding: 0.75rem 2rem;">
+                    📥 下載 PDF
+                </a>
+                <p class="text-secondary" style="margin-top: 1rem; font-size: 0.85rem;">
+                    檔案將在 24 小時後自動清理
+                </p>
+            </div>
+            {% elif task.status == 'failed' %}
+            <div style="margin: 2rem 0;">
+                <div style="background: #ef4444; color: white; padding: 1rem; border-radius: 8px;">
+                    ❌ 生成失敗
+                </div>
+                {% if task.error_message %}
+                <p class="text-secondary" style="margin-top: 1rem;">{{ task.error_message }}</p>
+                {% endif %}
+            </div>
+            {% else %}
+            <div style="margin: 2rem 0;">
+                <p class="text-secondary">未知狀態: {{ task.status }}</p>
+            </div>
+            {% endif %}
+
+            <div style="margin-top: 2rem;">
+                <a href="{{ url_for('admin.index', group_id=task.project_id) }}" class="btn btn-secondary">
+                    返回列表
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script nonce="{{ csp_nonce() }}">
+    {% if task.status in ['queued', 'running'] %}
+    function pollProgress() {
+        fetch('/admin/api/pdf-export/progress/{{ task.id }}')
+            .then(r => r.json())
+            .then(data => {
+                if (data.progress && data.progress.total > 0) {
+                    const pct = Math.floor((data.progress.current / data.progress.total) * 100);
+                    document.getElementById('progressFill').style.width = pct + '%';
+                    document.getElementById('progressText').innerHTML =
+                        `<strong>${data.progress.current}</strong> / ${data.progress.total} 完成`;
+                }
+
+                if (data.status === 'completed' || data.status === 'failed') {
+                    location.reload();
+                } else {
+                    setTimeout(pollProgress, 2000);
+                }
+            })
+            .catch(err => {
+                console.error('Progress poll failed:', err);
+                setTimeout(pollProgress, 5000);
+            });
+    }
+
+    pollProgress();
+    {% endif %}
+</script>
+{% endblock %}

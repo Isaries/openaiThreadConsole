@@ -658,3 +658,185 @@ def cleanup_old_search_results():
             db.session.rollback()
         except:
             pass
+
+# --- Batch PDF Export Tasks ---
+def _generate_single_thread_pdf(project_id, thread_id):
+    """
+    Helper to generate PDF for a single thread.
+    Returns PDF bytes (for threads <=50 messages) or ZIP bytes (for larger threads).
+    """
+    from .models import Project
+    from . import logic as legacy_services
+    from .services import pdf_service
+    from flask import render_template
+    import io
+    import math
+    
+    project = Project.query.get(project_id)
+    if not project:
+        raise ValueError(f"Project {project_id} not found")
+    
+    api_key_enc = project.api_key
+    
+    # Process thread data
+    thread_data = legacy_services.process_thread(
+        {'thread_id': thread_id}, None, None, None, api_key_enc, project_id
+    )
+    
+    if not thread_data or not thread_data.get('data'):
+        raise ValueError(f"Thread {thread_id} not found or empty")
+    
+    messages = thread_data['data']['messages']
+    
+    # Helper for headers
+    def get_headers_callback(key):
+        return legacy_services.get_headers(key)
+    
+    CHUNK_SIZE = 50
+    total_messages = len(messages)
+    
+    if total_messages <= CHUNK_SIZE:
+        # Single PDF
+        html = render_template('print_view.html', threads=[thread_data['data']])
+        html, temp_files = pdf_service.preprocess_html_for_pdf(html, project_id, get_headers_callback)
+        try:
+            pdf_bytes = pdf_service.generate_pdf_bytes(html)
+            return pdf_bytes
+        finally:
+            pdf_service.cleanup_temp_images(temp_files)
+    else:
+        # Split into multiple PDFs in a mini-ZIP
+        import zipfile
+        chunks = math.ceil(total_messages / CHUNK_SIZE)
+        zip_buffer = io.BytesIO()
+        
+        with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zf:
+            for i in range(chunks):
+                start = i * CHUNK_SIZE
+                end = start + CHUNK_SIZE
+                chunk_msgs = messages[start:end]
+                
+                chunk_data = thread_data['data'].copy()
+                chunk_data['messages'] = chunk_msgs
+                
+                html = render_template('print_view.html', threads=[chunk_data])
+                html, temp_files = pdf_service.preprocess_html_for_pdf(html, project_id, get_headers_callback)
+                
+                try:
+                    pdf_bytes = pdf_service.generate_pdf_bytes(html)
+                    zf.writestr(f"thread_{thread_id}_part_{i+1}.pdf", pdf_bytes)
+                finally:
+                    pdf_service.cleanup_temp_images(temp_files)
+        
+        zip_buffer.seek(0)
+        return zip_buffer.getvalue()
+
+@huey.task()
+def generate_batch_pdf_task(project_id, thread_ids, user_id, task_id):
+    """
+    Background task to generate batch PDF export.
+    Creates a ZIP file containing PDFs for all selected threads.
+    task_id is pre-created in the route to avoid race conditions.
+    """
+    logger.info(f"Starting Batch PDF Export Task {task_id} for {len(thread_ids)} threads")
+    
+    from . import create_app
+    from .models import PDFExportTask
+    import config
+    
+    app = create_app()
+    
+    with app.app_context():
+        # 1. Get the pre-created task record and update status
+        task_record = PDFExportTask.query.get(task_id)
+        if not task_record:
+            logger.error(f"Task record {task_id} not found")
+            return
+        
+        task_record.status = 'running'
+        db.session.commit()
+
+        
+        try:
+            # 2. Create export directory
+            export_dir = config.TEMP_PDF_EXPORT_DIR
+            os.makedirs(export_dir, exist_ok=True)
+            
+            zip_path = os.path.join(export_dir, f"{task_id}.zip")
+            
+            # 3. Generate PDFs and write to ZIP
+            import zipfile
+            with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zf:
+                for i, thread_id in enumerate(thread_ids):
+                    try:
+                        # Generate PDF for this thread
+                        pdf_bytes = _generate_single_thread_pdf(project_id, thread_id)
+                        
+                        # Add to ZIP
+                        zf.writestr(f"thread_{thread_id}.pdf", pdf_bytes)
+                        
+                        # Update progress
+                        task_record.progress_current = i + 1
+                        db.session.commit()
+                        
+                        logger.info(f"Task {task_id}: Completed {i+1}/{len(thread_ids)}")
+                        
+                    except Exception as e:
+                        logger.error(f"Task {task_id}: Failed to export thread {thread_id}: {e}")
+                        # Continue with next thread
+            
+            # 4. Mark as completed
+            task_record.status = 'completed'
+            task_record.file_path = zip_path
+            task_record.completed_at = int(time.time())
+            db.session.commit()
+            
+            logger.info(f"Batch PDF Export Task {task_id} completed successfully")
+            
+        except Exception as e:
+            logger.error(f"Batch PDF Export Task {task_id} failed: {e}")
+            task_record.status = 'failed'
+            task_record.error_message = str(e)
+            db.session.commit()
+
+@huey.periodic_task(crontab(hour='4', minute='0'))
+def cleanup_pdf_exports():
+    """Clean up PDF export files older than PDF_EXPORT_TTL_HOURS"""
+    logger.info("Starting PDF Export Cleanup Task")
+    
+    from . import create_app
+    from .models import PDFExportTask
+    import config
+    
+    app = create_app()
+    
+    with app.app_context():
+        cutoff = time.time() - (config.PDF_EXPORT_TTL_HOURS * 3600)
+        
+        # Clean up files
+        export_dir = config.TEMP_PDF_EXPORT_DIR
+        if os.path.exists(export_dir):
+            files = glob.glob(os.path.join(export_dir, "*.zip"))
+            count = 0
+            for f in files:
+                try:
+                    if os.path.isfile(f):
+                        mtime = os.path.getmtime(f)
+                        if mtime < cutoff:
+                            os.remove(f)
+                            count += 1
+                except Exception as e:
+                    logger.warning(f"Failed to delete {f}: {e}")
+            
+            logger.info(f"Deleted {count} old PDF export files")
+        
+        # Clean up database records
+        old_tasks = PDFExportTask.query.filter(
+            PDFExportTask.created_at < int(cutoff)
+        ).all()
+        
+        for task in old_tasks:
+            db.session.delete(task)
+        
+        db.session.commit()
+        logger.info(f"Deleted {len(old_tasks)} old PDF export task records")

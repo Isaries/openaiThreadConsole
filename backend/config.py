@@ -14,7 +14,10 @@ load_dotenv(env_path)
 
 # File Paths
 TEMP_PDF_IMG_DIR = os.path.join(basedir, 'temp_pdf_images')
+TEMP_PDF_EXPORT_DIR = os.path.join(basedir, 'temp_pdf_exports')
+PDF_EXPORT_TTL_HOURS = 24
 GROUPS_FILE = 'groups.json'
+
 USERS_FILE = 'users.json'
 SETTINGS_FILE = 'settings.json'
 LOG_FILE = 'search_logs.json'
