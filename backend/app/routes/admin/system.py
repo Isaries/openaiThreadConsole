@@ -102,6 +102,31 @@ def trigger_manual_refresh():
     return jsonify({'success': True, 'message': 'Manual global refresh started.'})
 
 
+@admin_bp.route('/settings/assistant_cache', methods=['POST'])
+def update_assistant_cache_settings():
+    if not session.get('user_id') or session.get('role') != 'admin':
+        return jsonify({'error': 'Unauthorized'}), 403
+        
+    data = request.json
+    try:
+        expiry_days = int(data.get('expiry_days', 3))
+    except (ValueError, TypeError):
+        return jsonify({'error': 'Invalid parameters'}), 400
+        
+    if not (1 <= expiry_days <= 30):
+        return jsonify({'error': 'Expiry days must be between 1 and 30'}), 400
+    
+    new_config = {
+        'expiry_days': expiry_days
+    }
+    
+    if database.update_setting('assistant_cache', new_config):
+        log_audit(session.get('username'), 'Update Assistant Cache Settings', f'{expiry_days} days')
+        return jsonify({'success': True})
+    else:
+        return jsonify({'error': 'Database Update Failed'}), 500
+
+
 @admin_bp.route('/performance')
 def performance_dashboard():
     if not session.get('user_id'): return redirect(url_for('auth.login'))

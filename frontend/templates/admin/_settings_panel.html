@@ -102,6 +102,51 @@
                     </div>
                 </div>
             </div> <!-- End of Auto-Refresh Global Settings Container -->
+
+            <!-- Assistant Cache Settings -->
+            <div
+                style="margin-top: 1.5rem; padding: 1.5rem; background: white; border: 1px solid var(--surface-border); border-radius: var(--radius-md);">
+                <h4 style="margin-bottom: 1rem;">🤖 Assistant 名稱快取設定</h4>
+                <div style="display: flex; gap: 1.5rem; flex-wrap: wrap; align-items: end;">
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label>快取過期時間 (天)</label>
+                        <input type="number" id="assistant_cache_expiry" class="input" style="width: 120px;" min="1"
+                            max="30" value="{{ assistant_cache_settings.get('expiry_days', 3) }}">
+                        <span class="text-xs text-secondary" style="margin-left: 4px;">(1-30)</span>
+                    </div>
+                    <div>
+                        <button type="button" class="btn btn-primary" onclick="saveAssistantCacheSettings()"
+                            style="height: 38px;">
+                            儲存設定
+                        </button>
+                    </div>
+                </div>
+                <p class="text-xs text-secondary" style="margin-top: 0.75rem;">
+                    💡 Assistant 名稱會在訊息同步時自動快取。超過此天數的快取會在下次同步時重新查詢 OpenAI API。
+                </p>
+            </div>
+
+            <script nonce="{{ csp_nonce() }}">
+                function saveAssistantCacheSettings() {
+                    const expiryDays = document.getElementById('assistant_cache_expiry').value;
+                    const csrf = "{{ csrf_token() }}";
+
+                    fetch('/admin/settings/assistant_cache', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': csrf
+                        },
+                        body: JSON.stringify({ expiry_days: parseInt(expiryDays) })
+                    })
+                        .then(r => r.json())
+                        .then(data => {
+                            if (data.success) alert('Assistant 快取設定已儲存！');
+                            else alert('儲存失敗: ' + (data.error || '未知錯誤'));
+                        })
+                        .catch(e => alert('Error: ' + e));
+                }
+            </script>
             <!-- </div> removed to include rest of form in settingsSection -->
 
             <script nonce="{{ csp_nonce() }}">

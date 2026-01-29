@@ -85,8 +85,17 @@ class Message(db.Model):
     role = db.Column(db.String(20), nullable=False) # user / assistant
     content = db.Column(db.Text, nullable=True)
     created_at = db.Column(db.Integer, nullable=False) # unix timestamp
+    assistant_id = db.Column(db.String(100), nullable=True, index=True)  # OpenAI assistant ID
     
     # Optional: store full JSON just in case? No, waste of space.
+
+class Assistant(db.Model):
+    """Cache table for OpenAI Assistant names"""
+    __tablename__ = 'assistants'
+    id = db.Column(db.String(100), primary_key=True)  # asst_xxx
+    name = db.Column(db.String(200), nullable=True)
+    project_id = db.Column(db.String(50), db.ForeignKey('projects.id'), nullable=False, index=True)
+    last_synced_at = db.Column(db.Integer, nullable=True)  # unix timestamp
     
 class SearchHistory(db.Model):
     __tablename__ = 'search_history'

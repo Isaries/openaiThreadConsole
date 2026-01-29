@@ -13,7 +13,7 @@ from . import utils
 import config
 
 from app.extensions import db
-from app.models import Thread, Message
+from app.models import Thread, Message, Assistant
 import time
 
 # Optional: tiktoken for precise token counting
@@ -115,6 +115,104 @@ def fetch_thread_messages(thread_id, api_key=None):
     except Exception as e:
         logging.getLogger().error(f"Fetch error {thread_id}: {e}")
         return {'error': str(e)}
+
+
+def fetch_assistant_info(assistant_id, api_key=None):
+    """
+    Fetch assistant details from OpenAI API.
+    Returns the assistant name or None if failed.
+    """
+    if not assistant_id:
+        return None
+    
+    base_url = config.OPENAI_BASE_URL
+    url = f"{base_url}/assistants/{assistant_id}"
+    headers = get_headers(api_key)
+    
+    session = _get_retry_session()
+    
+    try:
+        response = session.get(url, headers=headers, timeout=30)
+        
+        if response.status_code == 200:
+            data = response.json()
+            return data.get('name')
+        else:
+            logging.getLogger().warning(f"Failed to fetch assistant {assistant_id}: HTTP {response.status_code}")
+            return None
+    except Exception as e:
+        logging.getLogger().error(f"Error fetching assistant {assistant_id}: {e}")
+        return None
+
+
+def get_or_sync_assistants(assistant_ids, api_key=None, project_id=None):
+    """
+    Batch check and sync assistant names.
+    - Check local cache for existing entries
+    - Filter out expired (configurable, default 3 days) or missing entries
+    - Fetch from OpenAI API only for those
+    - Update cache
+    
+    Returns: dict mapping assistant_id -> assistant_name
+    """
+    from app.models import Assistant
+    
+    if not assistant_ids:
+        return {}
+    
+    result = {}
+    current_ts = int(time.time())
+    
+    # Read expiry from settings (default: 3 days)
+    settings = database.load_settings()
+    assistant_cache_config = settings.get('assistant_cache', {})
+    expiry_days = assistant_cache_config.get('expiry_days', 3)
+    cache_expiry = expiry_days * 24 * 60 * 60  # Convert to seconds
+    
+    # 1. Batch query existing cache
+    cached_assistants = Assistant.query.filter(Assistant.id.in_(assistant_ids)).all()
+    cached_map = {a.id: a for a in cached_assistants}
+    
+    # 2. Determine which need refresh
+    ids_to_fetch = []
+    for asst_id in assistant_ids:
+        cached = cached_map.get(asst_id)
+        if cached:
+            last_sync = cached.last_synced_at or 0
+            if (current_ts - last_sync) > cache_expiry:
+                # Expired, need refresh
+                ids_to_fetch.append(asst_id)
+            else:
+                # Valid cache
+                result[asst_id] = cached.name
+        else:
+            # Not in cache
+            ids_to_fetch.append(asst_id)
+    
+    # 3. Fetch missing/expired from API
+    for asst_id in ids_to_fetch:
+        name = fetch_assistant_info(asst_id, api_key)
+        
+        # Update or create cache entry
+        existing = cached_map.get(asst_id)
+        if existing:
+            existing.name = name
+            existing.last_synced_at = current_ts
+        else:
+            new_assistant = Assistant(
+                id=asst_id,
+                name=name,
+                project_id=project_id,
+                last_synced_at=current_ts
+            )
+            db.session.add(new_assistant)
+        
+        result[asst_id] = name
+        
+        # Small delay to avoid rate limiting
+        time.sleep(0.1)
+    
+    return result
 
 
 def calculate_messages_tokens(messages_data):
@@ -357,6 +455,12 @@ def sync_thread_to_db(thread_id_str, api_key=None, project_id=None, force_active
         # This represents the cost of reading/fetching messages, not running the assistant
         total_tokens = calculate_messages_tokens(messages_data)
         
+        # 1.6 Collect all assistant_ids for cache sync
+        assistant_ids = set()
+        for msg in messages_data:
+            if msg.get('role') == 'assistant' and msg.get('assistant_id'):
+                assistant_ids.add(msg.get('assistant_id'))
+        
         # 2. Prepare Data Objects
         new_msgs = []
         # We need thread foreign key `thread.id` (Integer PK), not string ID.
@@ -378,11 +482,17 @@ def sync_thread_to_db(thread_id_str, api_key=None, project_id=None, force_active
             thread_pk = thread.id
         else:
             thread_pk = thread.id
+        
+        # 2.5 Sync assistant names to cache (before processing messages)
+        # This ensures we have the latest names cached
+        if assistant_ids:
+            get_or_sync_assistants(list(assistant_ids), api_key, project_id)
             
         # 3. Process Data (CPU Bound - OUTSIDE Transaction)
         for msg in messages_data:
             role = msg.get('role', 'unknown')
             created_at = msg.get('created_at', 0)
+            msg_assistant_id = msg.get('assistant_id') if role == 'assistant' else None
             
             content_value = ""
             if msg.get('content'):
@@ -402,7 +512,8 @@ def sync_thread_to_db(thread_id_str, api_key=None, project_id=None, force_active
                 thread_id=thread_pk, # Use the Int PK we got
                 role=role,
                 content=content_value,
-                created_at=int(created_at)
+                created_at=int(created_at),
+                assistant_id=msg_assistant_id  # Store assistant_id
             ))
 
         # 3.5 Calculate latest message timestamp for smart refresh
@@ -496,6 +607,18 @@ def process_thread_from_db(thread_db_obj, target_name, start_date, end_date):
     # If no messages, maybe return empty or handle specially
     # BUT we must return the structure regardless
     
+    # Collect assistant_ids for batch lookup
+    assistant_ids = set()
+    for msg in db_messages:
+        if msg.assistant_id:
+            assistant_ids.add(msg.assistant_id)
+    
+    # Batch lookup assistant names from cache
+    assistant_names = {}
+    if assistant_ids:
+        cached_assistants = Assistant.query.filter(Assistant.id.in_(assistant_ids)).all()
+        assistant_names = {a.id: a.name for a in cached_assistants}
+    
     processed_messages = []
     has_target = False
     
@@ -507,9 +630,17 @@ def process_thread_from_db(thread_db_obj, target_name, start_date, end_date):
             content_value = msg.content or ""
             role = msg.role
             
+            # Get assistant name from cache
+            assistant_name = None
+            if msg.assistant_id:
+                assistant_name = assistant_names.get(msg.assistant_id)
+            
             # Highlight Logic
             if target_name:
                 if target_name.lower() in content_value.lower():
+                    has_target = True
+                # Also check assistant name match
+                if assistant_name and target_name.lower() in assistant_name.lower():
                     has_target = True
                 if target_name.lower() in content_value.lower() and target_name != "No choice was made":
                      pattern = re.compile(re.escape(target_name), re.IGNORECASE)
@@ -517,7 +648,8 @@ def process_thread_from_db(thread_db_obj, target_name, start_date, end_date):
 
             role_class = 'user' if role == 'user' else 'assistant'
             role_icon = '👤' if role == 'user' else '🤖'
-            role_name = '使用者' if role == 'user' else 'AI Agent'
+            # Use assistant name if available, otherwise default
+            role_name = '使用者' if role == 'user' else (assistant_name or 'AI Agent')
             
             processed_messages.append({
                 'time': time_str,
@@ -526,6 +658,7 @@ def process_thread_from_db(thread_db_obj, target_name, start_date, end_date):
                 'role_class': role_class,
                 'role_icon': role_icon,
                 'role_name': role_name,
+                'assistant_name': assistant_name,  # Include for frontend use
                 'content': content_value,
                 'date_str': date_str
             })
@@ -620,15 +753,20 @@ def search_threads_sql(project_id, target_name, start_date, end_date):
     if target_name or start_date or end_date:
         query = query.outerjoin(Message)
         
+        # Join Assistant table for name search
+        if target_name:
+            query = query.outerjoin(Assistant, Message.assistant_id == Assistant.id)
+        
         filters = []
         
         if target_name:
-            # Logic: Match keyword in Message Content OR Thread ID OR Remark
+            # Logic: Match keyword in Message Content OR Thread ID OR Remark OR Assistant Name
             
             t_filter = (Message.content.ilike(f'%{target_name}%'))
             t_meta_filter = (Thread.thread_id.ilike(f'%{target_name}%')) | (Thread.remark.ilike(f'%{target_name}%'))
+            t_assistant_filter = (Assistant.name.ilike(f'%{target_name}%'))
             
-            kw_condition = t_filter | t_meta_filter
+            kw_condition = t_filter | t_meta_filter | t_assistant_filter
             filters.append(kw_condition)
 
         if start_date:

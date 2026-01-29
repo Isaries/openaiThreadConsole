@@ -156,6 +156,7 @@ def index():
         'status_filter': status_filter if active_group else 'all', # Pass filter to template
         'masked_key': masked_key,
         'auto_refresh_settings': database.load_settings().get('auto_refresh', {}),
+        'assistant_cache_settings': database.load_settings().get('assistant_cache', {'expiry_days': 3}),
         'username': session.get('username'),
         'current_user_email': curr_user.email if session.get('user_id') and (curr_user := User.query.get(session['user_id'])) else None,
         'current_role': session.get('role'),
