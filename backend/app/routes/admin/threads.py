@@ -538,6 +538,15 @@ def export_pdf():
         # Synchronous export
         return _generate_sync_pdf_export(project, thread_ids)
     else:
+        # Check concurrent task limit before async processing
+        from ...models import PDFExportTask
+        ongoing_tasks = PDFExportTask.query.filter(
+            PDFExportTask.status.in_(['queued', 'running'])
+        ).count()
+        
+        if ongoing_tasks >= 4:  # Max 4 concurrent tasks (2 running + 2 queued)
+            flash('⏳ 系統繁忙，目前有多個匯出任務進行中，請稍後再試', 'warning')
+            return redirect(url_for('admin.index', group_id=group_id))
         # Asynchronous export - create record FIRST to avoid race condition
         import time
         from ...models import PDFExportTask
