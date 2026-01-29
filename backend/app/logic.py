@@ -302,6 +302,23 @@ def process_thread(thread_data, target_name, start_date, end_date, api_key=None,
         result['status'] = 'Empty Messages'
         return result
 
+    # Pre-fetch Assistant Names for display
+    assistant_names_map = {}
+    try:
+        assistant_ids = set()
+        for msg in messages_data:
+            if msg.get('role') == 'assistant' and msg.get('assistant_id'):
+                assistant_ids.add(msg.get('assistant_id'))
+        
+        if assistant_ids:
+            from .models import Assistant 
+            assistants = Assistant.query.filter(Assistant.id.in_(assistant_ids)).all()
+            for ast in assistants:
+                if ast.name:
+                    assistant_names_map[ast.id] = ast.name
+    except Exception as e:
+        logging.getLogger().warning(f"Failed to fetch assistant names: {e}")
+
     processed_messages = []
     has_target = False
     
@@ -344,7 +361,12 @@ def process_thread(thread_data, target_name, start_date, end_date, api_key=None,
 
             role_class = 'user' if role == 'user' else 'assistant'
             role_icon = '👤' if role == 'user' else '🤖'
-            role_name = '使用者' if role == 'user' else 'AI Agent'
+            
+            if role == 'user':
+                role_name = '使用者'
+            else:
+                aid = msg.get('assistant_id')
+                role_name = assistant_names_map.get(aid) or 'AI Agent'
             
             processed_messages.append({
                 'time': time_str,
