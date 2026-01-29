@@ -679,14 +679,17 @@ def _generate_single_thread_pdf(project_id, thread_id):
     api_key_enc = project.api_key
     
     # Process thread data
+    logger.info(f"Generating PDF for thread {thread_id} in project {project_id}")
     thread_data = legacy_services.process_thread(
         {'thread_id': thread_id}, None, None, None, api_key_enc, project_id
     )
     
     if not thread_data or not thread_data.get('data'):
+        logger.error(f"Thread {thread_id} returned no data. Status: {thread_data.get('status') if thread_data else 'None'}")
         raise ValueError(f"Thread {thread_id} not found or empty")
     
     messages = thread_data['data']['messages']
+    logger.info(f"Thread {thread_id}: {len(messages)} messages")
     
     # Helper for headers
     def get_headers_callback(key):
@@ -766,24 +769,32 @@ def generate_batch_pdf_task(project_id, thread_ids, user_id, task_id):
             
             # 3. Generate PDFs and write to ZIP
             import zipfile
+            logger.info(f"Task {task_id}: Creating ZIP at {zip_path}")
             with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zf:
+                success_count = 0
                 for i, thread_id in enumerate(thread_ids):
+                    logger.info(f"Task {task_id}: Processing thread {i+1}/{len(thread_ids)}: {thread_id}")
                     try:
                         # Generate PDF for this thread
                         pdf_bytes = _generate_single_thread_pdf(project_id, thread_id)
                         
-                        # Add to ZIP
-                        zf.writestr(f"thread_{thread_id}.pdf", pdf_bytes)
+                        if pdf_bytes:
+                            # Add to ZIP
+                            zf.writestr(f"thread_{thread_id}.pdf", pdf_bytes)
+                            success_count += 1
+                            logger.info(f"Task {task_id}: Added {thread_id} to ZIP ({len(pdf_bytes)} bytes)")
+                        else:
+                            logger.warning(f"Task {task_id}: No PDF bytes returned for {thread_id}")
                         
                         # Update progress
                         task_record.progress_current = i + 1
                         db.session.commit()
                         
-                        logger.info(f"Task {task_id}: Completed {i+1}/{len(thread_ids)}")
-                        
                     except Exception as e:
-                        logger.error(f"Task {task_id}: Failed to export thread {thread_id}: {e}")
+                        logger.error(f"Task {task_id}: Failed to export thread {thread_id}: {e}", exc_info=True)
                         # Continue with next thread
+                
+                logger.info(f"Task {task_id}: ZIP complete with {success_count} files")
             
             # 4. Mark as completed
             task_record.status = 'completed'

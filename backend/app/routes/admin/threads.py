@@ -646,6 +646,7 @@ def _generate_sync_pdf_export(project, thread_ids):
                     )
                     
                     if not thread_data or not thread_data.get('data'):
+                        current_app.logger.warning(f"Thread {thread_id} returned no data: {thread_data}")
                         continue
                     
                     html = render_template('print_view.html', threads=[thread_data['data']])
@@ -657,7 +658,7 @@ def _generate_sync_pdf_export(project, thread_ids):
                     finally:
                         pdf_service.cleanup_temp_images(temp_files)
                 except Exception as e:
-                    current_app.logger.error(f"Failed to export thread {thread_id}: {e}")
+                    current_app.logger.error(f"Failed to export thread {thread_id}: {e}", exc_info=True)
                     continue
         
         zip_buffer.seek(0)
