@@ -791,7 +791,7 @@ def generate_batch_pdf_task(project_id, thread_ids, user_id, task_id):
             import zipfile
             from concurrent.futures import ProcessPoolExecutor, as_completed, TimeoutError as FuturesTimeoutError
             
-            max_workers = int(os.getenv('PDF_EXPORT_MAX_WORKERS', '2'))
+            max_workers = config.PDF_EXPORT_MAX_WORKERS
             logger.info(f"Task {task_id}: Creating ZIP at {zip_path} with {max_workers} workers")
             
             with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zf:

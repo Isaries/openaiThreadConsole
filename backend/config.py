@@ -16,7 +16,7 @@ load_dotenv(env_path)
 TEMP_PDF_IMG_DIR = os.path.join(basedir, 'temp_pdf_images')
 TEMP_PDF_EXPORT_DIR = os.path.join(basedir, 'temp_pdf_exports')
 PDF_EXPORT_TTL_HOURS = 24  # Auto-cleanup after 24 hours
-PDF_EXPORT_MAX_WORKERS = int(os.getenv('PDF_EXPORT_MAX_WORKERS', '2'))  # Parallel workers
+PDF_EXPORT_MAX_WORKERS = int(os.getenv('PDF_EXPORT_MAX_WORKERS', '5'))  # Parallel workers
 GROUPS_FILE = 'groups.json'
 
 USERS_FILE = 'users.json'
