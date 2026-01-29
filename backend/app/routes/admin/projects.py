@@ -71,7 +71,6 @@ def create_group():
     # So mostly important for non-admins.
     
     db.session.add(new_project)
-    db.session.add(new_project)
     utils.log_audit('Create Project', name, f"ID: {new_project.id}")
     
     try:
@@ -275,9 +274,6 @@ def update_group():
         project.api_key = core_security.encrypt_data(api_key.strip())
         project.api_key_hash = core_security.hash_api_key(api_key.strip())
         
-    project.version += 1
-    db.session.commit()
-    
     project.version += 1
     db.session.commit()
     

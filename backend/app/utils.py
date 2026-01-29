@@ -26,7 +26,14 @@ def log_audit(action, target, details=None, status='Success', user_override=None
     import json
     
     try:
-        user_name = user_override or session.get('username', 'Unknown')
+        from flask import has_request_context
+        if user_override:
+            user_name = user_override
+        elif has_request_context():
+            user_name = session.get('username', 'Unknown')
+        else:
+            user_name = 'System'
+            
         ip = get_client_ip()
         
         # Serialize dict details
