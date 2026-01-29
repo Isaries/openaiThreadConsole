@@ -20,7 +20,7 @@ from . import admin_bp
 from ...models import Thread, Project, Message, User
 from ... import logic, tasks
 from ...extensions import db, limiter
-from .security import log_audit
+from ...utils import log_audit
 from .forms import AddThreadForm
 
 
