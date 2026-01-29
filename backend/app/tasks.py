@@ -704,7 +704,7 @@ def _generate_single_thread_pdf(project_id, thread_id):
         html, temp_files = pdf_service.preprocess_html_for_pdf(html, project_id, get_headers_callback)
         try:
             pdf_bytes = pdf_service.generate_pdf_bytes(html)
-            return pdf_bytes
+            return {'type': 'pdf', 'data': pdf_bytes}
         finally:
             pdf_service.cleanup_temp_images(temp_files)
     else:
@@ -732,7 +732,19 @@ def _generate_single_thread_pdf(project_id, thread_id):
                     pdf_service.cleanup_temp_images(temp_files)
         
         zip_buffer.seek(0)
-        return zip_buffer.getvalue()
+        return {'type': 'zip', 'data': zip_buffer.getvalue()}
+
+def _worker_generate_pdf_wrapper(project_id, thread_id):
+    """
+    Worker function for ProcessPoolExecutor.
+    Must be a top-level function (not nested) to be picklable.
+    """
+    from . import create_app
+    
+    app = create_app()
+    with app.app_context():
+        return _generate_single_thread_pdf(project_id, thread_id)
+
 
 @huey.task()
 def generate_batch_pdf_task(project_id, thread_ids, user_id, task_id):
@@ -767,34 +779,62 @@ def generate_batch_pdf_task(project_id, thread_ids, user_id, task_id):
             
             zip_path = os.path.join(export_dir, f"{task_id}.zip")
             
-            # 3. Generate PDFs and write to ZIP
+            # 3. Generate PDFs and write to ZIP (Parallel Processing)
             import zipfile
-            logger.info(f"Task {task_id}: Creating ZIP at {zip_path}")
+            from concurrent.futures import ProcessPoolExecutor, as_completed
+            
+            max_workers = int(os.getenv('PDF_EXPORT_MAX_WORKERS', '2'))
+            logger.info(f"Task {task_id}: Creating ZIP at {zip_path} with {max_workers} workers")
+            
             with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zf:
                 success_count = 0
-                for i, thread_id in enumerate(thread_ids):
-                    logger.info(f"Task {task_id}: Processing thread {i+1}/{len(thread_ids)}: {thread_id}")
-                    try:
-                        # Generate PDF for this thread
-                        pdf_bytes = _generate_single_thread_pdf(project_id, thread_id)
+                
+                # Submit all tasks to process pool
+                with ProcessPoolExecutor(max_workers=max_workers) as executor:
+                    future_to_thread = {
+                        executor.submit(_worker_generate_pdf_wrapper, project_id, tid): tid
+                        for tid in thread_ids
+                    }
+                    
+                    # Collect results as they complete
+                    completed = 0
+                    for future in as_completed(future_to_thread):
+                        thread_id = future_to_thread[future]
+                        completed += 1
                         
-                        if pdf_bytes:
-                            # Add to ZIP
-                            zf.writestr(f"thread_{thread_id}.pdf", pdf_bytes)
-                            success_count += 1
-                            logger.info(f"Task {task_id}: Added {thread_id} to ZIP ({len(pdf_bytes)} bytes)")
-                        else:
-                            logger.warning(f"Task {task_id}: No PDF bytes returned for {thread_id}")
+                        logger.info(f"Task {task_id}: Processing thread {completed}/{len(thread_ids)}: {thread_id}")
+                        
+                        try:
+                            result = future.result(timeout=120)  # 2-minute timeout per thread
+                            
+                            if result:
+                                # Handle PDF or ZIP result
+                                if result['type'] == 'zip':
+                                    # Expand mini-ZIP into main ZIP
+                                    mini_zip_buffer = io.BytesIO(result['data'])
+                                    with zipfile.ZipFile(mini_zip_buffer, 'r') as mini_zip:
+                                        for name in mini_zip.namelist():
+                                            zf.writestr(name, mini_zip.read(name))
+                                    logger.info(f"Task {task_id}: Expanded ZIP for {thread_id} ({len(result['data'])} bytes)")
+                                else:
+                                    # Single PDF
+                                    zf.writestr(f"thread_{thread_id}.pdf", result['data'])
+                                    logger.info(f"Task {task_id}: Added {thread_id} PDF ({len(result['data'])} bytes)")
+                                
+                                success_count += 1
+                            else:
+                                logger.warning(f"Task {task_id}: No result returned for {thread_id}")
+                            
+                        except TimeoutError:
+                            logger.error(f"Task {task_id}: Timeout for thread {thread_id} (>120s)")
+                        except Exception as e:
+                            logger.error(f"Task {task_id}: Failed to export thread {thread_id}: {e}", exc_info=True)
                         
                         # Update progress
-                        task_record.progress_current = i + 1
+                        task_record.progress_current = completed
                         db.session.commit()
-                        
-                    except Exception as e:
-                        logger.error(f"Task {task_id}: Failed to export thread {thread_id}: {e}", exc_info=True)
-                        # Continue with next thread
                 
-                logger.info(f"Task {task_id}: ZIP complete with {success_count} files")
+                logger.info(f"Task {task_id}: ZIP complete with {success_count}/{len(thread_ids)} files")
             
             # 4. Mark as completed
             task_record.status = 'completed'
