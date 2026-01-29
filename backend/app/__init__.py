@@ -50,6 +50,9 @@ def create_app():
     # CSP Nonce & Header Logic
     import base64
     def get_csp_nonce():
+        # Background tasks (e.g., Huey workers) don't have request context
+        if not has_request_context():
+            return ''  # Return empty string for background tasks
         if not getattr(request, 'csp_nonce', None):
             request.csp_nonce = base64.b64encode(os.urandom(16)).decode()
         return request.csp_nonce
