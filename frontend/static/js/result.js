@@ -316,8 +316,16 @@ window.editRemark = async function (threadId, projectId, oldRemark) {
 
             const selector = '#thread-' + threadId + ' .thread-remark > span';
             const remarkSpan = document.querySelector(selector);
+
+            // Also update the button's dataset so next edit shows correct value
+            const btnSelector = '#thread-' + threadId + ' .btn-edit-remark';
+            const editBtn = document.querySelector(btnSelector);
+
             if (remarkSpan) {
                 remarkSpan.textContent = newRemark;
+                if (editBtn) {
+                    editBtn.dataset.remark = newRemark;
+                }
             } else {
                 location.reload();
             }

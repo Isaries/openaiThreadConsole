@@ -405,6 +405,7 @@
     window.editRemark = function (threadId, groupId, currentRemark) {
         const newRemark = prompt("請輸入新的備註:", currentRemark);
         if (newRemark === null) return; // Cancelled
+        if (newRemark === currentRemark) return; // No change
 
         const csrfInput = document.querySelector('input[name="csrf_token"]');
         const token = csrfInput ? csrfInput.value : '';
@@ -426,24 +427,30 @@
             .then(data => {
                 if (data.success) {
                     // Update UI in all places
-                    // 1. Thread List Rows
-                    const rows = document.querySelectorAll(`.editable-remark[data-thread-id="${threadId}"]`);
-                    rows.forEach(el => {
-                        el.innerText = newRemark || '✏️';
-                        el.dataset.remark = newRemark;
-                    });
 
-                    // 2. Thread View Header
-                    const viewHeader = document.querySelector('.thread-remark.editable-remark');
-                    if (viewHeader && viewHeader.dataset.threadId === threadId) {
+                    // 1. specific handling for Thread View Header (avoids overwrite by generic list logic)
+                    const viewHeader = document.querySelector('.thread-remark.editable-remark[data-thread-id="' + threadId + '"]');
+                    if (viewHeader) {
                         viewHeader.innerText = '備註: ' + (newRemark || '-');
                         viewHeader.dataset.remark = newRemark;
                     }
 
+                    // 2. Thread List Rows (exclude the view header if we just updated it)
+                    const rows = document.querySelectorAll(`.editable-remark[data-thread-id="${threadId}"]`);
+                    rows.forEach(el => {
+                        // Skip if it's the viewHeader we already handled correctly
+                        if (el === viewHeader) return;
+
+                        el.innerText = newRemark || '✏️';
+                        el.dataset.remark = newRemark;
+                    });
+
                     // 3. Sidebar (if bookmarked)
                     const sidebarItem = document.querySelector(`.sidebar-item div[title="${threadId}"]`);
                     if (sidebarItem) {
-                        sidebarItem.innerText = newRemark || threadId;
+                        // Update sidebar text, handle empty case
+                        const displayText = (newRemark && newRemark.trim()) ? newRemark : threadId;
+                        sidebarItem.innerText = displayText;
                     }
                 } else {
                     alert('更新失敗: ' + (data.error || 'Unknown'));
