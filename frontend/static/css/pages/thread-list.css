@@ -1,12 +1,34 @@
-/* --- Specific Thread List Mobile Optimization --- */
+/* --- Thread List Page Styles --- */
 
-/* Base Styles (Replacing Inline Styles) */
-.toolbar-actions {
+/* 
+   MOBILE FIRST APPROACH 
+   Default styles apply to Mobile. 
+   Desktop overrides are in @media (min-width: 769px).
+*/
+
+/* --- 1. Toolbar Container --- */
+.thread-toolbar {
     display: flex;
-    gap: 0.5rem;
+    flex-direction: column;
+    /* Mobile Warning: Stack vertically */
+    gap: 1rem;
+}
+
+.thread-toolbar .toolbar-header {
+    display: flex;
+    justify-content: space-between;
     align-items: center;
 }
 
+.thread-toolbar .toolbar-actions {
+    display: flex;
+    flex-direction: column;
+    /* Mobile: Stack actions */
+    gap: 0.75rem;
+    width: 100%;
+}
+
+/* --- 2. Search Bar Component --- */
 .search-container {
     display: flex;
     align-items: center;
@@ -14,11 +36,15 @@
     border: 1px solid var(--surface-border);
     border-radius: 6px;
     overflow: hidden;
-    height: 32px;
+    height: 40px;
+    /* Mobile Friendly Height */
+    width: 100%;
+    /* Full width on mobile */
 }
 
 .search-select {
     border: none;
+    /* Reset native border */
     border-right: 1px solid #eee;
     background: #f8f9fa;
     padding: 0 0.5rem;
@@ -27,27 +53,32 @@
     color: var(--text-main);
     cursor: pointer;
     outline: none;
+    max-width: 100px;
+    /* Limit width on mobile */
 }
 
 .search-input {
     border: none;
     padding: 0 0.5rem;
-    width: 180px;
-    font-size: 0.875rem;
+    flex: 1;
+    /* Take remaining space */
+    font-size: 16px;
+    /* Prevent IOS Zoom */
     outline: none;
     height: 100%;
+    min-width: 0;
+    /* Flexbox fix */
 }
 
 .search-clear-btn {
-    padding: 0 0.5rem;
+    padding: 0 0.8rem;
     color: #999;
     text-decoration: none;
-    font-size: 0.8rem;
+    font-size: 0.9rem;
     cursor: pointer;
     display: flex;
     align-items: center;
     height: 100%;
-    border-left: 1px solid #eee;
 }
 
 .search-submit-btn {
@@ -55,101 +86,55 @@
     background: #f8f9fa;
     border-left: 1px solid var(--surface-border);
     cursor: pointer;
-    padding: 0 0.6rem;
+    padding: 0 1rem;
     height: 100%;
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: background 0.2s;
+    font-size: 1rem;
 }
 
+/* --- 3. Buttons --- */
 .btn-group {
     display: flex;
+    width: 100%;
     gap: 0.5rem;
-    align-items: center;
 }
 
+.btn-group .btn {
+    flex: 1;
+    /* Stretch buttons on mobile */
+    justify-content: center;
+    padding: 0.6rem;
+}
+
+/* Hide desktop group wrapper effect on mobile */
 .desktop-action-group {
-    display: flex;
-    gap: 0.5rem;
+    display: contents;
 }
 
 
+/* --- 4. Mobile Table Card View --- */
 @media (max-width: 768px) {
 
-    /* --- Toolbar Layout (Flex Column) --- */
-    .thread-toolbar {
-        flex-direction: column;
-        align-items: stretch;
-        gap: 1rem;
-    }
-
-    .thread-toolbar .toolbar-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-    }
-
-    .thread-toolbar .toolbar-actions {
-        flex-direction: column;
-        width: 100%;
-        gap: 0.75rem;
-    }
-
-    .search-container {
-        width: 100%;
-        margin-right: 0 !important;
-        height: 40px !important;
-    }
-
-    .search-input {
-        width: 100% !important;
-        font-size: 16px !important;
-        /* Prevent iOS zoom */
-    }
-
-    .btn-group {
-        display: flex;
-        width: 100%;
-        gap: 0.5rem;
-    }
-
-    .btn-group .btn {
-        flex: 1;
-        justify-content: center;
-        padding: 0.6rem;
-    }
-
-    /* Hide desktop grouping wrapper on mobile if needed, but flex children work fine */
-    .desktop-action-group {
-        display: contents;
-        /* Strip container rendering */
-    }
-
-    /* --- Optimized Card View for Thread Table --- */
-
-    /* 1. Reset standard table overrides from tables.css */
+    /* (Use existing optimized card css) */
     .thread-list-table td::before {
         content: none !important;
-        /* Disable auto-labels */
     }
 
     .thread-list-table thead {
         display: none;
     }
 
-    /* Grid Layout */
     .thread-list-table tr {
         display: grid;
         grid-template-columns: auto auto 1fr;
-        /* Checkbox | Star | Content */
         gap: 0.5rem;
         padding: 1rem;
         position: relative;
         border-bottom: 1px solid var(--surface-border);
     }
 
-    /* Col 1: Checkbox */
     .thread-list-table td:nth-child(1) {
         grid-column: 1;
         grid-row: 1 / span 3;
@@ -157,7 +142,6 @@
         align-items: center;
     }
 
-    /* Col 2: Star (New) */
     .thread-list-table td:nth-child(2) {
         grid-column: 2;
         grid-row: 1;
@@ -166,7 +150,6 @@
         padding-right: 0.5rem;
     }
 
-    /* Col 3: Thread ID (Title) */
     .thread-list-table td:nth-child(3) {
         grid-column: 3;
         grid-row: 1;
@@ -174,14 +157,11 @@
         font-size: 1rem;
         margin-bottom: 0.25rem;
         padding-right: 2rem;
-        /* Space for status badge */
         word-break: break-all;
     }
 
-    /* Col 4: Remark (Body Text) */
     .thread-list-table td:nth-child(4) {
         grid-column: 2 / -1;
-        /* Span from Star to End */
         grid-row: 2;
         font-size: 0.85rem;
         color: var(--text-secondary);
@@ -189,16 +169,13 @@
         padding-top: 0.25rem;
     }
 
-    /* Col 5: Status (Badge) - Top Right Absolute */
     .thread-list-table td:nth-child(5) {
         position: absolute;
         top: 1rem;
         right: 1rem;
         display: block !important;
-        /* Ensure it's visible */
     }
 
-    /* Col 5: Actions (Footer) */
     .thread-list-table td:last-child {
         grid-column: 1 / -1;
         grid-row: 3;
@@ -209,7 +186,7 @@
         border-top: 1px dashed var(--surface-border) !important;
     }
 
-    /* --- Bottom Action Sheet (Restored) --- */
+    /* Bottom Sheet */
     .bottom-action-sheet {
         position: fixed;
         bottom: 0;
@@ -222,7 +199,6 @@
         transform: translateY(100%);
         transition: transform 0.3s ease-in-out;
         display: none;
-        /* JS toggles active class */
     }
 
     .bottom-action-sheet.active {
@@ -241,61 +217,107 @@
         gap: 0.5rem;
     }
 
-    /* Prevent bottom sheet from covering content */
     body {
         padding-bottom: 80px;
     }
 }
 
-/* --- Optimized Desktop Toolbar --- */
+
+/* --- DESKTOP OPTIMIZATION (min-width: 769px) --- */
 @media (min-width: 769px) {
 
+    /* 1. Reset Layout to Horizontal Row */
+    .thread-toolbar {
+        flex-direction: row;
+        align-items: center;
+        width: 100%;
+    }
 
-    /* Make search container cleaner */
+    .thread-toolbar .toolbar-actions {
+        flex-direction: row;
+        width: auto;
+        gap: 0.75rem;
+    }
+
+    /* 2. Optimized Search Bar */
     .search-container {
-        height: 38px;
-        /* Slightly taller for desktop comfort */
+        width: auto;
+        /* Shrink to fit */
+        height: 36px;
+        /* Sleek desktop height */
         box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
-        border-color: #e5e7eb;
-        transition: all 0.2s;
+        transition: all 0.2s ease;
+    }
+
+    .search-container:hover {
+        border-color: #d1d5db;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
     }
 
     .search-container:focus-within {
         border-color: var(--primary);
-        box-shadow: 0 0 0 2px rgba(var(--primary-rgb), 0.1);
+        box-shadow: 0 0 0 3px rgba(var(--primary-rgb), 0.1);
     }
 
-    /* Join the export buttons visually */
+    .search-select {
+        font-size: 0.85rem;
+        padding: 0 0.8rem;
+    }
+
+    .search-input {
+        width: 220px;
+        /* Fixed width for consistency */
+        font-size: 0.85rem;
+    }
+
+    .search-submit-btn {
+        padding: 0 0.8rem;
+    }
+
+    /* 3. Button Layout Reset */
+    .btn-group {
+        width: auto;
+        gap: 0.75rem;
+        /* Nice gap between groups */
+    }
+
+    .btn-group .btn {
+        flex: none;
+        /* Don't stretch */
+        padding: 0 1rem;
+        height: 36px;
+        /* Match Input Height */
+        font-size: 0.85rem;
+    }
+
+    /* 4. Desktop Action Group (Clean Segmented Control Look) */
     .desktop-action-group {
+        display: flex;
+        align-items: center;
         background: white;
         border: 1px solid var(--surface-border);
         border-radius: 6px;
-        padding: 2px;
-        gap: 0;
-        /* No gap, joined */
+        overflow: hidden;
+        margin-right: 0.25rem;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
     }
 
     .desktop-action-group .btn {
         border: none;
-        border-radius: 4px;
-        background: transparent;
+        border-radius: 0;
+        background: white;
         color: var(--text-main);
-        padding: 0.4rem 0.8rem;
-        box-shadow: none;
+        padding: 0 1rem;
+        font-weight: 500;
     }
 
     .desktop-action-group .btn:hover {
-        background: #f3f4f6;
+        background: #f9fafb;
+        color: var(--primary);
     }
 
-    /* Separator line between group items if needed */
+    /* Separator line */
     .desktop-action-group .btn:not(:last-child) {
-        border-right: 1px solid transparent;
-        /* or #eee for separator */
-    }
-
-    /* Action buttons consistency */
-    .btn-group .btn {
-        height: 38px;
+        border-right: 1px solid #eee;
     }
 }
