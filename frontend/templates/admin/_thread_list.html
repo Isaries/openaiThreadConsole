@@ -53,15 +53,12 @@
             </h3>
         </div>
 
-        <div class="toolbar-actions flex gap-2 items-center">
-            <!-- Search Form (GET) -->
+        <div class="toolbar-actions">
             <!-- Search Form Input Group -->
-            <div class="search-group"
-                style="display: flex; gap: 0; align-items: center; background: white; border: 1px solid var(--surface-border); border-radius: 6px; overflow: hidden; margin-right: 0.5rem; height: 32px;">
+            <div class="search-container">
 
                 <!-- Status Filter Dropdown -->
-                <select form="searchForm" name="status_filter" onchange="this.form.submit()"
-                    style="border: none; border-right: 1px solid #eee; background: #f8f9fa; padding: 0 0.5rem; height: 100%; font-size: 0.875rem; color: var(--text-main); cursor: pointer; outline: none;">
+                <select form="searchForm" name="status_filter" onchange="this.form.submit()" class="search-select">
                     <option value="all" {% if status_filter=='all' %}selected{% endif %}>全部狀態</option>
                     <option value="active" {% if status_filter=='active' %}selected{% endif %}>🟢 活躍</option>
                     <option value="low" {% if status_filter=='low' %}selected{% endif %}>🟡 低優先</option>
@@ -69,18 +66,16 @@
                 </select>
 
                 <input form="searchForm" type="text" name="q" placeholder="🔍 搜尋 ID 或備註..." class="search-input"
-                    style="border: none; padding: 0 0.5rem; width: 180px; font-size: 0.875rem; outline: none; height: 100%;"
                     autocomplete="off" value="{{ search_query }}">
 
                 {% if search_query %}
                 <a href="{{ url_for('admin.index', group_id=active_group.group_id) }}" title="清除搜尋"
-                    style="padding: 0 0.5rem; color: #999; text-decoration: none; font-size: 0.8rem; cursor: pointer; display: flex; align-items: center; height: 100%; border-left: 1px solid #eee;">
+                    class="search-clear-btn">
                     ❌
                 </a>
                 {% endif %}
 
-                <button type="submit" form="searchForm" id="searchSubmitBtn" title="開始搜尋"
-                    style="border: none; background: #f8f9fa; border-left: 1px solid var(--surface-border); cursor: pointer; padding: 0 0.6rem; height: 100%; display: flex; align-items: center; justify-content: center; transition: background 0.2s;">
+                <button type="submit" form="searchForm" id="searchSubmitBtn" title="開始搜尋" class="search-submit-btn">
                     🔍
                 </button>
             </div>
@@ -92,21 +87,22 @@
                     ☑ 全選
                 </button>
 
-                <button type="submit" form="deleteMultiForm" formaction="/admin/threads/export" formmethod="POST"
-                    formtarget="_blank" class="btn btn-secondary btn-sm" title="匯出完整 Excel (不受搜尋影響)">
-                    📥 匯出
-                </button>
-                <button type="submit" form="deleteMultiForm" formaction="/admin/threads/export-pdf" formmethod="POST"
-                    class="btn btn-secondary btn-sm" title="匯出為 PDF">
-                    📄 PDF
-                </button>
+                <div class="desktop-action-group">
+                    <button type="submit" form="deleteMultiForm" formaction="/admin/threads/export" formmethod="POST"
+                        formtarget="_blank" class="btn btn-white btn-sm" title="匯出完整 Excel (不受搜尋影響)">
+                        📥 匯出
+                    </button>
+                    <button type="submit" form="deleteMultiForm" formaction="/admin/threads/export-pdf" formmethod="POST"
+                        class="btn btn-white btn-sm" title="匯出為 PDF">
+                        📄 PDF
+                    </button>
+                </div>
+                
                 <button type="submit" form="deleteMultiForm" formaction="/admin/threads/refresh" formmethod="POST"
                     class="btn btn-primary btn-sm desktop-only" title="更新快取">
-                    🔄
-                    <span class="desktop-only" style="display:inline;">更新</span>
+                    🔄 更新
                 </button>
 
-                <!-- Mobile Actions are now in Bottom Sheet -->
                 <!-- Desktop Delete Button -->
                 <button type="submit" form="deleteMultiForm" class="btn btn-danger btn-sm desktop-only"
                     onclick="return confirm('確定刪除選取項目？')">
