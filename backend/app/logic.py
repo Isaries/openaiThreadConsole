@@ -212,6 +212,14 @@ def get_or_sync_assistants(assistant_ids, api_key=None, project_id=None):
         # Small delay to avoid rate limiting
         time.sleep(0.1)
     
+    # Commit to persist cached assistant names
+    if ids_to_fetch:
+        try:
+            db.session.commit()
+        except Exception as e:
+            logging.getLogger().warning(f"Failed to commit assistant cache: {e}")
+            db.session.rollback()
+    
     return result
 
 
@@ -302,7 +310,7 @@ def process_thread(thread_data, target_name, start_date, end_date, api_key=None,
         result['status'] = 'Empty Messages'
         return result
 
-    # Pre-fetch Assistant Names for display
+    # Pre-fetch Assistant Names for display (with API sync if missing)
     assistant_names_map = {}
     try:
         assistant_ids = set()
@@ -311,11 +319,8 @@ def process_thread(thread_data, target_name, start_date, end_date, api_key=None,
                 assistant_ids.add(msg.get('assistant_id'))
         
         if assistant_ids:
-            from .models import Assistant 
-            assistants = Assistant.query.filter(Assistant.id.in_(assistant_ids)).all()
-            for ast in assistants:
-                if ast.name:
-                    assistant_names_map[ast.id] = ast.name
+            # Use get_or_sync_assistants to fetch from API if not in local cache
+            assistant_names_map = get_or_sync_assistants(list(assistant_ids), api_key, group_id)
     except Exception as e:
         logging.getLogger().warning(f"Failed to fetch assistant names: {e}")
 
