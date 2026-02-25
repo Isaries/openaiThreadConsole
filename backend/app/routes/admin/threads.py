@@ -408,18 +408,8 @@ def upload_file():
     if session.get('role') != 'admin' and not is_owner:
         return redirect(url_for('admin.index'))
 
-    try:
-        from openpyxl import load_workbook
-        wb = load_workbook(file, read_only=True, data_only=True)
-        if 'Threads' not in wb.sheetnames:
-            raise ValueError('缺少必需的工作表 "Threads"')
-    except Exception as e:
-        current_app.logger.error(
-            'Excel upload validation failed: %s', e, exc_info=True
-        )
-        flash('檔案內容無法解析或格式不正確', 'error')
-        return redirect(url_for('admin.index', group_id=group_id))
-
+    # Validation is explicitly handled by excel_service.py which parses with pandas
+    # and only demands the presence of a "thread_id" column.
     from ...services import excel_service
     file.seek(0)
     thread_data_map, error = excel_service.parse_excel_for_import(file)

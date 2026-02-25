@@ -901,3 +901,47 @@ def cleanup_pdf_exports():
         
         db.session.commit()
         logger.info(f"Deleted {len(old_tasks)} old PDF export task records")
+
+
+# --- General Database Cleanup ---
+@huey.periodic_task(crontab(hour='3', minute='0'))
+def cleanup_database_records_task():
+    """Clean up AuditLog, SearchHistory, and LoginAttempt records older than 30 days"""
+    logger.info("Starting Database Records Cleanup Task (30 days retention)")
+    
+    from . import create_app
+    from .models import SearchHistory, AuditLog, LoginAttempt
+    import time
+    from datetime import datetime, timedelta
+    
+    app = create_app()
+    
+    with app.app_context():
+        try:
+            # 30 days ago in seconds
+            cutoff_ts = int(time.time()) - (30 * 86400)
+            
+            # 30 days ago in datetime
+            cutoff_dt = datetime.now() - timedelta(days=30)
+            
+            # 1. Clean up SearchHistory (timestamp is Integer)
+            deleted_search = SearchHistory.query.filter(
+                SearchHistory.timestamp < cutoff_ts
+            ).delete()
+            
+            # 2. Clean up AuditLog (timestamp is DateTime)
+            deleted_audit = AuditLog.query.filter(
+                AuditLog.timestamp < cutoff_dt
+            ).delete()
+            
+            # 3. Clean up LoginAttempt (last_attempt is Float)
+            deleted_login = LoginAttempt.query.filter(
+                LoginAttempt.last_attempt < float(cutoff_ts)
+            ).delete()
+            
+            db.session.commit()
+            
+            logger.info(f"Database Cleanup Complete: Deleted {deleted_search} SearchHistory, {deleted_audit} AuditLog, {deleted_login} LoginAttempt records.")
+        except Exception as e:
+            logger.error(f"Database Records Cleanup Failed: {e}")
+            db.session.rollback()
