@@ -131,7 +131,19 @@ def download_pdf(thread_id):
             'Content-Disposition': utils.encode_filename_header(zip_filename)
         })
 
+def get_file_proxy_limit():
+    """
+    Dynamic Rate Limit for File Proxying
+    - 代理圖片可能一次載入多張，故限制較寬鬆。
+    """
+    if session.get('role') == 'admin':
+        return "1000 per hour"  # 管理員極大寬容度
+    if session.get('user_id'):
+        return "600 per hour"   # 一般登入使用者 (平均一分鐘 10 張)
+    return "60 per minute"      # 未登入者給予較嚴謹的短期限制
+
 @files_bp.route('/file/<file_id>')
+@limiter.limit(get_file_proxy_limit)
 def proxy_file(file_id):
     # Security: Validate file_id format (OpenAI files usually start with file-)
     import re
@@ -163,9 +175,6 @@ def proxy_file(file_id):
             return f"OpenAI Error: {resp.status_code}", 502
             
         excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
-        headers = [(name, value) for (name, value) in resp.raw.headers.items()
-                   if name.lower() not in excluded_headers]
-                   
         headers = [(name, value) for (name, value) in resp.raw.headers.items()
                    if name.lower() not in excluded_headers]
                    

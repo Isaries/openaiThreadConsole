@@ -430,18 +430,23 @@ def process_thread(thread_data, target_name, start_date, end_date, api_key=None,
     t_date = processed_messages[-1]['date_str'] if processed_messages else ''
     
     if keep_thread and (start_date or end_date):
-        if start_date and end_date:
-            if not (start_date <= t_date <= end_date): 
-                keep_thread = False
-                status = "Filtered Date"
-        elif start_date:
-            if not (t_date >= start_date): 
-                keep_thread = False
-                status = "Filtered Date"
-        elif end_date:
-            if not (t_date <= end_date): 
-                keep_thread = False
-                status = "Filtered Date"
+        if not t_date:
+            # If there's no date string (empty thread), it fails any date filter
+            keep_thread = False
+            status = "Filtered Date (Empty Thread)"
+        else:
+            if start_date and end_date:
+                if not (start_date <= t_date <= end_date): 
+                    keep_thread = False
+                    status = "Filtered Date"
+            elif start_date:
+                if not (t_date >= start_date): 
+                    keep_thread = False
+                    status = "Filtered Date"
+            elif end_date:
+                if not (t_date <= end_date): 
+                    keep_thread = False
+                    status = "Filtered Date"
             
     result['keep'] = keep_thread
     result['status'] = status
@@ -726,12 +731,16 @@ def process_thread_from_db(thread_db_obj, target_name, start_date, end_date):
     # Date Filtering
     t_date = processed_messages[-1]['date_str'] if processed_messages else ''
     if keep_thread and (start_date or end_date):
-        if start_date and end_date:
-            if not (start_date <= t_date <= end_date): keep_thread = False
-        elif start_date:
-            if not (t_date >= start_date): keep_thread = False
-        elif end_date:
-            if not (t_date <= end_date): keep_thread = False
+        if not t_date:
+            keep_thread = False
+            result['status'] = "Filtered Date (Empty Thread)"
+        else:
+            if start_date and end_date:
+                if not (start_date <= t_date <= end_date): keep_thread = False
+            elif start_date:
+                if not (t_date >= start_date): keep_thread = False
+            elif end_date:
+                if not (t_date <= end_date): keep_thread = False
 
     result['keep'] = keep_thread
     
