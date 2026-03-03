@@ -9,6 +9,7 @@ import io
 import math
 import zipfile
 from app import utils
+import config
 
 
 from ..extensions import limiter
@@ -86,13 +87,12 @@ def download_pdf(thread_id):
         html, temp_files = pdf_service.preprocess_html_for_pdf(html, found_group['group_id'], get_headers_callback)
         try:
             pdf_bytes = pdf_service.generate_pdf_bytes(html)
+            utils.log_audit('Download PDF', f"Thread: {thread_id}", "Single PDF")
             return Response(pdf_bytes, mimetype='application/pdf', headers={
                 'Content-Disposition': utils.encode_filename_header(filename)
             })
         finally:
             pdf_service.cleanup_temp_images(temp_files)
-            
-        utils.log_audit('Download PDF', f"Thread: {thread_id}", "Single PDF")
             
     else:
         # Split into ZIP
@@ -168,7 +168,7 @@ def proxy_file(file_id):
     headers = legacy_services.get_headers(api_key_enc)
     
     try:
-        url = f"https://api.openai.com/v1/files/{file_id}/content"
+        url = f"{config.OPENAI_BASE_URL}/files/{file_id}/content"
         resp = requests.get(url, headers=headers, stream=True, timeout=30)
         
         if resp.status_code != 200:

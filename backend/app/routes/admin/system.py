@@ -99,7 +99,7 @@ def trigger_manual_refresh():
     tasks.manual_global_refresh_task(force=force_refresh)
     
     # Log Audit
-    utils.log_audit(session.get('username'), 'Manual Refresh', 'Global')
+    utils.log_audit('Manual Refresh', 'Global')
     
     return jsonify({'success': True, 'message': 'Manual global refresh started.'})
 
@@ -123,7 +123,7 @@ def update_assistant_cache_settings():
     }
     
     if database.update_setting('assistant_cache', new_config):
-        utils.log_audit(session.get('username'), 'Update Assistant Cache Settings', f'{expiry_days} days')
+        utils.log_audit('Update Assistant Cache Settings', f'{expiry_days} days')
         return jsonify({'success': True})
     else:
         return jsonify({'error': 'Database Update Failed'}), 500

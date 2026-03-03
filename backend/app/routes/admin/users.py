@@ -1,4 +1,4 @@
-from flask import request, render_template, redirect, url_for, flash, session
+from flask import request, render_template, redirect, url_for, flash, session, current_app
 from . import admin_bp
 from ...models import User
 from ...extensions import db

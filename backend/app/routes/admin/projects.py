@@ -1,4 +1,4 @@
-from flask import request, redirect, url_for, flash, session
+from flask import request, redirect, url_for, flash, session, current_app
 from datetime import datetime
 from . import admin_bp
 from ...models import Project, Tag, User

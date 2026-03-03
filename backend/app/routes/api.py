@@ -1,4 +1,4 @@
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, current_app
 from ..extensions import db, limiter, csrf
 from ..models import Project, SearchHistory
 import security

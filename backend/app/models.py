@@ -138,7 +138,7 @@ class SearchResultChunk(db.Model):
 class PDFExportTask(db.Model):
     __tablename__ = 'pdf_export_tasks'
     id = db.Column(db.String(100), primary_key=True)  # Huey task ID
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    user_id = db.Column(db.String(36), db.ForeignKey('users.id'), nullable=False)
     project_id = db.Column(db.String(50), db.ForeignKey('projects.id'), nullable=False)
     thread_count = db.Column(db.Integer)
     status = db.Column(db.String(20), nullable=False)  # queued / running / completed / failed

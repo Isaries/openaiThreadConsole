@@ -276,7 +276,14 @@ def search_task(project_id, target_name, start_date, end_date, api_key, group_id
         # Save Search History Log
         utc8 = timezone(timedelta(hours=8))
         log_time = datetime.now(utc8)
-        date_range_str = f"{start_date} ~ {end_date}" if start_date and end_date else "All Time"
+        if start_date and end_date:
+            date_range_str = f"{start_date} ~ {end_date}"
+        elif start_date:
+            date_range_str = f"{start_date} ~"
+        elif end_date:
+            date_range_str = f"~ {end_date}"
+        else:
+            date_range_str = "All Time"
             
         log_entry = {
             'timestamp': int(log_time.timestamp()),
@@ -290,15 +297,20 @@ def search_task(project_id, target_name, start_date, end_date, api_key, group_id
         }
         database.save_log(log_entry)
         
+        import math
+        total_pages = max(1, math.ceil(total_count / BATCH_SIZE)) if total_count > 0 else 1
+
         result = {
             'status': 'done',
             'count': total_count,
             'duration': duration,
             'target_name': target_name,
             'date_range': date_range_str,
+            'total_pages': total_pages,
             'refreshed_count': refreshed_count,
             'skipped_frozen': skipped_frozen,
-            'skipped_low': skipped_low
+            'skipped_low': skipped_low,
+            'total_skipped': skipped_frozen + skipped_low
         }
         
         logger.info(f"Task {task.id} finished. Matches: {total_count}. Duration: {duration:.2f}s")
