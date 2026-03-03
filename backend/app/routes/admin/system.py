@@ -136,13 +136,11 @@ def performance_dashboard():
         flash('權限不足', 'error')
         return redirect(url_for('admin.index'))
         
-    # 1. Fetch History
-    metrics_query = SystemMetric.query.order_by(SystemMetric.timestamp.asc()).all()
-    
+    # 1. Fetch History (filter in DB to avoid loading entire history into memory)
     max_history_seconds = 10 * 86400
     cutoff = datetime.now().timestamp() - max_history_seconds
-    
-    metrics = [m for m in metrics_query if m.timestamp >= cutoff]
+
+    metrics = SystemMetric.query.filter(SystemMetric.timestamp >= cutoff).order_by(SystemMetric.timestamp.asc()).all()
     
     
     chart_data = []
