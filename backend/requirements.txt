@@ -11,7 +11,7 @@ bleach==6.1.0
 weasyprint==59.0
 pydyf<0.11.0
 bleach[css]==6.1.0
-requests==2.32.2
+requests==2.32.4
 openpyxl==3.1.2
 cryptography==42.0.7
 flask-talisman==1.1.0
