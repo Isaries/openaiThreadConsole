@@ -13,6 +13,58 @@ from flask import request, has_request_context
 
 import os
 
+def _run_auto_migrations(app):
+    """Check for missing columns/tables and apply schema migrations automatically."""
+    import sqlite3
+
+    db_path = app.config.get('SQLALCHEMY_DATABASE_URI', '')
+    if not db_path.startswith('sqlite:///'):
+        return
+    db_path = db_path.replace('sqlite:///', '')
+
+    try:
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+
+        # Build a map of existing columns per table
+        def get_columns(table_name):
+            cursor.execute(f"PRAGMA table_info({table_name})")
+            return {row[1] for row in cursor.fetchall()}
+
+        # Define migrations: (table, column, SQL to add it)
+        column_migrations = [
+            ('messages', 'assistant_id', "ALTER TABLE messages ADD COLUMN assistant_id VARCHAR(100)"),
+            ('search_result_chunks', 'progress_data', "ALTER TABLE search_result_chunks ADD COLUMN progress_data TEXT"),
+        ]
+
+        index_migrations = [
+            ('idx_messages_assistant', "CREATE INDEX IF NOT EXISTS idx_messages_assistant ON messages(assistant_id)"),
+            ('idx_assistants_project', "CREATE INDEX IF NOT EXISTS idx_assistants_project ON assistants(project_id)"),
+            ('idx_assistants_name', "CREATE INDEX IF NOT EXISTS idx_assistants_name ON assistants(name)"),
+        ]
+
+        applied = []
+        for table, column, sql in column_migrations:
+            cols = get_columns(table)
+            if not cols:  # table doesn't exist, db.create_all() should handle it
+                continue
+            if column not in cols:
+                cursor.execute(sql)
+                applied.append(f"{table}.{column}")
+
+        for idx_name, sql in index_migrations:
+            cursor.execute(sql)
+
+        conn.commit()
+        conn.close()
+
+        if applied:
+            app.logger.info(f"Auto-migration: added columns {applied}")
+
+    except Exception as e:
+        app.logger.warning(f"Auto-migration warning: {e}")
+
+
 def create_app():
     # Dynamic Path Resolution
     base_dir = os.path.abspath(os.path.dirname(__file__))
@@ -34,10 +86,11 @@ def create_app():
     csrf.init_app(app)
     limiter.init_app(app)
     
-    # Auto-create tables
+    # Auto-create tables & run migrations
     with app.app_context():
         db.create_all()
-        
+        _run_auto_migrations(app)
+
         # Security: Ensure Admin Exists (No Backdoor)
         from . import commands
         commands.ensure_admin_exists()
