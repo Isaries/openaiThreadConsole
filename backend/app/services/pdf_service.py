@@ -10,6 +10,9 @@ from concurrent.futures import ThreadPoolExecutor
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
+# Thread-safe logger for use in ThreadPoolExecutor workers (no app context)
+_logger = logging.getLogger(__name__)
+
 def _get_retry_session():
     session = requests.Session()
     retry = Retry(total=3, backoff_factor=1, status_forcelist=[429, 500, 502, 503, 504])
@@ -124,20 +127,20 @@ def save_image_locally(url, content, mime_type):
         if 'jpeg' in mime_type or 'jpg' in mime_type: ext = 'jpg'
         elif 'gif' in mime_type: ext = 'gif'
         elif 'webp' in mime_type: ext = 'webp'
-        
+
         # Unique filename from hash or UUID
         file_hash = hashlib.md5(url.encode('utf-8')).hexdigest()
         filename = f"{file_hash}.{ext}"
         filepath = os.path.join(TEMP_PDF_IMG_DIR, filename)
-        
+
         # Write file
         with open(filepath, 'wb') as f:
             f.write(content)
-            
+
         from pathlib import Path
         return Path(filepath).as_uri()
     except Exception as e:
-        current_app.logger.warning(f"Failed to save temp image: {e}")
+        _logger.warning(f"Failed to save temp image: {e}")
         return None
 
 def fetch_image_local_path(src, headers=None):
@@ -158,7 +161,7 @@ def fetch_image_local_path(src, headers=None):
                     url = f"https://api.openai.com/v1/files/{file_id}/content"
                     request_headers = headers # Auth headers passed from caller
             except Exception as e:
-                current_app.logger.debug(f"Failed to parse file ID from {src}: {e}")
+                _logger.debug(f"Failed to parse file ID from {src}: {e}")
                 pass # Fallback to original src if parsing fails
         
         # Scenario 2: External URL (Assistant Images)
@@ -180,15 +183,15 @@ def fetch_image_local_path(src, headers=None):
              if hostname:
                  # Block localhost
                  if hostname.lower() in ('localhost', '127.0.0.1', '0.0.0.0'):
-                     current_app.logger.warning(f"SSRF Blocked: {url}")
+                     _logger.warning(f"SSRF Blocked: {url}")
                      return src, None
                  # Resolve IP to check private ranges (Basic Check)
                  ip = socket.gethostbyname(hostname)
                  if ip.startswith(('127.', '10.', '192.168.', '172.16.', '0.')):
-                      current_app.logger.warning(f"SSRF Blocked (Private IP): {url} -> {ip}")
+                      _logger.warning(f"SSRF Blocked (Private IP): {url} -> {ip}")
                       return src, None
         except Exception as e:
-             current_app.logger.warning(f"URL Validation Failed: {e}")
+             _logger.warning(f"URL Validation Failed: {e}")
              return src, None
 
         # Perform Fetch using Retry Session
@@ -206,20 +209,19 @@ def fetch_image_local_path(src, headers=None):
 
             # Log unexpected content types
             if 'webp' in content_type.lower():
-                current_app.logger.warning(f"Warning: Server returned WebP for {src} despite Accept headers. WeasyPrint may fail.")
+                _logger.warning(f"Warning: Server returned WebP for {src} despite Accept headers. WeasyPrint may fail.")
 
             # Save Locally
             local_uri = save_image_locally(url, resp.content, content_type)
             if local_uri:
-                 # current_app.logger.info(f"Saved PDF Image: {local_uri}")
                  return src, local_uri
-            
+
             return src, None
         else:
-             current_app.logger.warning(f"Fetch Error {resp.status_code} for {url}")
-             
+             _logger.warning(f"Fetch Error {resp.status_code} for {url}")
+
     except Exception as e:
-        current_app.logger.warning(f"Failed to fetch image {src}: {str(e)}")
+        _logger.warning(f"Failed to fetch image {src}: {str(e)}")
     
     return src, None
 
